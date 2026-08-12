@@ -1,7 +1,7 @@
 import type { JobStatus } from '@mintreels/domain';
 
 export interface IngestVideoPayload {
-  recordingId: string;
+  recordingId: number;
   storageKey: string;
 }
 

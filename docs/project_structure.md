@@ -10,7 +10,8 @@ MintReels is a TypeScript monorepo for video intelligence: upload recordings, tr
 | `apps/api` | `@mintreels/api` | HTTP API |
 | `apps/worker` | `@mintreels/worker` | Background jobs |
 | `packages/domain` | `@mintreels/domain` | Domain types and rules |
-| `packages/db` | `@mintreels/db` | PostgreSQL metadata |
+| `packages/schema` | `@mintreels/schema` | Zod schemas (validation + DTO source of truth) |
+| `packages/db` | `@mintreels/db` | MySQL 8 metadata (TypeORM) |
 | `packages/ai` | `@mintreels/ai` | Speech, LLM, embeddings |
 | `packages/knowledge` | `@mintreels/knowledge` | Knowledge Base provider |
 | `packages/media` | `@mintreels/media` | FFmpeg-based media ops |
@@ -24,7 +25,7 @@ Applications depend on provider **interfaces**, not vendor SDKs. PyAI-specific c
 
 ## API
 
-The API is a Hono app (`apps/api`). HTTP handlers enqueue work; they do not run transcription, summarization, KB sync, hook generation, or clip rendering inline.
+The API is a NestJS app (`apps/api`). Feature modules use controller + service + optional zod DTO (`ZodValidationPipe` + `@mintreels/schema`). HTTP handlers enqueue work; they do not run transcription, summarization, KB sync, hook generation, or clip rendering inline.
 
 Placeholder routes:
 
@@ -59,7 +60,7 @@ Each job is `queued`, `running`, then `success` or `failed`, with bounded retrie
 
 ## Knowledge Base adapter
 
-`KnowledgeBaseProvider` is the only KB API the app uses. PostgreSQL stores `provider` and `provider_knowledge_base_id` (and document provider IDs). Embeddings stay in the provider. A local/pgvector adapter is intentionally not implemented.
+`KnowledgeBaseProvider` is the only KB API the app uses. MySQL stores `provider` and `provider_knowledge_base_id` (and document provider IDs). Embeddings stay in the provider. A local/pgvector adapter is intentionally not implemented.
 
 Scopes:
 

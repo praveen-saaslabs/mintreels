@@ -37,5 +37,5 @@ QUEUE_PROVIDER=bullmq
 ## Do not
 
 - Add a local / pgvector Knowledge Base adapter.
-- Store embeddings in PostgreSQL.
+- Store embeddings in MySQL.
 - Call vendor SDKs from apps or `packages/domain`.

@@ -4,24 +4,35 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "tsx watch src/server.ts",
+    "dev": "node --watch --import @swc-node/register/esm-register src/main.ts",
     "build": "tsc --noEmit",
-    "start": "tsx src/server.ts",
+    "start": "node --import @swc-node/register/esm-register src/main.ts",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "test": "node --input-type=module -e \"console.log('no tests yet')\""
   },
   "dependencies": {
-    "@hono/node-server": "^1.13.7",
     "@mintreels/ai": "workspace:*",
     "@mintreels/db": "workspace:*",
     "@mintreels/domain": "workspace:*",
     "@mintreels/knowledge": "workspace:*",
     "@mintreels/queue": "workspace:*",
+    "@mintreels/schema": "workspace:*",
     "@mintreels/storage": "workspace:*",
-    "hono": "^4.6.14"
+    "@nestjs/common": "^11.0.0",
+    "@nestjs/core": "^11.0.0",
+    "@nestjs/platform-express": "^11.0.0",
+    "@nestjs/typeorm": "^11.0.0",
+    "mysql2": "^3.23.3",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.1",
+    "typeorm": "^0.3.20",
+    "zod": "^4.0.0"
   },
   "devDependencies": {
+    "@swc-node/register": "^1.12.1",
+    "@swc/core": "^1.15.47",
+    "@types/express": "^5.0.0",
     "@types/node": "^22.10.2",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2"

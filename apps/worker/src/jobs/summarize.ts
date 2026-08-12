@@ -1,7 +1,7 @@
 import type { JobStatus } from '@mintreels/domain';
 
 export interface SummarizePayload {
-  recordingId: string;
+  recordingId: number;
 }
 
 export async function summarize(_payload: SummarizePayload): Promise<JobStatus> {

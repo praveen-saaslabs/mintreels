@@ -1,1 +1,11 @@
-export { createRecordingRepository } from './recordings';
+export { UserRepository } from './user.repository';
+export { ProjectRepository } from './project.repository';
+export { RecordingRepository } from './recording.repository';
+export { TranscriptRepository } from './transcript.repository';
+export { TranscriptSegmentRepository } from './transcript-segment.repository';
+export { SummaryRepository } from './summary.repository';
+export { KnowledgeBaseRepository } from './knowledge-base.repository';
+export { KnowledgeDocumentRepository } from './knowledge-document.repository';
+export { HookRepository } from './hook.repository';
+export { ClipRepository } from './clip.repository';
+export { JobRepository } from './job.repository';

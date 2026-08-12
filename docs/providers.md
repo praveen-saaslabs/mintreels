@@ -30,7 +30,7 @@ PyAI Adapter (or S3 / BullMQ adapter)
 `packages/ai/src/embedding-provider.ts`
 
 - `embed(text)` → `number[]`
-- Used only if a future local KB needs embeddings. The PyAI KB adapter does **not** store vectors in PostgreSQL.
+- Used only if a future local KB needs embeddings. The PyAI KB adapter does **not** store vectors in MySQL.
 
 ## KnowledgeBaseProvider
 

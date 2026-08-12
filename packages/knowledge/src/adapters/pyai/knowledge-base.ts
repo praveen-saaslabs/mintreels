@@ -19,12 +19,12 @@ export class PyAIKnowledgeBaseProvider implements KnowledgeBaseProvider {
     throw new KnowledgeNotImplementedError('PyAIKnowledgeBaseProvider.createKnowledgeBase');
   }
 
-  async getKnowledgeBase(_id: string): Promise<KnowledgeBase> {
+  async getKnowledgeBase(_id: number): Promise<KnowledgeBase> {
     void this.client;
     throw new KnowledgeNotImplementedError('PyAIKnowledgeBaseProvider.getKnowledgeBase');
   }
 
-  async deleteKnowledgeBase(_id: string): Promise<void> {
+  async deleteKnowledgeBase(_id: number): Promise<void> {
     void this.client;
     throw new KnowledgeNotImplementedError('PyAIKnowledgeBaseProvider.deleteKnowledgeBase');
   }

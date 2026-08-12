@@ -1,27 +1,32 @@
 ---
-description: Hono API conventions — enqueue work, do not run long jobs inline
+description: NestJS API conventions — enqueue work, do not run long jobs inline
 globs: apps/api/**
 alwaysApply: false
 ---
 
 # API
 
-The API is a Hono app (`apps/api/src/app.ts`). Handlers create metadata, enqueue jobs, and return IDs. They do not run transcription, summarization, KB sync, hook generation, or FFmpeg.
+The API is a NestJS app (`apps/api/src/main.ts`, `apps/api/src/app.module.ts`). Feature modules own controller + service (+ optional zod DTO). Handlers create metadata, enqueue jobs, and return IDs. They do not run transcription, summarization, KB sync, hook generation, or FFmpeg.
 
 ```ts
 // ❌ BAD
-app.post('/api/recordings/:id/transcribe', async (c) => {
-  const transcript = await speech.transcribe(input);
-  return c.json(transcript);
-});
+@Post(':id/transcribe')
+async transcribe(@Param('id') id: string) {
+  return this.speech.transcribe(input);
+}
 
 // ✅ GOOD
-app.post('/api/recordings', async (c) => {
-  const recording = await createRecording(input);
-  await queue.enqueue({ name: 'ingest-video', payload: { recordingId: recording.id } });
-  return c.json({ id: recording.id }, 201);
-});
+@Post()
+async create(@Body(new ZodValidationPipe(createRecordingRequestSchema)) body: CreateRecordingRequest) {
+  const recording = await this.recordings.create(body);
+  await this.queue.enqueue({ name: 'ingest-video', payload: { recordingId: recording.id } });
+  return { id: recording.id };
+}
 ```
+
+## Validation
+
+Use `@mintreels/schema` zod schemas as DTOs via `ZodValidationPipe`. Do not add class-validator DTOs. Add a feature `*.dto.ts` only when the HTTP request shape differs from `*InsertSchema`.
 
 ## Route surface
 
@@ -33,4 +38,4 @@ app.post('/api/recordings', async (c) => {
 - `GET/POST /api/knowledge-bases`
 - `POST /api/clips`, `GET /api/clips/:id`
 
-Wire providers at the composition root. Do not import PyAI or vendor SDKs in routes, controllers, or services.
+Wire providers at the composition root (`providers/ProvidersModule`). Do not import PyAI or vendor SDKs in controllers or services.

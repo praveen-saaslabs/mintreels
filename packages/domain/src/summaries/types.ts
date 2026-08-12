@@ -1,6 +1,6 @@
 export interface Summary {
-  id: string;
-  recordingId: string;
+  id: number;
+  recordingId: number;
   text: string;
   createdAt: Date;
 }

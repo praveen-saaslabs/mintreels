@@ -19,10 +19,10 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
 export const api = {
   getRecordings: () => request<unknown>('/recordings'),
-  getRecording: (id: string) => request<unknown>(`/recordings/${encodeURIComponent(id)}`),
-  getTranscript: (id: string) => request<unknown>(`/recordings/${encodeURIComponent(id)}/transcript`),
-  getSummary: (id: string) => request<unknown>(`/recordings/${encodeURIComponent(id)}/summary`),
-  getHooks: (id: string) => request<unknown>(`/recordings/${encodeURIComponent(id)}/hooks`),
+  getRecording: (id: number) => request<unknown>(`/recordings/${encodeURIComponent(id)}`),
+  getTranscript: (id: number) => request<unknown>(`/recordings/${encodeURIComponent(id)}/transcript`),
+  getSummary: (id: number) => request<unknown>(`/recordings/${encodeURIComponent(id)}/summary`),
+  getHooks: (id: number) => request<unknown>(`/recordings/${encodeURIComponent(id)}/hooks`),
   getKnowledgeBases: () => request<unknown>('/knowledge-bases'),
-  getClip: (id: string) => request<unknown>(`/clips/${encodeURIComponent(id)}`),
+  getClip: (id: number) => request<unknown>(`/clips/${encodeURIComponent(id)}`),
 };

@@ -1,5 +1,5 @@
 ---
-description: Transcript-first domain model and PostgreSQL metadata conventions
+description: Transcript-first domain model and MySQL metadata conventions
 globs: packages/domain/**,packages/db/**
 alwaysApply: false
 ---
@@ -10,7 +10,7 @@ The canonical transcript is timestamped segments, not one giant string. VTT is a
 
 ```ts
 export interface TranscriptSegment {
-  id: string;
+  id: number;
   sequence: number;
   startMs: number;
   endMs: number;
@@ -19,17 +19,19 @@ export interface TranscriptSegment {
 }
 ```
 
+IDs are auto-increment integers (not UUIDs).
+
 ## Recordings
 
 Statuses: `uploaded` | `processing` | `ready` | `failed`.
 
-Postgres (Drizzle in `packages/db`) stores metadata and object keys, never video binaries or embeddings.
+MySQL 8 (TypeORM in `packages/db`) stores metadata and object keys, never video binaries or embeddings. Validation + DTOs come from `@mintreels/schema` (zod); TypeORM entities align to zod `*RowSchema` shapes.
 
 ## Knowledge bases
 
 Scopes: `recording` (one KB per recording) and `global` (one project-wide KB).
 
-Store `provider` and `provider_knowledge_base_id`. “Add to global KB” goes through `KnowledgeBaseProvider` — do not copy vectors into PostgreSQL.
+Store `provider` and `provider_knowledge_base_id`. “Add to global KB” goes through `KnowledgeBaseProvider` — do not copy vectors into MySQL.
 
 ## Domain package
 

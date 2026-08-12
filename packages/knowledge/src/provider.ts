@@ -20,8 +20,8 @@ export type {
 
 export interface KnowledgeBaseProvider {
   createKnowledgeBase(input: CreateKnowledgeBaseInput): Promise<KnowledgeBase>;
-  getKnowledgeBase(id: string): Promise<KnowledgeBase>;
-  deleteKnowledgeBase(id: string): Promise<void>;
+  getKnowledgeBase(id: number): Promise<KnowledgeBase>;
+  deleteKnowledgeBase(id: number): Promise<void>;
   addDocument(input: AddDocumentInput): Promise<KnowledgeDocument>;
   removeDocument(input: RemoveDocumentInput): Promise<void>;
   search(input: KnowledgeSearchInput): Promise<KnowledgeSearchResult[]>;

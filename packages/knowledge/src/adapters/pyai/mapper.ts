@@ -31,7 +31,8 @@ export function toDomainKnowledgeBase(
   input: Pick<CreateKnowledgeBaseInput, 'scope' | 'recordingId'>,
 ): KnowledgeBase {
   const knowledgeBase: KnowledgeBase = {
-    id: pyai.id,
+    // Domain id is assigned by MySQL on persist; PyAI id lives in providerKnowledgeBaseId.
+    id: 0,
     name: pyai.name,
     scope: input.scope,
     provider: 'pyai',
@@ -50,7 +51,7 @@ export function toDomainDocument(
   input: Pick<AddDocumentInput, 'knowledgeBaseId' | 'recordingId'>,
 ): KnowledgeDocument {
   const document: KnowledgeDocument = {
-    id: pyai.id,
+    id: 0,
     knowledgeBaseId: input.knowledgeBaseId,
     providerDocumentId: pyai.id,
   };
@@ -64,13 +65,17 @@ export function toDomainDocument(
 
 export function toDomainSearchResult(hit: PyAISearchHit): KnowledgeSearchResult {
   const result: KnowledgeSearchResult = {
-    documentId: hit.document_id,
+    // Provider document ids are opaque strings; domain documentId is numeric after persist.
+    documentId: Number.parseInt(hit.document_id, 10) || 0,
     score: hit.score,
     excerpt: hit.excerpt,
   };
 
   if (hit.metadata?.recording_id !== undefined) {
-    result.recordingId = hit.metadata.recording_id;
+    const recordingId = Number.parseInt(hit.metadata.recording_id, 10);
+    if (Number.isFinite(recordingId) && recordingId > 0) {
+      result.recordingId = recordingId;
+    }
   }
 
   return result;
@@ -90,6 +95,6 @@ export function toPyAIAddDocumentBody(input: AddDocumentInput): {
   return {
     title: input.title,
     content: input.content,
-    metadata: { recording_id: input.recordingId },
+    metadata: { recording_id: String(input.recordingId) },
   };
 }

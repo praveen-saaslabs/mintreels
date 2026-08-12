@@ -1,7 +1,7 @@
 import type { JobStatus } from '@mintreels/domain';
 
 export interface GenerateHooksPayload {
-  recordingId: string;
+  recordingId: number;
 }
 
 export async function generateHooks(_payload: GenerateHooksPayload): Promise<JobStatus> {

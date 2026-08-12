@@ -1,5 +1,5 @@
 export interface TranscriptSegment {
-  id: string;
+  id: number;
   sequence: number;
   startMs: number;
   endMs: number;
@@ -8,14 +8,14 @@ export interface TranscriptSegment {
 }
 
 export interface Transcript {
-  id: string;
-  recordingId: string;
+  id: number;
+  recordingId: number;
   language?: string;
   segments: TranscriptSegment[];
 }
 
 export interface TranscriptionInput {
-  recordingId: string;
+  recordingId: number;
   storageKey: string;
   language?: string;
 }

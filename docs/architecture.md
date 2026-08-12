@@ -98,8 +98,9 @@ MP4 + subtitles
 ## Backend
 
 - TypeScript
-- Lightweight HTTP API framework
-- PostgreSQL
+- NestJS HTTP API
+- MySQL 8 + TypeORM
+- Zod validation (`@mintreels/schema`)
 - Redis
 - Background workers
 
@@ -156,7 +157,7 @@ MP4 + subtitles
                     ┌─────────────┘       └─────────────┐
                     ▼                                   ▼
              ┌────────────┐                     ┌──────────────┐
-             │ PostgreSQL │                     │ Object Store │
+             │ MySQL 8    │                     │ Object Store │
              │            │                     │              │
              │ metadata   │                     │ videos       │
              │ jobs       │                     │ audio        │
@@ -267,7 +268,7 @@ The app should use **PyAI's hosted Knowledge Base as the primary Knowledge Base 
 
 Do not build a local Postgres/pgvector Knowledge Base for MVP.
 
-The application should maintain only metadata and provider IDs in PostgreSQL.
+The application should maintain only metadata and provider IDs in MySQL.
 
 It should not own:
 
@@ -407,13 +408,13 @@ Add to Global Knowledge Base
 
 the backend uses `KnowledgeBaseProvider` to add the recording's source/document to the Global PyAI KB.
 
-Do not copy embeddings into PostgreSQL.
+Do not copy embeddings into MySQL.
 
 ---
 
 # 12. Knowledge Base Database Metadata
 
-PostgreSQL should contain:
+MySQL should contain:
 
 ```text
 knowledge_bases
@@ -1178,7 +1179,7 @@ thumbnails/
     clip.jpg
 ```
 
-PostgreSQL stores object keys, not video binaries.
+MySQL stores object keys, not video binaries.
 
 ---
 
@@ -1249,6 +1250,7 @@ mintreels/
 │
 ├── packages/
 │   ├── domain/
+│   ├── schema/
 │   ├── db/
 │   ├── ai/
 │   ├── knowledge/
@@ -1348,7 +1350,7 @@ Background queue abstraction.
 
 ## packages/db
 
-PostgreSQL schema and repositories.
+MySQL schema (TypeORM entities) and repositories. Entity shapes align to `@mintreels/schema` zod `*RowSchema` definitions. Primary keys are auto-increment integers.
 
 ## packages/config
 
@@ -1368,6 +1370,7 @@ mintreels/
 │   └── worker/
 │
 ├── packages/
+│   ├── schema/
 │   ├── db/
 │   ├── ai/
 │   ├── knowledge/
@@ -1437,18 +1440,17 @@ mintreels/
 │   │
 │   ├── api/
 │   │   ├── src/
-│   │   │   ├── routes/
-│   │   │   │   ├── recordings.ts
-│   │   │   │   ├── transcripts.ts
-│   │   │   │   ├── knowledge.ts
-│   │   │   │   ├── hooks.ts
-│   │   │   │   └── clips.ts
-│   │   │   │
-│   │   │   ├── middleware/
-│   │   │   ├── controllers/
-│   │   │   ├── services/
-│   │   │   ├── app.ts
-│   │   │   └── server.ts
+│   │   │   ├── main.ts
+│   │   │   ├── app.module.ts
+│   │   │   ├── providers/
+│   │   │   ├── common/
+│   │   │   ├── recordings/
+│   │   │   ├── transcripts/
+│   │   │   ├── summaries/
+│   │   │   ├── hooks/
+│   │   │   ├── clips/
+│   │   │   ├── knowledge/
+│   │   │   └── jobs/
 │   │   └── package.json
 │   │
 │   └── worker/
@@ -1510,10 +1512,17 @@ mintreels/
 │   │
 │   ├── db/
 │   │   ├── src/
-│   │   │   ├── client.ts
-│   │   │   ├── schema/
-│   │   │   ├── repositories/
-│   │   │   └── migrations/
+│   │   │   ├── data-source.ts
+│   │   │   ├── db.module.ts
+│   │   │   ├── entities/
+│   │   │   └── repositories/
+│   │   └── package.json
+│   │
+│   ├── schema/
+│   │   ├── src/
+│   │   │   ├── common.ts
+│   │   │   ├── recordings.ts
+│   │   │   └── ...
 │   │   └── package.json
 │   │
 │   ├── storage/
@@ -1600,16 +1609,18 @@ Never commit actual credentials.
 
 # 39. Docker Development
 
-Initial `docker-compose.yml` should provide:
+`docker compose up` should provide the full local stack:
 
 ```text
-postgres
+mysql (MySQL 8)
+phpmyadmin (:8080)
 redis
+api (:3000)
+worker
+web (:5173)
 ```
 
-Application services can run locally during development.
-
-Do not introduce Kubernetes at this stage.
+Source is bind-mounted; Node `--watch` reloads api/worker. Do not introduce Kubernetes at this stage.
 
 ---
 
@@ -1731,7 +1742,7 @@ PyAI is the default implementation and core infrastructure.
 
 ## No unnecessary duplication
 
-Do not duplicate PyAI Knowledge Base vectors/embeddings in PostgreSQL.
+Do not duplicate PyAI Knowledge Base vectors/embeddings in MySQL.
 
 ## Async by default
 
@@ -1787,7 +1798,9 @@ When using this document as context, Cursor should:
 | Frontend | React + React Router |
 | UI | ShadCN |
 | Language | TypeScript |
-| Database | PostgreSQL |
+| HTTP API | NestJS |
+| Database | MySQL 8 + TypeORM |
+| Validation / DTOs | Zod (`@mintreels/schema`) |
 | Queue | Redis + BullMQ |
 | Media | FFmpeg |
 | Object storage | S3-compatible |

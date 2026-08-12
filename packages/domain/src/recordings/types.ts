@@ -9,12 +9,12 @@ export type RecordingStatus =
   | 'failed';
 
 export interface Recording {
-  id: string;
+  id: number;
   title: string;
   storageKey: string;
   durationMs?: number;
   status: RecordingStatus;
-  knowledgeBaseId?: string;
+  knowledgeBaseId?: number;
   createdAt: Date;
   updatedAt: Date;
 }

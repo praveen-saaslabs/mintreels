@@ -5,7 +5,7 @@ import { idSchema, timestampsSchema } from './common';
  * knowledge_bases / knowledge_documents — docs/architecture.md §12
  *
  * scope: recording | global
- * Postgres stores provider metadata IDs only (no embeddings).
+ * MySQL stores provider metadata IDs only (no embeddings).
  */
 export const knowledgeBaseScopeSchema = z.enum(['recording', 'global']);
 

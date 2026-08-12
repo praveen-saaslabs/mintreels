@@ -1,9 +1,9 @@
 export type ClipStatus = 'queued' | 'rendering' | 'ready' | 'failed';
 
 export interface Clip {
-  id: string;
-  recordingId: string;
-  hookId?: string;
+  id: number;
+  recordingId: number;
+  hookId?: number;
   title: string;
   startMs: number;
   endMs: number;
@@ -14,8 +14,8 @@ export interface Clip {
 }
 
 export interface CreateClipInput {
-  recordingId: string;
-  hookId?: string;
+  recordingId: number;
+  hookId?: number;
   title: string;
   startMs: number;
   endMs: number;

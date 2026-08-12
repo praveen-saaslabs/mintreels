@@ -1,0 +1,11 @@
+export { User } from './user.entity';
+export { Project } from './project.entity';
+export { Recording } from './recording.entity';
+export { Transcript } from './transcript.entity';
+export { TranscriptSegment } from './transcript-segment.entity';
+export { Summary } from './summary.entity';
+export { KnowledgeBase } from './knowledge-base.entity';
+export { KnowledgeDocument } from './knowledge-document.entity';
+export { Hook } from './hook.entity';
+export { Clip } from './clip.entity';
+export { Job } from './job.entity';

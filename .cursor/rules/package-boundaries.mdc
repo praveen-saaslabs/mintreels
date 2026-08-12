@@ -34,6 +34,6 @@ Use `SpeechProvider`, `LLMProvider`, `EmbeddingProvider`, `KnowledgeBaseProvider
 
 Vendor request/response types stay inside adapters (mappers). Do not leak them into domain types.
 
-## PostgreSQL stores metadata only
+## MySQL stores metadata only
 
-Keep `provider` and `provider_knowledge_base_id` (and document provider IDs). Do not store embeddings, vector chunks, or video binaries in Postgres.
+Keep `provider` and `provider_knowledge_base_id` (and document provider IDs). Do not store embeddings, vector chunks, or video binaries in MySQL.

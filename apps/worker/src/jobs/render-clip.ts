@@ -1,8 +1,8 @@
 import type { JobStatus } from '@mintreels/domain';
 
 export interface RenderClipPayload {
-  clipId: string;
-  recordingId: string;
+  clipId: number;
+  recordingId: number;
   startMs: number;
   endMs: number;
   burnSubtitles: boolean;

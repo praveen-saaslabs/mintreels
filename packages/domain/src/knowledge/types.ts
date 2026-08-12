@@ -1,48 +1,48 @@
 export type KnowledgeBaseScope = 'recording' | 'global';
 
 export interface KnowledgeBase {
-  id: string;
+  id: number;
   name: string;
   scope: KnowledgeBaseScope;
   provider: string;
   providerKnowledgeBaseId: string;
-  recordingId?: string;
+  recordingId?: number;
 }
 
 export interface KnowledgeDocument {
-  id: string;
-  knowledgeBaseId: string;
+  id: number;
+  knowledgeBaseId: number;
   providerDocumentId: string;
-  recordingId?: string;
+  recordingId?: number;
 }
 
 export interface CreateKnowledgeBaseInput {
   name: string;
   scope: KnowledgeBaseScope;
-  recordingId?: string;
+  recordingId?: number;
 }
 
 export interface AddDocumentInput {
-  knowledgeBaseId: string;
-  recordingId: string;
+  knowledgeBaseId: number;
+  recordingId: number;
   title: string;
   content: string;
 }
 
 export interface RemoveDocumentInput {
-  knowledgeBaseId: string;
-  documentId: string;
+  knowledgeBaseId: number;
+  documentId: number;
 }
 
 export interface KnowledgeSearchInput {
-  knowledgeBaseId: string;
+  knowledgeBaseId: number;
   query: string;
   limit?: number;
 }
 
 export interface KnowledgeSearchResult {
-  documentId: string;
-  recordingId?: string;
+  documentId: number;
+  recordingId?: number;
   score: number;
   excerpt: string;
 }

@@ -4,7 +4,7 @@
 
 - Node.js 20+
 - pnpm 10+
-- Docker (PostgreSQL and Redis)
+- Docker (MySQL 8, Redis, api, worker, web)
 - FFmpeg (later, for media jobs)
 
 ## Install
@@ -20,58 +20,42 @@ Fill `.env` locally. Do not commit it. Never put secrets in source files.
 
 See `.env.example`. Required later for running services:
 
-- `DATABASE_URL`
+- `DATABASE_URL` (MySQL connection string)
+- `MYSQL_ROOT_PASSWORD`, `MYSQL_USER`, `MYSQL_PASSWORD`, `MYSQL_DATABASE` for Docker Compose
 - `REDIS_URL`
 - `S3_*` for object storage
 - `PYAI_API_KEY` and `PYAI_BASE_URL` for PyAI
-- `POSTGRES_USER`, `POSTGRES_PASSWORD`, and `POSTGRES_DB` for Docker Compose
 
-## Run database
-
-```bash
-docker compose up -d postgres
-```
-
-`DATABASE_URL` should point at `127.0.0.1:5432`.
-
-## Run Redis
+## Run the full stack
 
 ```bash
-docker compose up -d redis
+docker compose up --build
 ```
 
-`REDIS_URL` should point at `127.0.0.1:6379`.
+Services:
 
-## Start web
+| Service | URL |
+| --- | --- |
+| Web | http://127.0.0.1:5173 |
+| API | http://127.0.0.1:3000 |
+| phpMyAdmin | http://127.0.0.1:8080 |
+| MySQL | `127.0.0.1:3306` |
+| Redis | `127.0.0.1:6379` |
+
+`DATABASE_URL` inside containers points at `mysql:3306`. On the host use `127.0.0.1:3306`.
+
+## Run packages locally (outside Docker)
 
 ```bash
 pnpm --filter @mintreels/web dev
+pnpm --filter @mintreels/api start
+pnpm --filter @mintreels/worker start
 ```
 
-Vite serves the UI on port 5173 and proxies `/api` to the API.
+API health: `GET http://127.0.0.1:3000/health`
 
-## Start API
+## Notes
 
-```bash
-pnpm --filter @mintreels/api dev
-```
-
-API listens on port 3000.
-
-## Start worker
-
-```bash
-pnpm --filter @mintreels/worker dev
-```
-
-Or start everything:
-
-```bash
-pnpm dev
-```
-
-## Typecheck
-
-```bash
-pnpm typecheck
-```
+- IDs are auto-increment integers (not UUIDs).
+- Validation/DTOs live in `@mintreels/schema` (zod).
+- Long-running AI/media work belongs in the worker, not HTTP handlers.

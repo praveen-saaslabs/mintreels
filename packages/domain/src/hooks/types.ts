@@ -1,6 +1,6 @@
 export interface Hook {
-  id: string;
-  recordingId: string;
+  id: number;
+  recordingId: number;
   title: string;
   rationale: string;
   startMs: number;

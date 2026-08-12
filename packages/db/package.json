@@ -16,12 +16,19 @@
     "test": "node --input-type=module -e \"console.log('no tests yet')\""
   },
   "dependencies": {
-    "drizzle-orm": "^0.38.3",
-    "postgres": "^3.4.5"
+    "@mintreels/schema": "workspace:*",
+    "@nestjs/common": "^11.0.0",
+    "@nestjs/core": "^11.0.0",
+    "@nestjs/typeorm": "^11.0.0",
+    "mysql2": "^3.23.3",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.1",
+    "typeorm": "^0.3.20"
   },
   "devDependencies": {
+    "@swc-node/register": "^1.12.1",
+    "@swc/core": "^1.15.47",
     "@types/node": "^22.10.2",
-    "drizzle-kit": "^0.30.1",
     "typescript": "^5.7.2"
   }
 }

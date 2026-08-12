@@ -1,8 +1,8 @@
 import type { JobStatus } from '@mintreels/domain';
 
 export interface SyncKnowledgeBasePayload {
-  recordingId: string;
-  knowledgeBaseId: string;
+  recordingId: number;
+  knowledgeBaseId: number;
 }
 
 export async function syncKnowledgeBase(_payload: SyncKnowledgeBasePayload): Promise<JobStatus> {

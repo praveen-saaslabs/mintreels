@@ -6,4 +6,4 @@ export const timestampsSchema = z.object({
   updatedAt: z.coerce.date(),
 });
 
-export const idSchema = z.string().min(1);
+export const idSchema = z.number().int().positive();

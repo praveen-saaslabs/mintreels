@@ -11,8 +11,9 @@ MintReels is a transcript-first video intelligence and clipping product. Source 
 
 - Monorepo: pnpm + Turborepo
 - Web: React, React Router, ShadCN, TypeScript
-- API: Hono
-- Data: PostgreSQL (Drizzle)
+- API: NestJS
+- Data: MySQL 8 (TypeORM)
+- Validation: Zod (`@mintreels/schema`)
 - Queue: Redis + BullMQ
 - Media: FFmpeg
 - Storage: S3-compatible
@@ -28,7 +29,7 @@ Use TypeScript with strict typing. Prefer small, composable services.
 - **Async by default** — long-running work belongs in workers.
 - **Clear failures** — every job has a visible state and reason.
 - **Bounded retries** — never retry forever.
-- **Simple infra** — Postgres + Redis + object storage. No Kubernetes.
+- **Simple infra** — MySQL + Redis + object storage. No Kubernetes.
 
 ## Do not build unless asked
 
