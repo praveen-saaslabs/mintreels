@@ -6,9 +6,11 @@ alwaysApply: false
 
 # Web
 
-React + React Router + ShadCN. Call the backend only through `apps/web/app/lib/api.ts`.
+React + React Router + ShadCN (Tailwind v4, Base UI primitives). Call the backend only through `apps/web/app/lib/api.ts`.
 
 The UI must not know retrieval is PyAI. Do not import `@mintreels/ai` providers, PyAI clients, AWS SDKs, or BullMQ.
+
+Compose ShadCN buttons with Base UI `render` (for example `render={<Link to="..." />}`). Do not use Radix `asChild`.
 
 ## Layout
 

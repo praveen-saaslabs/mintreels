@@ -1,9 +1,13 @@
+import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+
 export function IndexPage() {
   return (
-    <section>
-      <h1 className="text-2xl font-semibold">MintReels</h1>
+    <Card className="max-w-lg">
+      <CardHeader>
+        <CardTitle>MintReels</CardTitle>
+        <CardDescription>Web application skeleton. UI is not implemented yet.</CardDescription>
+      </CardHeader>
       {/* TODO: dashboard for recent recordings, jobs, and suggested hooks */}
-      <p className="mt-2 text-sm text-neutral-600">Web application skeleton. UI is not implemented yet.</p>
-    </section>
+    </Card>
   );
 }

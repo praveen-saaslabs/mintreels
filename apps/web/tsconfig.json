@@ -10,5 +10,5 @@
       "@/*": ["./app/*"]
     }
   },
-  "include": ["app", "vite.config.ts", "tailwind.config.ts"]
+  "include": ["app", "vite.config.ts"]
 }
