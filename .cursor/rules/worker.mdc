@@ -1,0 +1,38 @@
+---
+description: Background job conventions — states, gates, bounded retries, safe parallelism
+globs: apps/worker/**
+alwaysApply: false
+---
+
+# Worker
+
+Jobs live in `apps/worker/src/jobs`:
+
+- `ingest-video`
+- `transcribe`
+- `summarize`
+- `generate-hooks`
+- `sync-knowledge-base`
+- `render-clip`
+
+Use provider interfaces. Do not call PyAI or FFmpeg from HTTP.
+
+## States
+
+`queued` → `running` → `success` | `failed`
+
+Every job leaves a record (attempt, error, timestamps). No silent hangs.
+
+## Blocking gates
+
+- Transcript required before summary or hook generation.
+- Hook timestamps must be valid before clip rendering.
+- Clip must render successfully before it is marked ready.
+
+Do not publish invalid output.
+
+## Retries and parallelism
+
+Every retry has a max attempts, a reason, and a final failure state. Never retry forever.
+
+Independent jobs may run concurrently (e.g. summary + VTT + KB sync after transcript). Serialize work that mutates the same recording when required.

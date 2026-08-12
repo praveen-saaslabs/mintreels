@@ -1,0 +1,1868 @@
+# MintReels — Project Infrastructure & Architecture Record
+
+> This document captures the architecture decisions and project direction established in the MintReels project discussion. It is intended to be checked into the repository and used as persistent context for Cursor/AI coding agents.
+>
+> **Primary goal:** Build an open-source Descript-like application using PyAI as the default AI and Knowledge Base infrastructure, while keeping application capabilities behind adapter/provider interfaces.
+
+---
+
+# 1. Project Overview
+
+## Product
+
+**MintReels** is an open-source Descript-like video intelligence and clipping application.
+
+The MVP is centered around uploaded video recordings and should provide:
+
+1. List of video recordings
+2. Speech-to-text for each recording
+3. Timestamped transcript
+4. Speaker identification/diarization where available
+5. Summary
+6. VTT subtitle output
+7. Recording-level Knowledge Base
+8. Ability to add a recording to a Global Knowledge Base
+9. AI-suggested hooks from recordings
+10. Video clipping based on selected AI hooks
+11. Subtitle-burned clip exports
+
+The central product idea is:
+
+```text
+Video
+  ↓
+Transcript
+  ├── Summary
+  ├── VTT
+  ├── Knowledge Base
+  ├── Search
+  ├── AI Hooks
+  └── Video Clips
+```
+
+The timestamped transcript is the **central data model / spine of the product**.
+
+---
+
+# 2. Strategic Direction
+
+The project is intended to be an open-source alternative to products such as Descript and podcast/video clipping tools.
+
+The hackathon context describes the broader strategy as building open-source products on top of a shared PyAI API and emphasizes:
+
+- open-source credibility
+- fast setup
+- PyAI usage
+- reusable AI loops
+- capability registries
+- clear job exits
+- blocking gates
+- bounded retries
+- failure records
+- safe parallelism
+- budgets
+
+The relevant product direction includes a "Podcast Clip Factory / Descript-lite" concept:
+
+> Upload an episode, get hooks, titles and clip timestamps.
+
+MintReels should therefore be optimized for a compelling workflow:
+
+```text
+Upload video
+    ↓
+Transcript + summary
+    ↓
+Knowledge Base
+    ↓
+AI suggested hooks
+    ↓
+Select hook
+    ↓
+Render clip
+    ↓
+MP4 + subtitles
+```
+
+---
+
+# 3. Technology Direction
+
+## Frontend
+
+- React
+- React Router
+- ShadCN UI
+- TypeScript
+
+## Backend
+
+- TypeScript
+- Lightweight HTTP API framework
+- PostgreSQL
+- Redis
+- Background workers
+
+## AI
+
+- PyAI as the default provider
+- Provider/adapter interfaces around AI capabilities
+
+## Knowledge Base
+
+- PyAI Knowledge Base as the default and primary implementation
+- `KnowledgeBaseProvider` abstraction
+- No local/vector DB implementation required for MVP
+
+## Media
+
+- FFmpeg
+
+## Storage
+
+- S3-compatible object storage
+
+## Queue
+
+- Redis + BullMQ
+
+## Monorepo
+
+- pnpm
+- Turborepo
+
+---
+
+# 4. High-Level Architecture
+
+```text
+                           ┌──────────────────────┐
+                           │      React App       │
+                           │ Router + ShadCN      │
+                           └──────────┬───────────┘
+                                      │
+                                      ▼
+                           ┌──────────────────────┐
+                           │      API Server      │
+                           │                      │
+                           │ Recordings           │
+                           │ Transcripts          │
+                           │ Summaries             │
+                           │ Knowledge             │
+                           │ Hooks                 │
+                           │ Clips                 │
+                           └──────┬───────┬───────┘
+                                  │       │
+                    ┌─────────────┘       └─────────────┐
+                    ▼                                   ▼
+             ┌────────────┐                     ┌──────────────┐
+             │ PostgreSQL │                     │ Object Store │
+             │            │                     │              │
+             │ metadata   │                     │ videos       │
+             │ jobs       │                     │ audio        │
+             │ mappings   │                     │ exports      │
+             └────────────┘                     └──────────────┘
+                    │
+                    ▼
+             ┌────────────┐
+             │ Job Queue  │
+             │ Redis      │
+             └──────┬─────┘
+                    │
+                    ▼
+             ┌──────────────┐
+             │   Workers    │
+             │              │
+             │ FFmpeg       │
+             │ PyAI Hear    │
+             │ Summarizer   │
+             │ Hook finder  │
+             │ KB sync      │
+             │ Clip render  │
+             └───────┬──────┘
+                     │
+          ┌──────────┴───────────┐
+          ▼                      ▼
+   ┌─────────────┐       ┌─────────────────────┐
+   │    PyAI     │       │ KnowledgeBaseAdapter│
+   │             │       │                     │
+   │ Hear        │       │       PyAI KB       │
+   │ LLM         │       │                     │
+   └─────────────┘       └─────────────────────┘
+```
+
+---
+
+# 5. Architectural Principle: Provider/Adapter Boundaries
+
+The application should own product/domain logic.
+
+PyAI should provide capabilities.
+
+Do **not** scatter PyAI-specific calls throughout the application.
+
+Use:
+
+```text
+MintReels Domain
+       ↓
+Capability Interface
+       ↓
+Provider / Adapter
+       ↓
+PyAI
+```
+
+Examples:
+
+```text
+SpeechProvider
+LLMProvider
+EmbeddingProvider
+KnowledgeBaseProvider
+StorageProvider
+QueueProvider
+```
+
+The first implementation is PyAI.
+
+Future providers can be added without rewriting product logic.
+
+---
+
+# 6. PyAI Dependency Strategy
+
+MintReels is intentionally dependent on PyAI for its default AI and Knowledge Base infrastructure.
+
+This is different from making PyAI an implementation detail that can be removed immediately.
+
+The intended architecture is:
+
+```text
+MintReels
+    │
+    ├── AI capability
+    │      └── PyAI provider
+    │
+    └── Knowledge capability
+           └── PyAI KB adapter
+```
+
+PyAI is the **default and primary infrastructure**, but the application code communicates through interfaces.
+
+Environment configuration:
+
+```env
+AI_PROVIDER=pyai
+KNOWLEDGE_BASE_PROVIDER=pyai
+```
+
+---
+
+# 7. Knowledge Base Architecture
+
+## Decision
+
+The app should use **PyAI's hosted Knowledge Base as the primary Knowledge Base implementation**.
+
+Do not build a local Postgres/pgvector Knowledge Base for MVP.
+
+The application should maintain only metadata and provider IDs in PostgreSQL.
+
+It should not own:
+
+- embeddings
+- vector storage
+- PyAI KB chunks
+- PyAI KB retrieval internals
+
+---
+
+# 8. Knowledge Base Adapter
+
+Create:
+
+```text
+packages/knowledge/
+└── src/
+    ├── provider.ts
+    ├── types.ts
+    ├── errors.ts
+    └── adapters/
+        └── pyai/
+            ├── client.ts
+            ├── knowledge-base.ts
+            └── mapper.ts
+```
+
+The application uses:
+
+```ts
+KnowledgeBaseProvider
+```
+
+The PyAI implementation lives only under:
+
+```text
+adapters/pyai/
+```
+
+---
+
+# 9. KnowledgeBaseProvider Interface
+
+Initial interface:
+
+```ts
+export interface KnowledgeBaseProvider {
+  createKnowledgeBase(
+    input: CreateKnowledgeBaseInput
+  ): Promise<KnowledgeBase>;
+
+  getKnowledgeBase(
+    id: string
+  ): Promise<KnowledgeBase>;
+
+  deleteKnowledgeBase(
+    id: string
+  ): Promise<void>;
+
+  addDocument(
+    input: AddDocumentInput
+  ): Promise<KnowledgeDocument>;
+
+  removeDocument(
+    input: RemoveDocumentInput
+  ): Promise<void>;
+
+  search(
+    input: KnowledgeSearchInput
+  ): Promise<KnowledgeSearchResult[]>;
+}
+```
+
+The interface must describe MintReels's needs rather than mirror PyAI's raw API.
+
+PyAI-specific request/response types belong inside the adapter.
+
+---
+
+# 10. Recording Knowledge Bases
+
+Each recording can have a dedicated Knowledge Base.
+
+Conceptually:
+
+```text
+Recording A
+    ↓
+PyAI KB A
+
+Recording B
+    ↓
+PyAI KB B
+
+Recording C
+    ↓
+PyAI KB C
+```
+
+After transcription:
+
+```text
+Video
+  ↓
+Transcript
+  ↓
+Create Recording KB
+  ↓
+Add transcript as a source/document
+```
+
+The Recording KB should be used for questions and retrieval constrained to that recording.
+
+---
+
+# 11. Global Knowledge Base
+
+The project also has one Global Knowledge Base.
+
+Conceptually:
+
+```text
+                    Global KB
+                   PyAI KB XYZ
+                       ▲
+                       │
+             ┌─────────┼─────────┐
+             │         │         │
+          Rec A      Rec B     Rec C
+```
+
+When the user chooses:
+
+```text
+Add to Global Knowledge Base
+```
+
+the backend uses `KnowledgeBaseProvider` to add the recording's source/document to the Global PyAI KB.
+
+Do not copy embeddings into PostgreSQL.
+
+---
+
+# 12. Knowledge Base Database Metadata
+
+PostgreSQL should contain:
+
+```text
+knowledge_bases
+-------------------------
+id
+project_id
+name
+scope
+provider
+provider_knowledge_base_id
+created_at
+updated_at
+```
+
+Where:
+
+```text
+scope:
+  recording
+  global
+```
+
+Example:
+
+```text
+id                           kb_rec_123
+scope                        recording
+recording_id                 rec_456
+provider                     pyai
+provider_knowledge_base_id  kb_abc123
+```
+
+Global example:
+
+```text
+id                           kb_global
+scope                        global
+provider                     pyai
+provider_knowledge_base_id  kb_xyz789
+```
+
+For documents:
+
+```text
+knowledge_documents
+-------------------------
+id
+knowledge_base_id
+provider_document_id
+recording_id
+source_type
+title
+created_at
+```
+
+This gives MintReels its own stable application-level identity while PyAI owns the actual Knowledge Base contents.
+
+---
+
+# 13. Knowledge Search Flow
+
+```text
+User:
+"What did we say about pricing?"
+            │
+            ▼
+     MintReels API
+            │
+            ▼
+ KnowledgeBaseProvider.search()
+            │
+            ▼
+         PyAI KB
+            │
+            ▼
+    Relevant passages
+            │
+            ▼
+           LLM
+            │
+            ▼
+     Answer + sources
+```
+
+The UI should not know that the retrieval is performed by PyAI.
+
+---
+
+# 14. AI Provider Architecture
+
+Create:
+
+```text
+packages/ai/
+└── src/
+    ├── speech-provider.ts
+    ├── llm-provider.ts
+    ├── embedding-provider.ts
+    └── providers/
+        └── pyai/
+            ├── client.ts
+            ├── speech.ts
+            └── llm.ts
+```
+
+## SpeechProvider
+
+```ts
+export interface SpeechProvider {
+  transcribe(
+    input: TranscriptionInput
+  ): Promise<Transcript>;
+}
+```
+
+## LLMProvider
+
+```ts
+export interface LLMProvider {
+  summarize(
+    transcript: Transcript
+  ): Promise<Summary>;
+
+  generateHooks(
+    transcript: Transcript
+  ): Promise<Hook[]>;
+}
+```
+
+## EmbeddingProvider
+
+```ts
+export interface EmbeddingProvider {
+  embed(
+    text: string
+  ): Promise<number[]>;
+}
+```
+
+Even though the current Knowledge Base is PyAI-hosted, keep the embedding capability interface available for future provider implementations.
+
+---
+
+# 15. Recording Data Model
+
+Core database/domain entities:
+
+```text
+users
+projects
+recordings
+transcripts
+transcript_segments
+summaries
+knowledge_bases
+knowledge_documents
+hooks
+clips
+jobs
+```
+
+---
+
+# 16. Recording Model
+
+Conceptually:
+
+```text
+recordings
+-----------
+id
+project_id
+title
+original_filename
+storage_key
+duration_ms
+width
+height
+status
+created_at
+updated_at
+```
+
+Recording status:
+
+```text
+uploaded
+processing
+ready
+failed
+```
+
+---
+
+# 17. Transcript Model
+
+The canonical transcript should be stored as timestamped segments.
+
+Do not use one giant transcript string as the primary representation.
+
+```ts
+export interface TranscriptSegment {
+  id: string;
+  sequence: number;
+  startMs: number;
+  endMs: number;
+  speaker?: string;
+  text: string;
+}
+```
+
+Database concept:
+
+```text
+transcript_segments
+-------------------
+id
+recording_id
+sequence
+start_ms
+end_ms
+speaker
+text
+```
+
+Example:
+
+```json
+{
+  "start_ms": 12450,
+  "end_ms": 18320,
+  "speaker": "speaker_1",
+  "text": "The biggest mistake founders make is..."
+}
+```
+
+---
+
+# 18. VTT Architecture
+
+VTT is an export artifact.
+
+The canonical representation remains timestamped transcript segments.
+
+Flow:
+
+```text
+TranscriptSegment[]
+        ↓
+VTT generator
+        ↓
+recording.vtt
+```
+
+This makes the transcript reusable for:
+
+- transcript UI
+- search
+- summary
+- hooks
+- clipping
+- subtitle export
+
+---
+
+# 19. Video Processing Pipeline
+
+The primary recording pipeline:
+
+```text
+Upload Video
+    ↓
+Object Storage
+    ↓
+Create Recording DB row
+    ↓
+Queue transcription job
+    ↓
+Extract audio using FFmpeg
+    ↓
+PyAI Speech Provider
+    ↓
+Timestamped Transcript
+    ├───────────────┐
+    ↓               ↓
+Generate VTT     Generate Summary
+    ↓               ↓
+    └───────┬───────┘
+            ↓
+     Create Recording KB
+            ↓
+      Generate Hooks
+            ↓
+          Ready
+```
+
+Long-running operations must be background jobs.
+
+Do not hold HTTP requests open for transcription or video rendering.
+
+---
+
+# 20. PyAI Speech-to-Text
+
+The application should use the PyAI speech capability for transcription.
+
+For batch/video processing, use an asynchronous transcription job model rather than keeping an HTTP request open.
+
+Expected transcription output should be normalized into MintReels's transcript model.
+
+If the provider supports:
+
+- timestamps
+- speaker diarization
+- VTT
+
+use those capabilities.
+
+The application should not depend directly on PyAI response formats outside the PyAI adapter/provider implementation.
+
+---
+
+# 21. Summary Generation
+
+After transcription:
+
+```text
+Transcript
+    ↓
+LLM
+    ├── Summary
+    ├── Key points
+    ├── Topics
+    ├── Action items
+    └── Important quotes
+```
+
+Important quotes and claims should ideally carry transcript timestamps.
+
+Example:
+
+```json
+{
+  "quote": "The biggest mistake founders make...",
+  "start_ms": 12450,
+  "end_ms": 18320
+}
+```
+
+This allows downstream features to remain grounded in the original video.
+
+---
+
+# 22. Hook Generation
+
+Hook generation is a major product feature.
+
+Do not ask the LLM to blindly return arbitrary clips.
+
+Instead:
+
+## Step 1 — Generate candidate transcript windows
+
+Candidate windows can be based on:
+
+- strong statements
+- surprising claims
+- questions
+- punchlines
+- emotional moments
+- stories
+- contrarian opinions
+- useful advice
+- high information density
+
+Candidate durations can include:
+
+```text
+15 sec
+30 sec
+45 sec
+60 sec
+90 sec
+```
+
+## Step 2 — Score candidates
+
+Example:
+
+```json
+{
+  "start_ms": 12450,
+  "end_ms": 42100,
+  "hook": "The biggest mistake founders make...",
+  "score": 0.91,
+  "reason": "Strong opening and actionable insight",
+  "title": "The Biggest Mistake Founders Make"
+}
+```
+
+Potential score dimensions:
+
+```text
+Hook strength
+Standalone context
+Emotional interest
+Information density
+Shareability
+```
+
+The UI should show suggested hooks and allow the user to preview or create a clip.
+
+---
+
+# 23. Clip Architecture
+
+When the user selects a hook:
+
+```text
+POST /api/clips
+```
+
+Example conceptual input:
+
+```json
+{
+  "recording_id": "rec_123",
+  "start_ms": 12400,
+  "end_ms": 42100,
+  "subtitle_style": "word_highlight"
+}
+```
+
+The clip becomes a background job.
+
+Pipeline:
+
+```text
+Selected Hook
+      ↓
+Clip Job
+      ↓
+FFmpeg
+      ├── trim
+      ├── crop/resize
+      ├── subtitle generation
+      ├── subtitle burn-in
+      └── encode
+      ↓
+clip.mp4
+clip.vtt
+thumbnail.jpg
+```
+
+---
+
+# 24. FFmpeg
+
+FFmpeg owns media processing.
+
+It should eventually support:
+
+- trim
+- crop
+- resize
+- audio normalization
+- subtitle overlay
+- thumbnail generation
+- final encoding
+
+Potential export formats:
+
+```text
+16:9
+9:16
+1:1
+```
+
+Do not implement a complete nonlinear video editor for MVP.
+
+---
+
+# 25. Subtitle Data
+
+Subtitles should remain structured before rendering.
+
+Example:
+
+```json
+[
+  {
+    "start": 12.4,
+    "end": 14.1,
+    "text": "The biggest mistake"
+  },
+  {
+    "start": 14.1,
+    "end": 15.8,
+    "text": "founders make is..."
+  }
+]
+```
+
+The same data can be used to:
+
+- create VTT
+- display transcript
+- synchronize video playback
+- burn subtitles
+- support word highlighting later
+
+---
+
+# 26. Frontend Architecture
+
+Recommended application structure:
+
+```text
+apps/web/
+└── app/
+    ├── routes/
+    │   ├── _index.tsx
+    │   ├── recordings.tsx
+    │   ├── recordings.$id.tsx
+    │   ├── knowledge.tsx
+    │   └── clips.tsx
+    │
+    ├── components/
+    │   ├── recordings/
+    │   ├── transcript/
+    │   ├── video/
+    │   ├── hooks/
+    │   ├── knowledge/
+    │   └── ui/
+    │
+    └── lib/
+        ├── api.ts
+        └── utils.ts
+```
+
+---
+
+# 27. Recording Detail Page
+
+The main recording page should eventually contain:
+
+```text
+┌─────────────────────────────────────────────────────────────┐
+│ ← Recordings       My Podcast Episode 12       [Export]      │
+├──────────────────────────────┬──────────────────────────────┤
+│                              │                              │
+│                              │ Transcript                   │
+│          VIDEO               │                              │
+│                              │ 00:12                        │
+│             ▶                │ The biggest mistake founders │
+│                              │ make is...                   │
+│                              │                              │
+├──────────────────────────────┴──────────────────────────────┤
+│ Summary                                                     │
+│ The recording discusses...                                  │
+├─────────────────────────────────────────────────────────────┤
+│ AI HOOKS                                                    │
+│                                                             │
+│ The biggest mistake... [91] [Create clip]                  │
+│ Nobody tells you...     [88] [Create clip]                 │
+├─────────────────────────────────────────────────────────────┤
+│ Knowledge Base                                              │
+│                                                             │
+│ [Recording KB] [Add to Global KB]                           │
+└─────────────────────────────────────────────────────────────┘
+```
+
+---
+
+# 28. API Surface
+
+Initial API:
+
+## Recordings
+
+```http
+POST   /api/recordings
+GET    /api/recordings
+GET    /api/recordings/:id
+DELETE /api/recordings/:id
+```
+
+## Transcript
+
+```http
+GET /api/recordings/:id/transcript
+GET /api/recordings/:id/transcript.vtt
+```
+
+## Summary
+
+```http
+GET  /api/recordings/:id/summary
+POST /api/recordings/:id/summary
+```
+
+## Knowledge
+
+```http
+GET  /api/knowledge-bases
+POST /api/knowledge-bases
+
+POST /api/recordings/:id/add-to-global-kb
+```
+
+## Hooks
+
+```http
+GET  /api/recordings/:id/hooks
+POST /api/recordings/:id/hooks/generate
+```
+
+## Clips
+
+```http
+POST /api/clips
+GET  /api/clips/:id
+GET  /api/clips/:id/download
+```
+
+---
+
+# 29. Background Jobs
+
+Every expensive operation is a job.
+
+Initial job types:
+
+```text
+VIDEO_INGEST
+TRANSCRIBE
+GENERATE_SUMMARY
+SYNC_KNOWLEDGE_BASE
+GENERATE_HOOKS
+RENDER_CLIP
+```
+
+Job model:
+
+```text
+jobs
+----
+id
+type
+recording_id
+status
+attempt
+max_attempts
+error
+started_at
+finished_at
+metadata
+```
+
+Job states:
+
+```text
+queued
+  ↓
+running
+  ↓
+success
+```
+
+or:
+
+```text
+running
+  ↓
+failed
+  ↓
+retry
+  ↓
+failed permanently
+```
+
+---
+
+# 30. Reliability / Harness Principles
+
+The worker architecture should support the following principles:
+
+## Named loop
+
+Every job has a clear outcome:
+
+```text
+success
+partial
+failed
+```
+
+## Blocking gates
+
+Do not publish invalid output.
+
+Examples:
+
+- transcript required before summary
+- transcript required before hook generation
+- hook timestamps must be valid before clip rendering
+- clip must render successfully before it is marked ready
+
+## Bounded retries
+
+Every retry must have:
+
+- a maximum number of attempts
+- the reason for retry
+- final failure state
+
+Never retry forever.
+
+## Failure invariant
+
+Every job leaves a record.
+
+No silent hangs.
+
+## Safe parallelism
+
+Independent jobs may run concurrently.
+
+Operations that mutate the same resource should be serialized where required.
+
+## Budget awareness
+
+Long-running AI/media operations should eventually support:
+
+- token limits
+- time limits
+- cost limits
+- retry limits
+
+---
+
+# 31. Storage Architecture
+
+Use an S3-compatible object storage provider.
+
+Store:
+
+```text
+recordings/
+    original.mp4
+
+audio/
+    recording.wav
+
+exports/
+    recording.vtt
+    clip.mp4
+    clip.vtt
+
+thumbnails/
+    recording.jpg
+    clip.jpg
+```
+
+PostgreSQL stores object keys, not video binaries.
+
+---
+
+# 32. StorageProvider
+
+Create:
+
+```ts
+export interface StorageProvider {
+  upload(
+    input: UploadInput
+  ): Promise<StoredObject>;
+
+  download(
+    key: string
+  ): Promise<ReadableStream>;
+
+  getSignedUrl(
+    key: string
+  ): Promise<string>;
+
+  delete(
+    key: string
+  ): Promise<void>;
+}
+```
+
+Initial implementation:
+
+```text
+S3-compatible storage
+```
+
+The design should allow AWS S3, Cloudflare R2, MinIO, etc.
+
+---
+
+# 33. QueueProvider
+
+Create:
+
+```ts
+export interface QueueProvider {
+  enqueue<T>(
+    job: Job<T>
+  ): Promise<void>;
+}
+```
+
+Initial implementation:
+
+```text
+Redis + BullMQ
+```
+
+---
+
+# 34. Repository Structure
+
+Use a monorepo:
+
+```text
+mintreels/
+├── apps/
+│   ├── web/
+│   ├── api/
+│   └── worker/
+│
+├── packages/
+│   ├── domain/
+│   ├── db/
+│   ├── ai/
+│   ├── knowledge/
+│   ├── media/
+│   ├── storage/
+│   ├── queue/
+│   └── config/
+│
+├── tests/
+│   ├── integration/
+│   └── e2e/
+│
+├── docs/
+│   ├── architecture.md
+│   ├── development.md
+│   └── providers.md
+│
+├── scripts/
+│   ├── setup.ts
+│   └── seed.ts
+│
+├── docker/
+│   ├── Dockerfile.web
+│   ├── Dockerfile.api
+│   └── Dockerfile.worker
+│
+├── .env.example
+├── .gitignore
+├── docker-compose.yml
+├── package.json
+├── pnpm-workspace.yaml
+├── turbo.json
+├── README.md
+└── LICENSE
+```
+
+---
+
+# 35. Detailed Package Boundaries
+
+## apps/web
+
+Application/runtime.
+
+Depends on API contracts and UI/domain types.
+
+Should not directly import PyAI.
+
+## apps/api
+
+HTTP API.
+
+Coordinates domain services and jobs.
+
+Should not directly contain vendor-specific PyAI logic.
+
+## apps/worker
+
+Executes background jobs.
+
+Uses provider interfaces.
+
+## packages/domain
+
+Product/domain logic.
+
+Contains:
+
+```text
+recordings/
+transcripts/
+summaries/
+hooks/
+clips/
+knowledge/
+```
+
+## packages/ai
+
+AI capability interfaces and provider implementations.
+
+## packages/knowledge
+
+Knowledge Base capability interface and adapters.
+
+## packages/media
+
+FFmpeg/media processing.
+
+## packages/storage
+
+Object storage abstraction.
+
+## packages/queue
+
+Background queue abstraction.
+
+## packages/db
+
+PostgreSQL schema and repositories.
+
+## packages/config
+
+Shared configuration and environment validation.
+
+---
+
+# 36. Recommended Initial Folder Structure
+
+For the 33-hour hackathon/MVP, start with:
+
+```text
+mintreels/
+├── apps/
+│   ├── web/
+│   ├── api/
+│   └── worker/
+│
+├── packages/
+│   ├── db/
+│   ├── ai/
+│   ├── knowledge/
+│   │   └── adapters/
+│   │       └── pyai/
+│   ├── media/
+│   ├── storage/
+│   └── queue/
+│
+├── docs/
+├── scripts/
+├── docker/
+├── docker-compose.yml
+├── .env.example
+├── package.json
+├── pnpm-workspace.yaml
+├── turbo.json
+├── README.md
+└── LICENSE
+```
+
+Do not over-engineer the first release.
+
+In particular, do not implement:
+
+- local KB
+- Kubernetes
+- billing
+- multi-region infrastructure
+- collaborative editing
+- full nonlinear video editor
+- advanced authentication
+
+unless explicitly required later.
+
+---
+
+# 37. Suggested Detailed Folder Structure
+
+```text
+mintreels/
+├── apps/
+│   ├── web/
+│   │   ├── app/
+│   │   │   ├── routes/
+│   │   │   │   ├── _index.tsx
+│   │   │   │   ├── recordings.tsx
+│   │   │   │   ├── recordings.$id.tsx
+│   │   │   │   ├── knowledge.tsx
+│   │   │   │   └── clips.tsx
+│   │   │   │
+│   │   │   ├── components/
+│   │   │   │   ├── recordings/
+│   │   │   │   ├── transcript/
+│   │   │   │   ├── video/
+│   │   │   │   ├── hooks/
+│   │   │   │   ├── knowledge/
+│   │   │   │   └── ui/
+│   │   │   │
+│   │   │   ├── lib/
+│   │   │   │   ├── api.ts
+│   │   │   │   └── utils.ts
+│   │   │   │
+│   │   │   └── root.tsx
+│   │   ├── public/
+│   │   └── package.json
+│   │
+│   ├── api/
+│   │   ├── src/
+│   │   │   ├── routes/
+│   │   │   │   ├── recordings.ts
+│   │   │   │   ├── transcripts.ts
+│   │   │   │   ├── knowledge.ts
+│   │   │   │   ├── hooks.ts
+│   │   │   │   └── clips.ts
+│   │   │   │
+│   │   │   ├── middleware/
+│   │   │   ├── controllers/
+│   │   │   ├── services/
+│   │   │   ├── app.ts
+│   │   │   └── server.ts
+│   │   └── package.json
+│   │
+│   └── worker/
+│       ├── src/
+│       │   ├── jobs/
+│       │   │   ├── ingest-video.ts
+│       │   │   ├── transcribe.ts
+│       │   │   ├── summarize.ts
+│       │   │   ├── generate-hooks.ts
+│       │   │   ├── sync-knowledge-base.ts
+│       │   │   └── render-clip.ts
+│       │   │
+│       │   ├── queues/
+│       │   ├── processors/
+│       │   └── worker.ts
+│       └── package.json
+│
+├── packages/
+│   ├── domain/
+│   │   ├── recordings/
+│   │   ├── transcripts/
+│   │   ├── summaries/
+│   │   ├── hooks/
+│   │   ├── clips/
+│   │   └── knowledge/
+│   │
+│   ├── ai/
+│   │   ├── src/
+│   │   │   ├── speech-provider.ts
+│   │   │   ├── llm-provider.ts
+│   │   │   ├── embedding-provider.ts
+│   │   │   └── providers/
+│   │   │       └── pyai/
+│   │   │           ├── client.ts
+│   │   │           ├── speech.ts
+│   │   │           └── llm.ts
+│   │   └── package.json
+│   │
+│   ├── knowledge/
+│   │   ├── src/
+│   │   │   ├── provider.ts
+│   │   │   ├── types.ts
+│   │   │   ├── errors.ts
+│   │   │   └── adapters/
+│   │   │       └── pyai/
+│   │   │           ├── client.ts
+│   │   │           ├── knowledge-base.ts
+│   │   │           └── mapper.ts
+│   │   └── package.json
+│   │
+│   ├── media/
+│   │   ├── src/
+│   │   │   ├── ffmpeg.ts
+│   │   │   ├── audio.ts
+│   │   │   ├── video.ts
+│   │   │   ├── subtitles.ts
+│   │   │   └── thumbnails.ts
+│   │   └── package.json
+│   │
+│   ├── db/
+│   │   ├── src/
+│   │   │   ├── client.ts
+│   │   │   ├── schema/
+│   │   │   ├── repositories/
+│   │   │   └── migrations/
+│   │   └── package.json
+│   │
+│   ├── storage/
+│   │   ├── src/
+│   │   │   ├── provider.ts
+│   │   │   └── s3.ts
+│   │   └── package.json
+│   │
+│   ├── queue/
+│   │   ├── src/
+│   │   │   ├── provider.ts
+│   │   │   └── bullmq.ts
+│   │   └── package.json
+│   │
+│   └── config/
+│       ├── src/
+│       │   └── index.ts
+│       └── package.json
+│
+├── tests/
+│   ├── integration/
+│   └── e2e/
+│
+├── docs/
+│   ├── architecture.md
+│   ├── development.md
+│   └── providers.md
+│
+├── scripts/
+│   ├── setup.ts
+│   └── seed.ts
+│
+├── docker/
+│   ├── Dockerfile.web
+│   ├── Dockerfile.api
+│   └── Dockerfile.worker
+│
+├── docker-compose.yml
+├── .env.example
+├── .gitignore
+├── package.json
+├── pnpm-workspace.yaml
+├── turbo.json
+├── README.md
+└── LICENSE
+```
+
+---
+
+# 38. Environment Configuration
+
+Initial `.env.example`:
+
+```env
+NODE_ENV=development
+
+# Database
+DATABASE_URL=
+
+# Redis
+REDIS_URL=
+
+# Object storage
+S3_ENDPOINT=
+S3_REGION=
+S3_BUCKET=
+S3_ACCESS_KEY_ID=
+S3_SECRET_ACCESS_KEY=
+
+# PyAI
+PYAI_API_KEY=
+PYAI_BASE_URL=
+
+# Providers
+AI_PROVIDER=pyai
+KNOWLEDGE_BASE_PROVIDER=pyai
+STORAGE_PROVIDER=s3
+QUEUE_PROVIDER=bullmq
+```
+
+Never commit actual credentials.
+
+---
+
+# 39. Docker Development
+
+Initial `docker-compose.yml` should provide:
+
+```text
+postgres
+redis
+```
+
+Application services can run locally during development.
+
+Do not introduce Kubernetes at this stage.
+
+---
+
+# 40. API → Worker Flow
+
+Example:
+
+```text
+POST /api/recordings
+        ↓
+Create DB recording
+        ↓
+Upload / register object
+        ↓
+Enqueue VIDEO_INGEST
+        ↓
+Return recording ID
+```
+
+Worker:
+
+```text
+VIDEO_INGEST
+    ↓
+Extract audio
+    ↓
+TRANSCRIBE
+    ↓
+GENERATE_SUMMARY
+    ↓
+SYNC_KNOWLEDGE_BASE
+    ↓
+GENERATE_HOOKS
+```
+
+Jobs may be parallelized where safe.
+
+For example:
+
+```text
+Transcript
+   ├── Summary
+   ├── VTT
+   ├── KB sync
+   └── Hook generation
+```
+
+---
+
+# 41. Product Priorities
+
+Build in this order:
+
+## Phase 1
+
+```text
+Upload
+  ↓
+Storage
+  ↓
+Transcription
+  ↓
+Transcript
+  ↓
+VTT
+```
+
+## Phase 2
+
+```text
+Transcript
+  ├── Summary
+  └── Recording KB
+```
+
+## Phase 3
+
+```text
+Recording KB
+     ↓
+Add to Global KB
+     ↓
+Search
+```
+
+## Phase 4
+
+```text
+Transcript
+     ↓
+AI Hooks
+     ↓
+User selection
+     ↓
+FFmpeg
+     ↓
+Clip + subtitles
+```
+
+The MVP success case:
+
+> Upload a video and get transcript, summary, searchable knowledge, and suggested clips.
+
+---
+
+# 42. Design Principles
+
+## Transcript-first
+
+The transcript is the central representation.
+
+## Provider abstraction
+
+All external capabilities are accessed through interfaces.
+
+## PyAI-first
+
+PyAI is the default implementation and core infrastructure.
+
+## No unnecessary duplication
+
+Do not duplicate PyAI Knowledge Base vectors/embeddings in PostgreSQL.
+
+## Async by default
+
+Long-running work belongs in workers.
+
+## Clear failures
+
+Every job has a visible state and failure reason.
+
+## Bounded retries
+
+Never retry indefinitely.
+
+## Simple infrastructure
+
+Prefer a few understandable services over a large distributed system.
+
+## OSS-friendly
+
+A developer should be able to understand the architecture and replace a provider without rewriting the product.
+
+---
+
+# 43. Cursor Implementation Instructions
+
+When using this document as context, Cursor should:
+
+1. Treat this document as the current architecture record.
+2. Preserve the provider/adapter boundaries.
+3. Treat PyAI as the default AI and Knowledge Base provider.
+4. Do not introduce a local Knowledge Base unless explicitly requested.
+5. Do not bypass `KnowledgeBaseProvider`.
+6. Do not import PyAI directly into frontend/domain code.
+7. Keep vendor-specific types inside provider/adapter directories.
+8. Use TypeScript.
+9. Use strict typing.
+10. Keep background operations asynchronous.
+11. Prefer small, composable services.
+12. Avoid premature infrastructure.
+13. Update this architecture record when a major architecture decision changes.
+14. Do not silently change the storage, queue, AI provider, or KB strategy.
+15. Ask before making a major architectural change.
+
+---
+
+# 44. Current Architectural Decisions
+
+| Decision | Current choice |
+|---|---|
+| Repository | Monorepo |
+| Package manager | pnpm |
+| Build orchestration | Turborepo |
+| Frontend | React + React Router |
+| UI | ShadCN |
+| Language | TypeScript |
+| Database | PostgreSQL |
+| Queue | Redis + BullMQ |
+| Media | FFmpeg |
+| Object storage | S3-compatible |
+| STT | PyAI |
+| LLM | PyAI/default provider |
+| Knowledge Base | PyAI KB |
+| KB abstraction | `KnowledgeBaseProvider` |
+| Local KB | Not implemented |
+| Vector DB | Not implemented separately |
+| Background processing | Worker |
+| Transcript source of truth | Timestamped transcript segments |
+| Subtitle format | VTT |
+| Clip generation | FFmpeg |
+| AI hooks | LLM + transcript timestamps |
+
+---
+
+# 45. Explicit Non-Goals for Initial MVP
+
+Do not implement unless requested:
+
+- Full Descript-style timeline editor
+- Multi-user real-time collaboration
+- Comments
+- Billing
+- Enterprise permissions
+- Kubernetes
+- Microservices
+- Self-hosted vector database
+- Local LLM
+- Local STT
+- Provider marketplace
+- Advanced video effects
+- Advanced animations
+- Automated social posting
+- Mobile applications
+
+The goal is a focused, working video intelligence and clipping pipeline rather than a complete clone of Descript.
+
+---
+
+# 46. Target End State
+
+The desired architecture can be summarized as:
+
+```text
+                         OPEN DESCRIPT
+                              │
+              ┌───────────────┴────────────────┐
+              │                                │
+         Product Domain                  Capability Layer
+              │                                │
+              │                 ┌──────────────┼──────────────┐
+              │                 │              │              │
+              │              AI Provider    Knowledge      Media
+              │                 │           Provider       Provider
+              │                 │              │              │
+              │              PyAI           PyAI KB        FFmpeg
+              │
+              ▼
+       Timestamped Transcript
+              │
+       ┌──────┼───────────┬─────────────┐
+       │      │           │             │
+    Summary  VTT        KB           Hooks
+                                      │
+                                      ▼
+                                   Clip
+                                      │
+                                      ▼
+                               MP4 + subtitles
+```
+
+The central architectural idea is:
+
+> **MintReels owns the product experience and domain model. PyAI provides the AI and Knowledge Base capabilities through explicit provider/adapter boundaries.**
+
+This document is the source of truth for the current project architecture.

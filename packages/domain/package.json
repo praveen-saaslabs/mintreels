@@ -1,0 +1,21 @@
+{
+  "name": "@mintreels/domain",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc --noEmit",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "test": "node --experimental-vm-modules --input-type=module -e \"console.log('no tests yet')\""
+  },
+  "devDependencies": {
+    "typescript": "^5.7.2"
+  }
+}

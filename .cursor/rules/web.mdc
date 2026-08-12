@@ -1,0 +1,23 @@
+---
+description: MintReels web UI conventions — React, ShadCN, API client, no vendor leakage
+globs: apps/web/**
+alwaysApply: false
+---
+
+# Web
+
+React + React Router + ShadCN. Call the backend only through `apps/web/app/lib/api.ts`.
+
+The UI must not know retrieval is PyAI. Do not import `@mintreels/ai` providers, PyAI clients, AWS SDKs, or BullMQ.
+
+## Layout
+
+Keep feature components under `app/components/{recordings,transcript,video,hooks,knowledge,ui}`.
+
+Recording detail is the main surface: video player, timestamped transcript, summary, AI hooks with “create clip”, and KB actions (recording KB / add to global KB).
+
+## Do not
+
+- Build a nonlinear timeline editor.
+- Talk to PyAI or object storage from the browser.
+- Bypass the API for transcription, search, or clip rendering.

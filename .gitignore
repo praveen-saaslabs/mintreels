@@ -1,0 +1,16 @@
+node_modules
+dist
+build
+.turbo
+.cache
+coverage
+*.log
+.DS_Store
+
+.env
+.env.local
+.env.*.local
+
+*.tsbuildinfo
+.vite
+.react-router

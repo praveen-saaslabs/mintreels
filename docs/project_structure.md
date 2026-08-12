@@ -1,0 +1,86 @@
+# Architecture
+
+MintReels is a TypeScript monorepo for video intelligence: upload recordings, transcribe them, generate summaries and VTT, maintain knowledge bases, suggest hooks, and export clips.
+
+## Monorepo
+
+| Path | Package | Role |
+| --- | --- | --- |
+| `apps/web` | `@mintreels/web` | React UI |
+| `apps/api` | `@mintreels/api` | HTTP API |
+| `apps/worker` | `@mintreels/worker` | Background jobs |
+| `packages/domain` | `@mintreels/domain` | Domain types and rules |
+| `packages/db` | `@mintreels/db` | PostgreSQL metadata |
+| `packages/ai` | `@mintreels/ai` | Speech, LLM, embeddings |
+| `packages/knowledge` | `@mintreels/knowledge` | Knowledge Base provider |
+| `packages/media` | `@mintreels/media` | FFmpeg-based media ops |
+| `packages/storage` | `@mintreels/storage` | Object storage |
+| `packages/queue` | `@mintreels/queue` | Job queue |
+
+Applications depend on provider **interfaces**, not vendor SDKs. PyAI-specific code lives only in:
+
+- `packages/ai/src/providers/pyai`
+- `packages/knowledge/src/adapters/pyai`
+
+## API
+
+The API is a Hono app (`apps/api`). HTTP handlers enqueue work; they do not run transcription, summarization, KB sync, hook generation, or clip rendering inline.
+
+Placeholder routes:
+
+- `POST/GET /api/recordings`
+- `GET/DELETE /api/recordings/:id`
+- `GET /api/recordings/:id/transcript`
+- `GET /api/recordings/:id/transcript.vtt`
+- `GET /api/recordings/:id/summary`
+- `POST /api/recordings/:id/add-to-global-kb`
+- `GET /api/recordings/:id/hooks`
+- `POST /api/recordings/:id/hooks/generate`
+- `GET/POST /api/knowledge-bases`
+- `POST /api/clips`
+- `GET /api/clips/:id`
+
+## Worker
+
+Jobs in `apps/worker/src/jobs`:
+
+- `ingest-video`
+- `transcribe`
+- `summarize`
+- `generate-hooks`
+- `sync-knowledge-base`
+- `render-clip`
+
+Each job is `queued`, `running`, then `success` or `failed`, with bounded retries.
+
+## AI providers
+
+`SpeechProvider`, `LLMProvider`, and `EmbeddingProvider` are defined in `@mintreels/ai`. PyAI is the default implementation, selected with `AI_PROVIDER=pyai`.
+
+## Knowledge Base adapter
+
+`KnowledgeBaseProvider` is the only KB API the app uses. PostgreSQL stores `provider` and `provider_knowledge_base_id` (and document provider IDs). Embeddings stay in the provider. A local/pgvector adapter is intentionally not implemented.
+
+Scopes:
+
+- **Recording KB** — one knowledge base per recording
+- **Global KB** — project-wide; `add-to-global-kb` adds a recording document through the provider
+
+## Storage
+
+`StorageProvider` is implemented with the official AWS SDK against S3-compatible stores (AWS S3, Cloudflare R2, MinIO).
+
+## Queue
+
+`QueueProvider.enqueue` is implemented with Redis + BullMQ.
+
+## Media pipeline
+
+```text
+Video Upload → Object Storage → Recording
+  → INGEST_VIDEO → Extract Audio
+  → SpeechProvider → Timestamped Transcript
+  → VTT + Summary → Recording KB → Hooks → Ready
+```
+
+Clip pipeline: selected hook → clip job → FFmpeg (trim / crop / subtitles / encode) → exported MP4.

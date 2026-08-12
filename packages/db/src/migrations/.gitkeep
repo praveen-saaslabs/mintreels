@@ -1,0 +1,3 @@
+-- Placeholder for Drizzle/SQL migrations.
+-- PostgreSQL stores application metadata and provider IDs only.
+-- Do not store PyAI embeddings or vector data here.

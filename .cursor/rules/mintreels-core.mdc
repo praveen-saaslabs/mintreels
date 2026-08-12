@@ -1,0 +1,39 @@
+---
+description: MintReels product identity, stack, design principles, and MVP non-goals
+alwaysApply: true
+---
+
+# MintReels Core
+
+MintReels is a transcript-first video intelligence and clipping product. Source of truth: `docs/architecture.md`.
+
+## Stack
+
+- Monorepo: pnpm + Turborepo
+- Web: React, React Router, ShadCN, TypeScript
+- API: Hono
+- Data: PostgreSQL (Drizzle)
+- Queue: Redis + BullMQ
+- Media: FFmpeg
+- Storage: S3-compatible
+- AI / KB: PyAI (default)
+
+Use TypeScript with strict typing. Prefer small, composable services.
+
+## Principles
+
+- **Transcript-first** — timestamped segments are the spine of the product.
+- **Provider interfaces** — apps talk to capabilities, not vendors.
+- **PyAI-first** — default AI and Knowledge Base implementation.
+- **Async by default** — long-running work belongs in workers.
+- **Clear failures** — every job has a visible state and reason.
+- **Bounded retries** — never retry forever.
+- **Simple infra** — Postgres + Redis + object storage. No Kubernetes.
+
+## Do not build unless asked
+
+Local KB / pgvector, local STT / LLM, Kubernetes, billing, collab editing, full timeline editor, mobile apps, microservices, provider marketplace.
+
+## Architecture changes
+
+Ask before changing storage, queue, AI, or KB strategy. When a major decision changes, update `docs/architecture.md`.

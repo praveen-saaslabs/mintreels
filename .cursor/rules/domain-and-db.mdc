@@ -1,0 +1,36 @@
+---
+description: Transcript-first domain model and PostgreSQL metadata conventions
+globs: packages/domain/**,packages/db/**
+alwaysApply: false
+---
+
+# Domain and Database
+
+The canonical transcript is timestamped segments, not one giant string. VTT is an export artifact.
+
+```ts
+export interface TranscriptSegment {
+  id: string;
+  sequence: number;
+  startMs: number;
+  endMs: number;
+  speaker?: string;
+  text: string;
+}
+```
+
+## Recordings
+
+Statuses: `uploaded` | `processing` | `ready` | `failed`.
+
+Postgres (Drizzle in `packages/db`) stores metadata and object keys, never video binaries or embeddings.
+
+## Knowledge bases
+
+Scopes: `recording` (one KB per recording) and `global` (one project-wide KB).
+
+Store `provider` and `provider_knowledge_base_id`. “Add to global KB” goes through `KnowledgeBaseProvider` — do not copy vectors into PostgreSQL.
+
+## Domain package
+
+`packages/domain` holds product types and rules (`recordings`, `transcripts`, `summaries`, `hooks`, `clips`, `knowledge`, `jobs`). It must not import providers or vendor SDKs.

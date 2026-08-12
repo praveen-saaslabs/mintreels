@@ -1,0 +1,36 @@
+---
+description: Hono API conventions — enqueue work, do not run long jobs inline
+globs: apps/api/**
+alwaysApply: false
+---
+
+# API
+
+The API is a Hono app (`apps/api/src/app.ts`). Handlers create metadata, enqueue jobs, and return IDs. They do not run transcription, summarization, KB sync, hook generation, or FFmpeg.
+
+```ts
+// ❌ BAD
+app.post('/api/recordings/:id/transcribe', async (c) => {
+  const transcript = await speech.transcribe(input);
+  return c.json(transcript);
+});
+
+// ✅ GOOD
+app.post('/api/recordings', async (c) => {
+  const recording = await createRecording(input);
+  await queue.enqueue({ name: 'ingest-video', payload: { recordingId: recording.id } });
+  return c.json({ id: recording.id }, 201);
+});
+```
+
+## Route surface
+
+- `POST/GET /api/recordings`, `GET/DELETE /api/recordings/:id`
+- `GET /api/recordings/:id/transcript`, `GET /api/recordings/:id/transcript.vtt`
+- `GET/POST /api/recordings/:id/summary`
+- `POST /api/recordings/:id/add-to-global-kb`
+- `GET /api/recordings/:id/hooks`, `POST /api/recordings/:id/hooks/generate`
+- `GET/POST /api/knowledge-bases`
+- `POST /api/clips`, `GET /api/clips/:id`
+
+Wire providers at the composition root. Do not import PyAI or vendor SDKs in routes, controllers, or services.

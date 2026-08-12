@@ -1,0 +1,39 @@
+---
+description: MintReels package import boundaries and provider/adapter placement
+alwaysApply: true
+---
+
+# Package Boundaries
+
+MintReels owns product/domain logic. PyAI (and other vendors) provide capabilities through adapters.
+
+```text
+MintReels Domain → Capability Interface → Provider/Adapter → Vendor
+```
+
+## Never import vendors here
+
+`apps/web`, `apps/api`, and `packages/domain` must not import PyAI, AWS SDKs, BullMQ, or FFmpeg.
+
+```ts
+// ❌ BAD — in apps/api or packages/domain
+import { PyAIClient } from '@mintreels/ai/providers/pyai';
+
+// ✅ GOOD — depend on the interface
+import type { SpeechProvider } from '@mintreels/ai';
+```
+
+## Apps depend on interfaces
+
+Use `SpeechProvider`, `LLMProvider`, `EmbeddingProvider`, `KnowledgeBaseProvider`, `StorageProvider`, `QueueProvider`. Wire concrete implementations only at composition roots (`apps/api/src/providers.ts`, worker bootstrap).
+
+## PyAI lives only here
+
+- `packages/ai/src/providers/pyai`
+- `packages/knowledge/src/adapters/pyai`
+
+Vendor request/response types stay inside adapters (mappers). Do not leak them into domain types.
+
+## PostgreSQL stores metadata only
+
+Keep `provider` and `provider_knowledge_base_id` (and document provider IDs). Do not store embeddings, vector chunks, or video binaries in Postgres.

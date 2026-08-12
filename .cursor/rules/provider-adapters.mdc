@@ -1,0 +1,41 @@
+---
+description: Provider/adapter conventions for AI, knowledge, storage, and queue packages
+globs: packages/ai/**,packages/knowledge/**,packages/storage/**,packages/queue/**
+alwaysApply: false
+---
+
+# Provider Adapters
+
+Interfaces describe MintReels needs. They must not mirror a vendor’s raw API.
+
+```ts
+// ❌ BAD — PyAI-shaped interface
+transcribePyAIHear(req: PyAIHearRequest): Promise<PyAIHearResponse>
+
+// ✅ GOOD — product-shaped interface
+transcribe(input: TranscriptionInput): Promise<Transcript>
+```
+
+## Defaults
+
+```env
+AI_PROVIDER=pyai
+KNOWLEDGE_BASE_PROVIDER=pyai
+STORAGE_PROVIDER=s3
+QUEUE_PROVIDER=bullmq
+```
+
+## Placement
+
+- AI interfaces: `packages/ai/src/{speech,llm,embedding}-provider.ts`
+- PyAI AI: `packages/ai/src/providers/pyai/`
+- KB interface: `packages/knowledge/src/provider.ts`
+- PyAI KB: `packages/knowledge/src/adapters/pyai/` (mapper keeps vendor types inside)
+- Storage: `packages/storage/src/provider.ts` + `s3.ts` via official `@aws-sdk/*` (no hand-rolled SigV4)
+- Queue: `packages/queue/src/provider.ts` + `bullmq.ts`
+
+## Do not
+
+- Add a local / pgvector Knowledge Base adapter.
+- Store embeddings in PostgreSQL.
+- Call vendor SDKs from apps or `packages/domain`.

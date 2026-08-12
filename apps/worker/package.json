@@ -1,0 +1,28 @@
+{
+  "name": "@mintreels/worker",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/worker.ts",
+    "build": "tsc --noEmit",
+    "start": "tsx src/worker.ts",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "test": "node --input-type=module -e \"console.log('no tests yet')\""
+  },
+  "dependencies": {
+    "@mintreels/ai": "workspace:*",
+    "@mintreels/db": "workspace:*",
+    "@mintreels/domain": "workspace:*",
+    "@mintreels/knowledge": "workspace:*",
+    "@mintreels/media": "workspace:*",
+    "@mintreels/queue": "workspace:*",
+    "@mintreels/storage": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  }
+}
