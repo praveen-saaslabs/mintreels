@@ -1,5 +1,15 @@
-import { Body, Controller, Delete, Get, Param, ParseIntPipe, Post } from '@nestjs/common';
 import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  ParseIntPipe,
+  Post,
+  UseGuards,
+} from '@nestjs/common';
+import {
+  ApiCookieAuth,
   ApiCreatedResponse,
   ApiNoContentResponse,
   ApiNotFoundResponse,
@@ -7,7 +17,11 @@ import {
   ApiOperation,
   ApiParam,
   ApiTags,
+  ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
+import { AuthGuard } from '../auth/auth.guard';
+import { CurrentUser } from '../auth/current-user.decorator';
+import type { RequestUser } from '../auth/auth.types';
 import { ZodValidationPipe } from '../common/zod-validation.pipe';
 import {
   createRecordingRequestSchema,
@@ -16,6 +30,9 @@ import {
 import { RecordingsService } from './recordings.service';
 
 @ApiTags('Recordings')
+@ApiCookieAuth('auth_token')
+@ApiUnauthorizedResponse({ description: 'UNAUTHORIZED' })
+@UseGuards(AuthGuard)
 @Controller('api/recordings')
 export class RecordingsController {
   constructor(private readonly recordingsService: RecordingsService) {}
@@ -24,16 +41,17 @@ export class RecordingsController {
   @ApiCreatedResponse({ description: 'Recording created; ingest job enqueued' })
   @Post()
   create(
+    @CurrentUser() user: RequestUser,
     @Body(new ZodValidationPipe(createRecordingRequestSchema)) body: CreateRecordingRequest,
   ) {
-    return this.recordingsService.create(body);
+    return this.recordingsService.create(body, user.id);
   }
 
-  @ApiOperation({ summary: 'List all recordings' })
+  @ApiOperation({ summary: 'List recordings for the current user' })
   @ApiOkResponse({ description: 'Array of recording objects' })
   @Get()
-  list() {
-    return this.recordingsService.list();
+  list(@CurrentUser() user: RequestUser) {
+    return this.recordingsService.list(user.id);
   }
 
   @ApiOperation({ summary: 'Get a single recording by ID' })
@@ -41,8 +59,8 @@ export class RecordingsController {
   @ApiOkResponse({ description: 'Recording object' })
   @ApiNotFoundResponse({ description: 'Recording not found' })
   @Get(':id')
-  getById(@Param('id', ParseIntPipe) id: number) {
-    return this.recordingsService.getById(id);
+  getById(@CurrentUser() user: RequestUser, @Param('id', ParseIntPipe) id: number) {
+    return this.recordingsService.getById(id, user.id);
   }
 
   @ApiOperation({ summary: 'Delete a recording' })
@@ -50,8 +68,8 @@ export class RecordingsController {
   @ApiNoContentResponse({ description: 'Recording deleted' })
   @ApiNotFoundResponse({ description: 'Recording not found' })
   @Delete(':id')
-  remove(@Param('id', ParseIntPipe) id: number) {
-    return this.recordingsService.remove(id);
+  remove(@CurrentUser() user: RequestUser, @Param('id', ParseIntPipe) id: number) {
+    return this.recordingsService.remove(id, user.id);
   }
 
   @ApiOperation({ summary: 'Add recording to the global knowledge base' })
@@ -59,7 +77,10 @@ export class RecordingsController {
   @ApiOkResponse({ description: 'KB sync job enqueued' })
   @ApiNotFoundResponse({ description: 'Recording not found' })
   @Post(':id/add-to-global-kb')
-  addToGlobalKnowledgeBase(@Param('id', ParseIntPipe) id: number) {
-    return this.recordingsService.addToGlobalKnowledgeBase(id);
+  addToGlobalKnowledgeBase(
+    @CurrentUser() user: RequestUser,
+    @Param('id', ParseIntPipe) id: number,
+  ) {
+    return this.recordingsService.addToGlobalKnowledgeBase(id, user.id);
   }
 }

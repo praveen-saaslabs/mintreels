@@ -12,6 +12,9 @@ export class Project implements ProjectRow {
   @PrimaryGeneratedColumn('increment')
   id!: number;
 
+  @Column({ type: 'int', name: 'user_id' })
+  userId!: number;
+
   @Column({ type: 'text' })
   name!: string;
 

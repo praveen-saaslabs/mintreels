@@ -1,10 +1,13 @@
-import { Body, Controller, Get, Post } from '@nestjs/common';
+import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
 import {
+  ApiCookieAuth,
   ApiCreatedResponse,
   ApiOkResponse,
   ApiOperation,
   ApiTags,
+  ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
+import { AuthGuard } from '../auth/auth.guard';
 import { ZodValidationPipe } from '../common/zod-validation.pipe';
 import {
   createKnowledgeBaseRequestSchema,
@@ -13,6 +16,9 @@ import {
 import { KnowledgeService } from './knowledge.service';
 
 @ApiTags('Knowledge Bases')
+@ApiCookieAuth('auth_token')
+@ApiUnauthorizedResponse({ description: 'UNAUTHORIZED' })
+@UseGuards(AuthGuard)
 @Controller('api/knowledge-bases')
 export class KnowledgeController {
   constructor(private readonly knowledgeService: KnowledgeService) {}
