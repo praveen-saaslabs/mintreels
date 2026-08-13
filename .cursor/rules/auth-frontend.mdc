@@ -1,0 +1,18 @@
+---
+description: Frontend auth contract — cookies, /api/auth, no JWT in JS
+globs: apps/web/**
+alwaysApply: false
+---
+
+# Frontend authentication
+
+Read `docs/auth-frontend.md` before adding login/signup/verify UI.
+
+- Call the API only through `apps/web/app/lib/api.ts` with `credentials: 'include'`.
+- Never read, decode, or store the JWT. It is an HTTP-only `auth_token` cookie.
+- Never send `Authorization: Bearer`.
+- Public routes: `/login`, `/signup`, `/verify-email`. Everything else waits on `GET /api/auth/me`.
+- JSON is camelCase. User ids are integers.
+- No forgot-password, OAuth, or refresh-token UI.
+- Do not put `SMTP_*`, `JWT_SECRET`, or `PYAI_*` in Vite env.
+- Do not add auth unit/UI tests until explicitly requested.

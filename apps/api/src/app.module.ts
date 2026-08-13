@@ -4,6 +4,7 @@ import { DbModule } from '@mintreels/db';
 import { AllExceptionsFilter } from './common/all-exceptions.filter';
 import { HealthController } from './health.controller';
 import { migrations } from './migrations';
+import { AuthModule } from './auth/auth.module';
 import { ProvidersModule } from './providers/providers.module';
 import { RecordingsModule } from './recordings/recordings.module';
 import { TranscriptsModule } from './transcripts/transcripts.module';
@@ -17,6 +18,7 @@ import { JobsModule } from './jobs/jobs.module';
   imports: [
     DbModule.forRoot({ migrations, migrationsRun: true }),
     ProvidersModule,
+    AuthModule,
     RecordingsModule,
     TranscriptsModule,
     SummariesModule,

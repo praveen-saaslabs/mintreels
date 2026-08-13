@@ -10,15 +10,29 @@ export const userRowSchema = z
     id: idSchema,
     email: z.string().email(),
     name: z.string().nullable(),
+    passwordHash: z.string().min(1),
+    emailVerified: z.boolean(),
+    emailVerificationCodeHash: z.string().nullable(),
+    emailVerificationExpiresAt: z.coerce.date().nullable(),
   })
   .merge(timestampsSchema);
 
 export const userInsertSchema = userRowSchema.partial({
   id: true,
   name: true,
+  emailVerified: true,
+  emailVerificationCodeHash: true,
+  emailVerificationExpiresAt: true,
   createdAt: true,
   updatedAt: true,
 });
 
+export const userPublicSchema = userRowSchema.pick({
+  id: true,
+  email: true,
+  emailVerified: true,
+});
+
 export type UserRow = z.infer<typeof userRowSchema>;
 export type UserInsert = z.infer<typeof userInsertSchema>;
+export type UserPublic = z.infer<typeof userPublicSchema>;

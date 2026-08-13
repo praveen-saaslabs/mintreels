@@ -8,12 +8,15 @@ export class UserRepository extends Repository<User> {
     super(User, dataSource.createEntityManager());
   }
 
-  // TODO: implement user persistence
-  async list(): Promise<User[]> {
-    throw new Error('UserRepository.list is not implemented');
+  async findById(id: number): Promise<User | null> {
+    return this.findOneBy({ id });
   }
 
-  async findById(_id: number): Promise<User | null> {
-    throw new Error('UserRepository.findById is not implemented');
+  async findByEmail(email: string): Promise<User | null> {
+    return this.findOneBy({ email });
+  }
+
+  async list(): Promise<User[]> {
+    return this.find();
   }
 }

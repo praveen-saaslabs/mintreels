@@ -1,10 +1,26 @@
 export { idSchema, timestampsSchema } from './common';
 export {
   userInsertSchema,
+  userPublicSchema,
   userRowSchema,
   type UserInsert,
+  type UserPublic,
   type UserRow,
 } from './users';
+export {
+  authUserResponseSchema,
+  loginRequestSchema,
+  resendVerificationRequestSchema,
+  signupRequestSchema,
+  signupResponseSchema,
+  verifyEmailRequestSchema,
+  type AuthUserResponse,
+  type LoginRequest,
+  type ResendVerificationRequest,
+  type SignupRequest,
+  type SignupResponse,
+  type VerifyEmailRequest,
+} from './auth';
 export {
   projectInsertSchema,
   projectRowSchema,

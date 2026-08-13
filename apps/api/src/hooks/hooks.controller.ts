@@ -1,15 +1,21 @@
-import { Controller, Get, Param, ParseIntPipe, Post } from '@nestjs/common';
+import { Controller, Get, Param, ParseIntPipe, Post, UseGuards } from '@nestjs/common';
 import {
   ApiAcceptedResponse,
+  ApiCookieAuth,
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
   ApiParam,
   ApiTags,
+  ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
+import { AuthGuard } from '../auth/auth.guard';
 import { HooksService } from './hooks.service';
 
 @ApiTags('Hooks')
+@ApiCookieAuth('auth_token')
+@ApiUnauthorizedResponse({ description: 'UNAUTHORIZED' })
+@UseGuards(AuthGuard)
 @Controller('api/recordings')
 export class HooksController {
   constructor(private readonly hooksService: HooksService) {}
