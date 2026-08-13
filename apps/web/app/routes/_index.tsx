@@ -1,13 +1,11 @@
-import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { ProjectsGrid } from '@/components/home/projects-grid';
+import { ProjectsHeader } from '@/components/home/projects-header';
 
 export function IndexPage() {
   return (
-    <Card className="max-w-lg">
-      <CardHeader>
-        <CardTitle>MintReels</CardTitle>
-        <CardDescription>Web application skeleton. UI is not implemented yet.</CardDescription>
-      </CardHeader>
-      {/* TODO: dashboard for recent recordings, jobs, and suggested hooks */}
-    </Card>
+    <div className="flex min-h-0 flex-1 flex-col gap-[22px] overflow-y-auto px-8 pt-7 pb-10">
+      <ProjectsHeader />
+      <ProjectsGrid />
+    </div>
   );
 }
