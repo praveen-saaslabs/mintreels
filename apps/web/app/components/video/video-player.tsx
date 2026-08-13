@@ -3,10 +3,6 @@ import { useRecordingId } from '@/lib/recording-id';
 import { formatTimestamp } from '@/lib/time';
 import { useEditorStore } from '@/stores/editor-store';
 
-type VideoPlayerProps = {
-  src?: string;
-};
-
 function finiteSeconds(value: number): number | undefined {
   if (!Number.isFinite(value) || value < 0) {
     return undefined;
@@ -15,8 +11,9 @@ function finiteSeconds(value: number): number | undefined {
   return value;
 }
 
-export function VideoPlayer({ src }: VideoPlayerProps) {
+export function VideoPlayer() {
   const recordingId = useRecordingId();
+  const src = useEditorStore((state) => state.video.src);
   const currentTime = useEditorStore((state) => state.video.currentTime);
   const seekEpoch = useEditorStore((state) => state.video.seekEpoch);
   const setCurrentTime = useEditorStore((state) => state.setCurrentTime);
@@ -40,7 +37,7 @@ export function VideoPlayer({ src }: VideoPlayerProps) {
       <header className="shrink-0 border-b border-white/10 px-3 py-2">
         <h2 className="text-sm font-medium text-neutral-100">Video</h2>
       </header>
-      <div className="min-h-0 flex-1">
+      <div className="min-h-0 flex-1 bg-black">
         {src ? (
           <video
             ref={videoRef}
@@ -61,6 +58,7 @@ export function VideoPlayer({ src }: VideoPlayerProps) {
               if (duration !== undefined) {
                 setDuration(duration);
               }
+              event.currentTarget.currentTime = currentTimeRef.current;
             }}
             onDurationChange={(event) => {
               const duration = finiteSeconds(event.currentTarget.duration);

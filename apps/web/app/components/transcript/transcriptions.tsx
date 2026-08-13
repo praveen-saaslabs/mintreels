@@ -1,64 +1,170 @@
+import { useMemo, useState } from 'react';
+import { SearchIcon } from 'lucide-react';
+import { SpeakerBadge } from '@/components/transcript/speaker-badge';
+import { TranscriptSegmentItem } from '@/components/transcript/transcript-segment-item';
+import { useTranscriptFollowScroll } from '@/components/transcript/use-transcript-follow-scroll';
 import { Badge } from '@/components/ui/badge';
-import { EditorPane } from '@/components/video/editor-layout';
+import { Input } from '@/components/ui/input';
 import { useRecordingId } from '@/lib/recording-id';
-import { formatTimestamp } from '@/lib/time';
-import { cn } from '@/lib/utils';
-import { useEditorStore, type EditorSegment } from '@/stores/editor-store';
+import {
+  ALL_SPEAKERS,
+  EMPTY_SEGMENTS,
+  EMPTY_WORDS,
+  findSegmentAtTime,
+  findWordAtTime,
+  groupWordsBySegment,
+  matchesSearch,
+  resolveSpeakerFilter,
+  uniqueSpeakers,
+} from '@/lib/transcript';
+import { useEditorStore, type EditorWord } from '@/stores/editor-store';
 
-function findSegmentAtTime(
-  segments: readonly EditorSegment[],
-  time: number,
-): EditorSegment | undefined {
-  return (
-    segments.find((segment) => time >= segment.start && time < segment.end) ??
-    segments.find((segment) => time === segment.end)
-  );
+function activeWordKey(word: EditorWord | undefined, segmentId: number | undefined): string | null {
+  if (word) {
+    return `${String(word.start)}:${String(word.end)}`;
+  }
+  if (segmentId !== undefined) {
+    return `segment:${String(segmentId)}`;
+  }
+  return null;
 }
 
 export function Transcriptions() {
   const recordingId = useRecordingId();
-  const segments = useEditorStore((state) => state.project?.result?.segments ?? []);
+  const segments = useEditorStore((state) => state.project?.result?.segments ?? EMPTY_SEGMENTS);
+  const words = useEditorStore((state) => state.project?.result?.words ?? EMPTY_WORDS);
   const currentTime = useEditorStore((state) => state.video.currentTime);
+  const seekEpoch = useEditorStore((state) => state.video.seekEpoch);
   const seek = useEditorStore((state) => state.seek);
+  const [speakerFilter, setSpeakerFilter] = useState(ALL_SPEAKERS);
+  const [search, setSearch] = useState('');
+
+  const speakers = useMemo(() => uniqueSpeakers(segments), [segments]);
+  const wordsBySegment = useMemo(() => groupWordsBySegment(segments, words), [segments, words]);
+  const effectiveSpeaker = resolveSpeakerFilter(speakerFilter, speakers);
+
+  const visibleSegments = useMemo(
+    () =>
+      segments.filter((segment) => {
+        if (effectiveSpeaker !== ALL_SPEAKERS && segment.speaker !== effectiveSpeaker) {
+          return false;
+        }
+        return matchesSearch(segment.text, search);
+      }),
+    [segments, effectiveSpeaker, search],
+  );
+
   const activeSegment = findSegmentAtTime(segments, currentTime);
+  const visibleActiveSegment =
+    activeSegment !== undefined && visibleSegments.some((segment) => segment.id === activeSegment.id)
+      ? activeSegment
+      : undefined;
+  const activeSegmentWords = visibleActiveSegment
+    ? (wordsBySegment.get(visibleActiveSegment.id) ?? EMPTY_WORDS)
+    : EMPTY_WORDS;
+  const activeWord = visibleActiveSegment
+    ? findWordAtTime(activeSegmentWords, currentTime)
+    : undefined;
+  const followKey = visibleActiveSegment
+    ? activeWordKey(activeWord, visibleActiveSegment.id)
+    : null;
+  const { listRef, activeWordRef, activeItemRef, pauseFollow } = useTranscriptFollowScroll(
+    followKey,
+    seekEpoch,
+  );
 
   return (
-    <EditorPane title="Transcriptions">
-      {segments.length === 0 ? (
-        <p className="text-sm text-muted-foreground">
-          No transcript yet{recordingId ? ` for recording ${String(recordingId)}` : ''}.
-        </p>
-      ) : (
-        <ol className="space-y-2">
-          {segments.map((segment) => {
-            const isActive = segment.id === activeSegment?.id;
+    <section className="flex h-full min-h-0 w-full flex-col border border-neutral-300 bg-background">
+      <header className="shrink-0 space-y-2 border-b border-neutral-200 px-3 py-2">
+        <h2 className="text-sm font-medium text-foreground">Transcriptions</h2>
+        {segments.length > 0 ? (
+          <>
+            <div className="flex flex-wrap gap-1.5" role="group" aria-label="Filter by speaker">
+              <Badge
+                variant={effectiveSpeaker === ALL_SPEAKERS ? 'default' : 'outline'}
+                className="h-6 cursor-pointer"
+                render={
+                  <button
+                    type="button"
+                    aria-pressed={effectiveSpeaker === ALL_SPEAKERS}
+                    onClick={() => setSpeakerFilter(ALL_SPEAKERS)}
+                  />
+                }
+              >
+                All Speakers
+              </Badge>
+              {speakers.map((speaker) => {
+                const selected = effectiveSpeaker === speaker;
+                return (
+                  <SpeakerBadge
+                    key={speaker}
+                    speaker={speaker}
+                    selected={selected}
+                    className="h-6 cursor-pointer"
+                    render={
+                      <button
+                        type="button"
+                        aria-pressed={selected}
+                        onClick={() => setSpeakerFilter(speaker)}
+                      />
+                    }
+                  />
+                );
+              })}
+            </div>
+            <div className="relative">
+              <SearchIcon
+                aria-hidden
+                className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground"
+              />
+              <Input
+                type="search"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Search transcript"
+                aria-label="Search transcript"
+                className="pl-8"
+                autoComplete="off"
+                spellCheck={false}
+              />
+            </div>
+          </>
+        ) : null}
+      </header>
+      <div
+        ref={listRef}
+        className="min-h-0 flex-1 overflow-auto p-3"
+        onWheel={pauseFollow}
+        onTouchMove={pauseFollow}
+      >
+        {segments.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            No transcript yet{recordingId ? ` for recording ${String(recordingId)}` : ''}.
+          </p>
+        ) : visibleSegments.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No matching transcript lines.</p>
+        ) : (
+          <ol className="space-y-2">
+            {visibleSegments.map((segment) => {
+              const isActive = segment.id === visibleActiveSegment?.id;
 
-            return (
-              <li key={segment.id}>
-                <button
-                  type="button"
-                  onClick={() => seek(segment.start)}
-                  className={cn(
-                    'w-full rounded-lg border border-transparent px-2 py-2 text-left hover:bg-muted/80',
-                    isActive && 'border-border bg-muted',
-                  )}
-                >
-                  <div className="mb-1 flex items-center gap-2">
-                    <time
-                      className="font-mono text-xs text-muted-foreground"
-                      dateTime={`${String(segment.start)}s`}
-                    >
-                      {formatTimestamp(segment.start)}
-                    </time>
-                    {segment.speaker ? <Badge variant="secondary">{segment.speaker}</Badge> : null}
-                  </div>
-                  <p className="text-sm leading-relaxed text-foreground">{segment.text}</p>
-                </button>
-              </li>
-            );
-          })}
-        </ol>
-      )}
-    </EditorPane>
+              return (
+                <TranscriptSegmentItem
+                  key={segment.id}
+                  segment={segment}
+                  isActive={isActive}
+                  words={isActive ? activeSegmentWords : undefined}
+                  activeWordStart={isActive ? activeWord?.start : undefined}
+                  activeWordEnd={isActive ? activeWord?.end : undefined}
+                  seek={seek}
+                  activeWordRef={activeWordRef}
+                  itemRef={activeItemRef}
+                />
+              );
+            })}
+          </ol>
+        )}
+      </div>
+    </section>
   );
 }

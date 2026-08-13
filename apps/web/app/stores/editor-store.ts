@@ -41,6 +41,7 @@ export type EditorVideoState = {
   duration: number;
   seekEpoch: number;
   playing: boolean;
+  src: string;
 };
 
 type EditorStore = {
@@ -49,6 +50,7 @@ type EditorStore = {
   setCurrentTime: (time: number) => void;
   setDuration: (duration: number) => void;
   setPlaying: (playing: boolean) => void;
+  setSrc: (src: string) => void;
   seek: (time: number) => void;
   resetVideo: () => void;
   setProject: (project: EditorProject | null) => void;
@@ -73,11 +75,16 @@ function clampTime(time: number, duration: number): number {
 
 const seededProject = editorProjectSeed as EditorProject;
 
-const emptyVideo = (duration = 0): EditorVideoState => ({
+export const SEEDED_VIDEO_SRC = encodeURI(
+  '/Lee Harris on Global Unrest Spiritual Awakening and Reclaiming Faith in Turbulent Times - Video.mp4',
+);
+
+const emptyVideo = (duration = 0, src = SEEDED_VIDEO_SRC): EditorVideoState => ({
   currentTime: 0,
   duration,
   seekEpoch: 0,
   playing: false,
+  src,
 });
 
 export const useEditorStore = create<EditorStore>((set, get) => ({
@@ -107,6 +114,12 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
     }));
   },
 
+  setSrc: (src) => {
+    set((state) => ({
+      video: { ...state.video, src },
+    }));
+  },
+
   seek: (time) => {
     const { duration } = get().video;
     set((state) => ({
@@ -120,7 +133,8 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
 
   resetVideo: () => {
     const duration = get().project?.result?.audio_seconds ?? 0;
-    set({ video: emptyVideo(duration) });
+    const src = get().video.src || SEEDED_VIDEO_SRC;
+    set({ video: emptyVideo(duration, src) });
   },
 
   setProject: (project) => {
