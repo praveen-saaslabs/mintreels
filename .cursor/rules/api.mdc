@@ -39,3 +39,70 @@ Use `@mintreels/schema` zod schemas as DTOs via `ZodValidationPipe`. Do not add 
 - `POST /api/clips`, `GET /api/clips/:id`
 
 Wire providers at the composition root (`providers/ProvidersModule`). Do not import PyAI or vendor SDKs in controllers or services.
+
+## Swagger (mandatory for every controller)
+
+Every controller **must** carry complete `@nestjs/swagger` decorators so FE developers have accurate docs at `/docs`.
+
+### Controller level
+
+```ts
+import { ApiTags } from '@nestjs/swagger';
+
+@ApiTags('Feature Name')   // single, human-readable group label
+@Controller('api/feature')
+export class FeatureController { ... }
+```
+
+### Every route handler
+
+Apply **all** of the following that are relevant:
+
+| Decorator | When to use |
+|-----------|-------------|
+| `@ApiOperation({ summary: '...' })` | Always — one sentence describing what the endpoint does |
+| `@ApiParam({ name: 'id', type: Number })` | Every `:param` in the path |
+| `@ApiBody({ type: ... })` | POST/PATCH/PUT with a request body |
+| `@ApiOkResponse` / `@ApiCreatedResponse` / `@ApiAcceptedResponse` | Success response — add `description` |
+| `@ApiNotFoundResponse` | When a 404 is possible |
+| `@ApiBadRequestResponse` | When validation can fail |
+| `@ApiProduces('text/vtt')` | Non-JSON response types |
+
+### Full example
+
+```ts
+import {
+  ApiCreatedResponse,
+  ApiNotFoundResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiParam,
+  ApiTags,
+} from '@nestjs/swagger';
+
+@ApiTags('Recordings')
+@Controller('api/recordings')
+export class RecordingsController {
+  @ApiOperation({ summary: 'Create a recording and enqueue ingest' })
+  @ApiCreatedResponse({ description: 'Recording created; ingest job enqueued' })
+  @Post()
+  create(@Body(new ZodValidationPipe(createRecordingRequestSchema)) body: CreateRecordingRequest) {
+    return this.recordingsService.create(body);
+  }
+
+  @ApiOperation({ summary: 'Get a recording by ID' })
+  @ApiParam({ name: 'id', type: Number })
+  @ApiOkResponse({ description: 'Recording object' })
+  @ApiNotFoundResponse({ description: 'Recording not found' })
+  @Get(':id')
+  getById(@Param('id', ParseIntPipe) id: number) {
+    return this.recordingsService.getById(id);
+  }
+}
+```
+
+### Rules
+
+- Do **not** skip `@ApiOperation` — it is the primary signal FE devs read.
+- Do **not** add `@ApiProperty` to Zod-derived types — they have no class-transformer metadata. Describe the shape with `schema: { example: ... }` inside the response decorator instead.
+- The Swagger UI is served at `/docs` (dev only; not exposed behind auth).
