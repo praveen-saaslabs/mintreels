@@ -4,9 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "tsx watch src/worker.ts",
+    "dev": "node --watch --import @swc-node/register/esm-register src/worker.ts",
     "build": "tsc --noEmit",
-    "start": "tsx src/worker.ts",
+    "start": "node --import @swc-node/register/esm-register src/worker.ts",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "test": "node --import tsx --test 'src/**/*.test.ts'"
@@ -23,6 +23,8 @@
     "reflect-metadata": "^0.2.2"
   },
   "devDependencies": {
+    "@swc-node/register": "^1.12.1",
+    "@swc/core": "^1.15.47",
     "@types/node": "^22.10.2",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2"
