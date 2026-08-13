@@ -1,6 +1,8 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import {
+  Clip,
+  ClipRepository,
   Hook,
   HookRepository,
   Job,
@@ -9,6 +11,10 @@ import {
   JobRepository,
   JobStep,
   JobStepRepository,
+  KnowledgeBase,
+  KnowledgeBaseRepository,
+  KnowledgeDocument,
+  KnowledgeDocumentRepository,
   Project,
   ProjectRepository,
   Recording,
@@ -36,6 +42,9 @@ import { RecordingsService } from './recordings.service';
       TranscriptSegment,
       Summary,
       Hook,
+      Clip,
+      KnowledgeBase,
+      KnowledgeDocument,
     ]),
     AuthModule,
   ],
@@ -51,6 +60,9 @@ import { RecordingsService } from './recordings.service';
     TranscriptSegmentRepository,
     SummaryRepository,
     HookRepository,
+    ClipRepository,
+    KnowledgeBaseRepository,
+    KnowledgeDocumentRepository,
   ],
   exports: [RecordingsService],
 })

@@ -1,9 +1,21 @@
-import { Body, Controller, Get, Param, ParseIntPipe, Post, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  ParseIntPipe,
+  Post,
+  UseGuards,
+} from '@nestjs/common';
 import {
   ApiBadRequestResponse,
   ApiConflictResponse,
   ApiCookieAuth,
   ApiCreatedResponse,
+  ApiNoContentResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
@@ -66,11 +78,10 @@ export class ClipsController {
     schema: {
       example: [
         { id: ClipFilterId.All, label: CLIP_FILTER_LABELS[ClipFilterId.All], count: 128 },
-        { id: ClipFilterId.Ready, label: CLIP_FILTER_LABELS[ClipFilterId.Ready], count: 119 },
+        { id: ClipFilterId.Queued, label: CLIP_FILTER_LABELS[ClipFilterId.Queued], count: 5 },
         { id: ClipFilterId.Rendering, label: CLIP_FILTER_LABELS[ClipFilterId.Rendering], count: 6 },
+        { id: ClipFilterId.Ready, label: CLIP_FILTER_LABELS[ClipFilterId.Ready], count: 114 },
         { id: ClipFilterId.Failed, label: CLIP_FILTER_LABELS[ClipFilterId.Failed], count: 3 },
-        { id: ClipFilterId.Ratio916, label: CLIP_FILTER_LABELS[ClipFilterId.Ratio916], count: 90 },
-        { id: ClipFilterId.Subtitled, label: CLIP_FILTER_LABELS[ClipFilterId.Subtitled], count: 80 },
       ],
     },
   })
@@ -99,5 +110,15 @@ export class ClipsController {
   @Get(':id')
   getById(@CurrentUser() user: RequestUser, @Param('id', ParseIntPipe) id: number) {
     return this.clipsService.getById(id, user.id);
+  }
+
+  @ApiOperation({ summary: 'Soft-delete a clip' })
+  @ApiParam({ name: 'id', type: Number })
+  @ApiNoContentResponse({ description: 'Clip deleted' })
+  @ApiNotFoundResponse({ description: 'Clip not found' })
+  @Delete(':id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  remove(@CurrentUser() user: RequestUser, @Param('id', ParseIntPipe) id: number) {
+    return this.clipsService.remove(id, user.id);
   }
 }

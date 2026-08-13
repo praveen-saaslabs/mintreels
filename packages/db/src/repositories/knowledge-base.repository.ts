@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { DataSource, In, Repository } from 'typeorm';
+import { DataSource, In, IsNull, Repository } from 'typeorm';
 import { KnowledgeBaseScope } from '@mintreels/schema';
 import { KnowledgeBase } from '../entities/knowledge-base.entity';
 
@@ -11,7 +11,7 @@ export class KnowledgeBaseRepository extends Repository<KnowledgeBase> {
 
   async listForUser(userId: number): Promise<KnowledgeBase[]> {
     return this.find({
-      where: { project: { userId } },
+      where: { project: { userId, deletedAt: IsNull() } },
       order: { updatedAt: 'DESC' },
     });
   }

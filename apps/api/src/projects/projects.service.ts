@@ -4,11 +4,14 @@ import {
   HookRepository,
   JobRepository,
   KnowledgeBaseRepository,
+  KnowledgeDocumentRepository,
   ProjectRepository,
   RecordingRepository,
 } from '@mintreels/db';
 import { JobActivityStatus, JobStatus, SidebarAccent } from '@mintreels/schema';
 import type { KnowledgeBaseScope } from '@mintreels/schema';
+import { HttpError } from '../common/http-error';
+import { RecordingsService } from '../recordings/recordings.service';
 
 type ProjectSummaryRow = {
   id: number;
@@ -69,7 +72,9 @@ export class ProjectsService {
     private readonly clips: ClipRepository,
     private readonly hooks: HookRepository,
     private readonly knowledgeBases: KnowledgeBaseRepository,
+    private readonly knowledgeDocuments: KnowledgeDocumentRepository,
     private readonly jobs: JobRepository,
+    private readonly recordingsService: RecordingsService,
   ) {}
 
   async list(userId: number) {
@@ -85,6 +90,25 @@ export class ProjectsService {
       recordingCount: row.recordingCount,
       accent: accent(row.runningJobCount, row.failedJobCount),
     }));
+  }
+
+  async remove(id: number, userId: number): Promise<void> {
+    const project = await this.projects.findByIdForUser(id, userId);
+    if (!project) {
+      throw new HttpError(404, 'Not found');
+    }
+
+    const recordings = await this.recordings.listByProjectIds([project.id]);
+    for (const recording of recordings) {
+      await this.recordingsService.remove(recording.id, userId);
+    }
+
+    const knowledgeBases = await this.knowledgeBases.find({ where: { projectId: project.id } });
+    for (const knowledgeBase of knowledgeBases) {
+      await this.knowledgeDocuments.softDelete({ knowledgeBaseId: knowledgeBase.id });
+    }
+    await this.knowledgeBases.softDelete({ projectId: project.id });
+    await this.projects.softRemove(project);
   }
 
   private async listSummaries(userId: number): Promise<ProjectSummaryRow[]> {

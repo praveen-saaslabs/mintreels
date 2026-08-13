@@ -196,34 +196,28 @@ export class ClipsService {
     const clips = await this.clips.listForUser(userId);
     const counts = {
       [ClipFilterId.All]: clips.length,
-      [ClipFilterId.Ready]: 0,
+      [ClipFilterId.Queued]: 0,
       [ClipFilterId.Rendering]: 0,
+      [ClipFilterId.Ready]: 0,
       [ClipFilterId.Failed]: 0,
-      [ClipFilterId.Ratio916]: 0,
-      [ClipFilterId.Subtitled]: 0,
     };
     for (const clip of clips) {
-      if (clip.status === ClipStatus.Ready) {
-        counts[ClipFilterId.Ready] += 1;
+      if (clip.status === ClipStatus.Queued) {
+        counts[ClipFilterId.Queued] += 1;
       } else if (clip.status === ClipStatus.Rendering) {
         counts[ClipFilterId.Rendering] += 1;
+      } else if (clip.status === ClipStatus.Ready) {
+        counts[ClipFilterId.Ready] += 1;
       } else if (clip.status === ClipStatus.Failed) {
         counts[ClipFilterId.Failed] += 1;
-      }
-      if (clipRatio(clip.recording?.width, clip.recording?.height) === ClipRatio.Vertical) {
-        counts[ClipFilterId.Ratio916] += 1;
-      }
-      if (clip.subtitleStyle) {
-        counts[ClipFilterId.Subtitled] += 1;
       }
     }
     return [
       ClipFilterId.All,
-      ClipFilterId.Ready,
+      ClipFilterId.Queued,
       ClipFilterId.Rendering,
+      ClipFilterId.Ready,
       ClipFilterId.Failed,
-      ClipFilterId.Ratio916,
-      ClipFilterId.Subtitled,
     ].map((id) => ({ id, label: CLIP_FILTER_LABELS[id], count: counts[id] }));
   }
 
@@ -233,6 +227,14 @@ export class ClipsService {
       throw new HttpError(404, 'Not found');
     }
     return toPublicClip(clip);
+  }
+
+  async remove(id: number, userId: number): Promise<void> {
+    const clip = await this.clips.findByIdForUser(id, userId);
+    if (!clip) {
+      throw new HttpError(404, 'Not found');
+    }
+    await this.clips.softRemove(clip);
   }
 
   private async enqueueRender(clip: Clip): Promise<void> {

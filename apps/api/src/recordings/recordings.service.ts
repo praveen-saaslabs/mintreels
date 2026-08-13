@@ -1,9 +1,13 @@
 import { Inject, Injectable } from '@nestjs/common';
+import { In } from 'typeorm';
 import {
+  ClipRepository,
   HookRepository,
   JobAuditLogRepository,
   JobRepository,
   JobStepRepository,
+  KnowledgeBaseRepository,
+  KnowledgeDocumentRepository,
   ProjectRepository,
   RecordingRepository,
   SummaryRepository,
@@ -141,6 +145,9 @@ export class RecordingsService {
     private readonly segments: TranscriptSegmentRepository,
     private readonly summaries: SummaryRepository,
     private readonly hooks: HookRepository,
+    private readonly clips: ClipRepository,
+    private readonly knowledgeBases: KnowledgeBaseRepository,
+    private readonly knowledgeDocuments: KnowledgeDocumentRepository,
     @Inject(QUEUE_PROVIDER) private readonly queue: QueueProvider,
     @Inject(VECTOR_STORE_PROVIDER) private readonly vectorStore: VectorStoreProvider,
     @Inject(TRANSCRIPT_VECTOR_STORE_PROVIDER)
@@ -400,6 +407,22 @@ export class RecordingsService {
       this.transcriptVectorStore.deleteByRecordingId(id),
     ]);
     await this.recordings.remove(recording);
+
+    const jobs = await this.jobs.find({ where: { recordingId: id }, select: ['id'] });
+    const jobIds = jobs.map((job) => job.id);
+    if (jobIds.length > 0) {
+      await this.jobAuditLogs.softDelete({ jobId: In(jobIds) });
+      await this.jobSteps.softDelete({ jobId: In(jobIds) });
+    }
+    await this.jobs.softDelete({ recordingId: id });
+    await this.clips.softDelete({ recordingId: id });
+    await this.hooks.softDelete({ recordingId: id });
+    await this.segments.softDelete({ recordingId: id });
+    await this.transcripts.softDelete({ recordingId: id });
+    await this.summaries.softDelete({ recordingId: id });
+    await this.knowledgeDocuments.softDelete({ recordingId: id });
+    await this.knowledgeBases.softDelete({ recordingId: id });
+    await this.recordings.softRemove(recording);
   }
 
   async addToGlobalKnowledgeBase(_id: number, _userId: number): Promise<never> {

@@ -159,11 +159,12 @@ export class RecordingsController {
     return this.recordingsService.getById(id, user.id);
   }
 
-  @ApiOperation({ summary: 'Delete a recording' })
+  @ApiOperation({ summary: 'Soft-delete a recording and its child rows' })
   @ApiParam({ name: 'id', type: Number })
   @ApiNoContentResponse({ description: 'Recording deleted' })
   @ApiNotFoundResponse({ description: 'Recording not found' })
   @Delete(':id')
+  @HttpCode(HttpStatus.NO_CONTENT)
   remove(@CurrentUser() user: RequestUser, @Param('id', ParseIntPipe) id: number) {
     return this.recordingsService.remove(id, user.id);
   }

@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { IsNull } from 'typeorm';
 import { ClipRepository, ProjectRepository, RecordingRepository, UserRepository } from '@mintreels/db';
 import { HttpError } from '../common/http-error';
 
@@ -48,8 +49,10 @@ export class WorkspaceService {
   async getStats(userId: number) {
     const [projectCount, recordingCount, clipCount] = await Promise.all([
       this.projects.count({ where: { userId } }),
-      this.recordings.count({ where: { project: { userId } } }),
-      this.clips.count({ where: { recording: { project: { userId } } } }),
+      this.recordings.count({ where: { project: { userId, deletedAt: IsNull() } } }),
+      this.clips.count({
+        where: { recording: { deletedAt: IsNull(), project: { userId, deletedAt: IsNull() } } },
+      }),
     ]);
     return { projectCount, recordingCount, clipCount };
   }

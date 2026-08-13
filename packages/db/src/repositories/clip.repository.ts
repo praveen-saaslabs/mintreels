@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { DataSource, In, Repository } from 'typeorm';
+import { DataSource, In, IsNull, Repository } from 'typeorm';
 import { Clip } from '../entities/clip.entity';
 
 @Injectable()
@@ -10,7 +10,9 @@ export class ClipRepository extends Repository<Clip> {
 
   async listForUser(userId: number): Promise<Clip[]> {
     return this.find({
-      where: { recording: { project: { userId } } },
+      where: {
+        recording: { deletedAt: IsNull(), project: { userId, deletedAt: IsNull() } },
+      },
       relations: { recording: { project: true } },
       order: { createdAt: 'DESC' },
     });
@@ -18,7 +20,10 @@ export class ClipRepository extends Repository<Clip> {
 
   async findByIdForUser(id: number, userId: number): Promise<Clip | null> {
     return this.findOne({
-      where: { id, recording: { project: { userId } } },
+      where: {
+        id,
+        recording: { deletedAt: IsNull(), project: { userId, deletedAt: IsNull() } },
+      },
       relations: { recording: { project: true } },
     });
   }

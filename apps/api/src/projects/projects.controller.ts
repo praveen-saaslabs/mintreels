@@ -1,8 +1,20 @@
-import { Controller, Get, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  ParseIntPipe,
+  UseGuards,
+} from '@nestjs/common';
 import {
   ApiCookieAuth,
+  ApiNoContentResponse,
+  ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
+  ApiParam,
   ApiTags,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
@@ -57,5 +69,17 @@ export class ProjectsController {
   @Get()
   list(@CurrentUser() user: RequestUser) {
     return this.projectsService.list(user.id);
+  }
+
+  @ApiOperation({
+    summary: 'Soft-delete a project and cascade-soft-delete recordings, clips, and knowledge metadata',
+  })
+  @ApiParam({ name: 'id', type: Number })
+  @ApiNoContentResponse({ description: 'Project deleted' })
+  @ApiNotFoundResponse({ description: 'Project not found' })
+  @Delete(':id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  remove(@CurrentUser() user: RequestUser, @Param('id', ParseIntPipe) id: number) {
+    return this.projectsService.remove(id, user.id);
   }
 }
