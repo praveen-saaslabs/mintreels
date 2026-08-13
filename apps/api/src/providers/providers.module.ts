@@ -1,5 +1,5 @@
 import { Global, Module } from '@nestjs/common';
-import type { EmbeddingProvider, LLMProvider, SpeechProvider } from '@mintreels/ai';
+import type { LLMProvider, SpeechProvider } from '@mintreels/ai';
 import type { KnowledgeBaseProvider } from '@mintreels/knowledge';
 import type { QueueProvider } from '@mintreels/queue';
 import type { StorageProvider } from '@mintreels/storage';
@@ -52,7 +52,7 @@ function lazy<T extends object>(factory: () => T): T {
     },
     {
       provide: LLM_PROVIDER,
-      useFactory: (): LLMProvider & EmbeddingProvider => lazy(createLLMProvider),
+      useFactory: (): LLMProvider => lazy(createLLMProvider),
     },
     {
       provide: KB_PROVIDER,

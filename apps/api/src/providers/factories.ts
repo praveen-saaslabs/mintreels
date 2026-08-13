@@ -1,5 +1,11 @@
-import { PyAIClient, PyAILLMProvider, PyAISpeechProvider } from '@mintreels/ai';
-import type { EmbeddingProvider, LLMProvider, SpeechProvider } from '@mintreels/ai';
+import {
+  OpenAICompatibleLLMProvider,
+  PyAIClient,
+  PyAISpeechProvider,
+  openAICompatibleConfigFromEnv,
+} from '@mintreels/ai';
+import type { LLMProvider, SpeechProvider } from '@mintreels/ai';
+import { EnvKey } from '@mintreels/schema';
 import { PyAIKnowledgeBaseProvider, PyAIKnowledgeClient } from '@mintreels/knowledge';
 import type { KnowledgeBaseProvider } from '@mintreels/knowledge';
 import { BullMQQueueProvider } from '@mintreels/queue';
@@ -23,12 +29,12 @@ export function createSpeechProvider(): SpeechProvider {
   return new PyAISpeechProvider(new PyAIClient());
 }
 
-export function createLLMProvider(): LLMProvider & EmbeddingProvider {
-  const provider = requireProvider('AI_PROVIDER', 'pyai');
-  if (provider !== 'pyai') {
-    throw new Error(`Unsupported AI_PROVIDER: ${provider}`);
+export function createLLMProvider(): LLMProvider {
+  const provider = requireProvider(EnvKey.LlmProvider, 'openai');
+  if (provider === 'openai' || provider === 'nvidia') {
+    return new OpenAICompatibleLLMProvider(openAICompatibleConfigFromEnv(provider));
   }
-  return new PyAILLMProvider(new PyAIClient());
+  throw new Error(`Unsupported LLM_PROVIDER: ${provider}`);
 }
 
 export function createKnowledgeBaseProvider(): KnowledgeBaseProvider {

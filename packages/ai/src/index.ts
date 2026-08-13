@@ -10,3 +10,14 @@ export {
   mapJobToSubmission,
   mapResultToCanonical,
 } from './providers/pyai';
+export {
+  DEFAULT_NVIDIA_BASE_URL,
+  DEFAULT_NVIDIA_MODEL,
+  DEFAULT_OPENAI_MODEL,
+  OpenAICompatibleLLMProvider,
+  openAICompatibleConfigFromEnv,
+} from './providers/openai-compatible';
+export type {
+  OpenAICompatibleLLMConfig,
+  OpenAICompatibleProviderId,
+} from './providers/openai-compatible';

@@ -33,20 +33,20 @@ export async function loadDomainTranscript(
 
 export function summaryHandler(deps: WorkerDeps): StepHandler {
   return async (ctx) => {
-    const existing = await deps.summaries.findByRecordingId(ctx.recordingId);
-    if (existing) {
-      return { summaryId: existing.id, skipped: true };
-    }
     const transcript = await loadDomainTranscript(deps, ctx.recordingId);
     const summary = await deps.llm.summarize(transcript);
-    const saved = await deps.summaries.save(
-      deps.summaries.create({
+    let row = await deps.summaries.findByRecordingId(ctx.recordingId);
+    if (row) {
+      row.text = summary.text;
+    } else {
+      row = deps.summaries.create({
         recordingId: ctx.recordingId,
         text: summary.text,
         actionItems: null,
         keyPoints: null,
-      }),
-    );
+      });
+    }
+    const saved = await deps.summaries.save(row);
     return { summaryId: saved.id };
   };
 }

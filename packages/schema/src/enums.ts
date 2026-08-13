@@ -122,8 +122,15 @@ export enum JobStepStatus {
 
 export enum EnvKey {
   AiProvider = 'AI_PROVIDER',
+  LlmProvider = 'LLM_PROVIDER',
   PyaiApiKey = 'PYAI_API_KEY',
   PyaiBaseUrl = 'PYAI_BASE_URL',
+  OpenaiApiKey = 'OPENAI_API_KEY',
+  OpenaiBaseUrl = 'OPENAI_BASE_URL',
+  OpenaiModel = 'OPENAI_MODEL',
+  NvidiaApiKey = 'NVIDIA_API_KEY',
+  NvidiaBaseUrl = 'NVIDIA_BASE_URL',
+  NvidiaModel = 'NVIDIA_MODEL',
   KnowledgeBaseProvider = 'KNOWLEDGE_BASE_PROVIDER',
   StorageProvider = 'STORAGE_PROVIDER',
   FilestackApiKey = 'FILESTACK_API_KEY',

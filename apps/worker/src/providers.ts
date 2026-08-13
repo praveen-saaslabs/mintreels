@@ -1,4 +1,9 @@
-import { PyAIClient, PyAILLMProvider, PyAISpeechProvider } from '@mintreels/ai';
+import {
+  OpenAICompatibleLLMProvider,
+  PyAIClient,
+  PyAISpeechProvider,
+  openAICompatibleConfigFromEnv,
+} from '@mintreels/ai';
 import type { LLMProvider, SpeechProvider } from '@mintreels/ai';
 import { FilestackStorageProvider } from '@mintreels/storage';
 import type { StorageProvider } from '@mintreels/storage';
@@ -21,11 +26,11 @@ export function createSpeechProvider(): SpeechProvider {
 }
 
 export function createLLMProvider(): LLMProvider {
-  const provider = requireProvider(EnvKey.AiProvider, 'pyai');
-  if (provider !== 'pyai') {
-    throw new Error(`Unsupported AI_PROVIDER: ${provider}`);
+  const provider = requireProvider(EnvKey.LlmProvider, 'openai');
+  if (provider === 'openai' || provider === 'nvidia') {
+    return new OpenAICompatibleLLMProvider(openAICompatibleConfigFromEnv(provider));
   }
-  return new PyAILLMProvider(new PyAIClient());
+  throw new Error(`Unsupported LLM_PROVIDER: ${provider}`);
 }
 
 export function createStorageProvider(): StorageProvider {

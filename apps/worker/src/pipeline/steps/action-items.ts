@@ -7,15 +7,15 @@ export function actionItemsHandler(deps: WorkerDeps): StepHandler {
     const transcript = await loadDomainTranscript(deps, ctx.recordingId);
     const items = await deps.llm.generateActionItems(transcript);
     let summary = await deps.summaries.findByRecordingId(ctx.recordingId);
-    if (!summary) {
+    if (summary) {
+      summary.actionItems = items;
+    } else {
       summary = deps.summaries.create({
         recordingId: ctx.recordingId,
-        text: transcript.segments.map((s) => s.text).join(' ').slice(0, 2000) || 'Transcript',
+        text: 'Summary pending.',
         actionItems: items,
         keyPoints: null,
       });
-    } else {
-      summary.actionItems = items;
     }
     const saved = await deps.summaries.save(summary);
     return { summaryId: saved.id, count: items.length };
