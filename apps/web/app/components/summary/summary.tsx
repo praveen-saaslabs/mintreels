@@ -47,6 +47,7 @@ export function Summary({ text }: SummaryProps) {
                   <HookCard
                     hook={hook}
                     selected={hook.id === selectedHookId}
+                    recordingId={recordingId}
                     onPreview={() => {
                       selectHookAndSeek(hook.id);
                     }}

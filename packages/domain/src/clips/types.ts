@@ -8,6 +8,7 @@ export interface Clip {
   startMs: number;
   endMs: number;
   storageKey?: string;
+  thumbnailStorageKey?: string;
   status: ClipStatus;
   burnSubtitles: boolean;
   createdAt: Date;

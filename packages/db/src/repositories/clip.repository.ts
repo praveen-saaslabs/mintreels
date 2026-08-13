@@ -32,4 +32,19 @@ export class ClipRepository extends Repository<Clip> {
       select: ['id', 'recordingId'],
     });
   }
+
+  async listByRecordingId(recordingId: number): Promise<Clip[]> {
+    return this.find({
+      where: { recordingId },
+      order: { createdAt: 'DESC' },
+    });
+  }
+
+  async findLatestByRecordingAndHookId(recordingId: number, hookId: number): Promise<Clip | null> {
+    return this.findOne({
+      where: { recordingId, hookId },
+      order: { createdAt: 'DESC' },
+      relations: { recording: { project: true } },
+    });
+  }
 }

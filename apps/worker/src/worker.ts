@@ -1,5 +1,6 @@
 import 'reflect-metadata';
 import {
+  ClipRepository,
   createDataSource,
   HookRepository,
   JobAuditLogRepository,
@@ -19,6 +20,7 @@ async function main(): Promise<void> {
 
   const deps = {
     recordings: new RecordingRepository(dataSource),
+    clips: new ClipRepository(dataSource),
     jobs: new JobRepository(dataSource),
     jobSteps: new JobStepRepository(dataSource),
     jobAuditLogs: new JobAuditLogRepository(dataSource),
@@ -32,7 +34,7 @@ async function main(): Promise<void> {
   };
 
   const worker = createProcessors(deps);
-  console.log('MintReels worker listening on queue mintreels for ingest-video');
+  console.log('MintReels worker listening on queue mintreels for ingest-video and render-clip');
 
   const shutdown = async () => {
     await worker.close();

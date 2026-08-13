@@ -21,6 +21,7 @@ const clipExample = {
   id: 1,
   title: 'The roadmap was never a plan',
   recordingId: 10,
+  hookId: 4,
   projectId: 2,
   projectName: 'Q3 Product Podcast',
   recordingTitle: 'Ep. 14',
@@ -28,6 +29,8 @@ const clipExample = {
   endMs: 293000,
   status: ClipStatus.Ready,
   subtitleStyle: 'bold_mint',
+  videoUrl: 'https://cdn.filestackcontent.com/HANDLE',
+  thumbnailUrl: 'https://cdn.filestackcontent.com/THUMB',
   ratio: ClipRatio.Vertical,
 };
 

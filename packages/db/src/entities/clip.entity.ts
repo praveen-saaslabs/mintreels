@@ -32,6 +32,9 @@ export class Clip implements ClipRow {
   @Column({ type: 'text', name: 'storage_key', nullable: true })
   storageKey!: string | null;
 
+  @Column({ type: 'text', name: 'thumbnail_storage_key', nullable: true })
+  thumbnailStorageKey!: string | null;
+
   @Column({ type: 'text' })
   status!: ClipStatus;
 

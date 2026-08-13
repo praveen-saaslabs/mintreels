@@ -13,9 +13,9 @@ Jobs live in `apps/worker/src/jobs`:
 - `summarize`
 - `generate-hooks`
 - `sync-knowledge-base`
-- `render-clip`
+- `render-clip` (registered; FFmpeg trim + Filestack upload)
 
-Use provider interfaces. Do not call PyAI or FFmpeg from HTTP.
+The worker currently listens for `ingest-video` and `render-clip`. Use provider interfaces. Do not call PyAI or FFmpeg from HTTP.
 
 ## States
 

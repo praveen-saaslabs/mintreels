@@ -15,6 +15,10 @@ export class HookRepository extends Repository<Hook> {
     });
   }
 
+  async findByIdAndRecordingId(id: number, recordingId: number): Promise<Hook | null> {
+    return this.findOne({ where: { id, recordingId } });
+  }
+
   async listByRecordingIds(recordingIds: number[]): Promise<Hook[]> {
     if (recordingIds.length === 0) {
       return [];

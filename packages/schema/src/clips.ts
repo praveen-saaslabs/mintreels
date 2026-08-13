@@ -23,6 +23,7 @@ export const clipRowSchema = z.object({
   endMs: z.number().int().nonnegative(),
   subtitleStyle: z.string().nullable(),
   storageKey: z.string().nullable(),
+  thumbnailStorageKey: z.string().nullable(),
   status: clipStatusSchema,
   createdAt: z.coerce.date(),
 });
@@ -32,6 +33,7 @@ export const clipInsertSchema = clipRowSchema.partial({
   hookId: true,
   subtitleStyle: true,
   storageKey: true,
+  thumbnailStorageKey: true,
   createdAt: true,
 });
 

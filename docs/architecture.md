@@ -832,13 +832,17 @@ The UI should show suggested hooks and allow the user to preview or create a cli
 
 # 23. Clip Architecture
 
-When the user selects a hook:
+When the user selects a hook (Cut clip):
 
 ```text
-POST /api/clips
+POST /api/recordings/:id/hooks/:hookId/export
 ```
 
-Example conceptual input:
+The API looks up the recording video (`storageKey`) and the hook `startMs` / `endMs`, inserts a `clips` row (`queued`, `recordingId`, `hookId`), and enqueues `render-clip`. The worker trims with FFmpeg, uploads the MP4 to Filestack, then asks Filestack for a video thumbnail (`video_convert=preset:thumbnail`, FFmpeg frame upload as fallback). It stores `clip.storageKey` + `clip.thumbnailStorageKey` and sets `status: ready` (or `failed`). The UI polls `GET /api/clips/:id` and, when ready, downloads via public `videoUrl` and shows `thumbnailUrl` (HTTPS Filestack CDN). Generic `POST /api/clips` (arbitrary ranges) and signed `GET /api/clips/:id/download` remain unimplemented (501).
+
+MVP render is **trim + encode + upload + thumbnail**. Crop, resize, subtitle burn-in, and VTT sidecar are future FFmpeg work.
+
+Example conceptual input (legacy / generic create — not the product path yet):
 
 ```json
 {
@@ -1032,6 +1036,7 @@ POST /api/recordings/:id/add-to-global-kb
 ```http
 GET  /api/recordings/:id/hooks
 POST /api/recordings/:id/hooks/generate
+POST /api/recordings/:id/hooks/:hookId/export
 ```
 
 ## Clips
@@ -1043,6 +1048,8 @@ GET  /api/clips/filters
 GET  /api/clips/:id
 GET  /api/clips/:id/download
 ```
+
+Product clip create is hook export (`POST /api/recordings/:id/hooks/:hookId/export`). Generic `POST /api/clips` and `GET /api/clips/:id/download` are still 501; the UI downloads `videoUrl` from `GET /api/clips/:id`.
 
 ## Projects
 
@@ -1207,6 +1214,10 @@ export interface StorageProvider {
   delete(
     key: string
   ): Promise<void>;
+
+  createVideoThumbnail(
+    sourceKey: string
+  ): Promise<StoredObject>;
 }
 ```
 

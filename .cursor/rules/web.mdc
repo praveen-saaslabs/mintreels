@@ -18,7 +18,7 @@ Compose ShadCN buttons with Base UI `render` (for example `render={<Link to="...
 
 Keep feature components under `app/components/{recordings,transcript,video,hooks,knowledge,ui}`.
 
-Recording detail is the main surface: video player, timestamped transcript, summary, AI hooks with “create clip”, and KB actions (recording KB / add to global KB).
+Recording detail is the main surface: video player, timestamped transcript, summary, AI hooks with **Cut clip** (export) then **download** when `videoUrl` is ready, and KB actions (recording KB / add to global KB).
 
 ## Do not
 

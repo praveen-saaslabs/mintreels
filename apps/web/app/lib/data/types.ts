@@ -50,6 +50,7 @@ export type ClipSummary = {
   id: number;
   title: string;
   recordingId: number;
+  hookId: number | null;
   projectId: number;
   projectName: string;
   recordingTitle: string;
@@ -57,6 +58,8 @@ export type ClipSummary = {
   endMs: number;
   status: ClipRenderStatus;
   subtitleStyle: string | null;
+  videoUrl: string | null;
+  thumbnailUrl: string | null;
   ratio?: '9:16' | '1:1' | '16:9';
 };
 

@@ -1,14 +1,19 @@
-import type { KeyboardEvent } from 'react';
+import { Download, Loader2 } from 'lucide-react';
+import type { KeyboardEvent, MouseEvent } from 'react';
 import { HookThumb } from '@/components/summary/hook-thumb';
 import { buttonVariants } from '@/components/ui/button';
+import { useClipDownload } from '@/hooks/use-clip-download';
+import { useHookClipExport } from '@/hooks/use-hook-clip-export';
 import { DEMO_MEDIA } from '@/lib/demo-media';
+import { clipDownloadFilename } from '@/lib/filestack-playback';
 import { formatTimestamp } from '@/lib/time';
 import { cn } from '@/lib/utils';
-import { useEditorStore, type EditorHook } from '@/stores/editor-store';
+import { useEditorStore, type EditorHook, type EditorHookStatus } from '@/stores/editor-store';
 
 type HookCardProps = {
   hook: EditorHook;
   selected: boolean;
+  recordingId?: number | undefined;
   onPreview: () => void;
 };
 
@@ -16,17 +21,56 @@ function formatHookDuration(start: number, end: number): string {
   return `${Math.max(0, Math.round(end - start))}s`;
 }
 
-export function HookCard({ hook, selected, onPreview }: HookCardProps) {
+function cutClipLabel(status: EditorHookStatus, isExporting: boolean): string {
+  if (isExporting) {
+    return 'Starting…';
+  }
+  if (status === 'queued') {
+    return 'Queued';
+  }
+  if (status === 'rendering') {
+    return 'Rendering…';
+  }
+  if (status === 'failed') {
+    return 'Retry';
+  }
+  return 'Cut clip';
+}
+
+export function HookCard({ hook, selected, recordingId, onPreview }: HookCardProps) {
   const score = hook.score;
   const mediaSrc = useEditorStore((state) => state.mediaElement?.currentSrc);
   const storeSrc = useEditorStore((state) => state.video.src);
   const videoUrl = mediaSrc || storeSrc || DEMO_MEDIA.videoUrl;
+  const { exportClip, isExporting, canExport } = useHookClipExport(recordingId, hook);
+  const { isDownloading, download } = useClipDownload();
+  const showDownload = hook.status === 'ready' && Boolean(hook.clipVideoUrl);
+  const inFlight = hook.status === 'queued' || hook.status === 'rendering' || isExporting;
+  const actionLabel = cutClipLabel(hook.status, isExporting);
 
   function onKeyDown(event: KeyboardEvent<HTMLDivElement>) {
     if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault();
       onPreview();
     }
+  }
+
+  function onCutClip(event: MouseEvent<HTMLButtonElement>) {
+    event.preventDefault();
+    event.stopPropagation();
+    if (!canExport) {
+      return;
+    }
+    exportClip();
+  }
+
+  function onDownload(event: MouseEvent<HTMLButtonElement>) {
+    event.preventDefault();
+    event.stopPropagation();
+    if (!hook.clipVideoUrl || isDownloading) {
+      return;
+    }
+    void download(hook.clipVideoUrl, clipDownloadFilename(hook.title, hook.clipId));
   }
 
   return (
@@ -37,7 +81,7 @@ export function HookCard({ hook, selected, onPreview }: HookCardProps) {
       onClick={onPreview}
       onKeyDown={onKeyDown}
       className={cn(
-        'glass flex w-full cursor-pointer items-center overflow-hidden rounded-md text-left',
+        'glass flex w-full cursor-pointer items-stretch overflow-hidden rounded-md text-left',
         'outline-none transition-[border-color,box-shadow] focus-visible:ring-2 focus-visible:ring-ring/50',
         selected
           ? 'border-[var(--mr-acc)] shadow-[var(--glass-shadow-elevated)] ring-2 ring-[color-mix(in_oklch,var(--mr-acc)_35%,transparent)]'
@@ -48,9 +92,9 @@ export function HookCard({ hook, selected, onPreview }: HookCardProps) {
         start={hook.start}
         ratio={hook.ratio}
         videoUrl={videoUrl}
-        className="aspect-[4/3] w-[128px]"
+        className="aspect-[4/3] w-[128px] self-stretch"
       />
-      <div className="flex min-w-0 flex-1 flex-col gap-1.5 p-2.5">
+      <div className="flex min-w-0 flex-1 flex-col justify-between gap-1.5 p-2.5">
         <div className="flex items-start justify-between gap-2">
           <p className="line-clamp-2 text-[13px] font-semibold leading-snug text-pretty text-foreground">
             {hook.title}
@@ -61,19 +105,40 @@ export function HookCard({ hook, selected, onPreview }: HookCardProps) {
             </span>
           ) : null}
         </div>
-        <p className="font-mono text-[11px] text-muted-foreground">
-          {formatTimestamp(hook.start)} – {formatTimestamp(hook.end)} ·{' '}
-          {formatHookDuration(hook.start, hook.end)}
-        </p>
-        <span
-          aria-hidden
-          className={cn(
-            buttonVariants({ variant: 'outline', size: 'xs' }),
-            'pointer-events-none mt-auto w-fit opacity-50',
+        <div className="flex items-center justify-between gap-2">
+          <p className="min-w-0 truncate font-mono text-[11px] text-muted-foreground">
+            {formatTimestamp(hook.start)} – {formatTimestamp(hook.end)} ·{' '}
+            {formatHookDuration(hook.start, hook.end)}
+          </p>
+          {showDownload ? (
+            <button
+              type="button"
+              aria-label={isDownloading ? `Downloading ${hook.title}` : `Download clip ${hook.title}`}
+              disabled={isDownloading}
+              onClick={onDownload}
+              className={cn(
+                buttonVariants({ variant: 'ghost', size: 'icon-xs' }),
+                'shrink-0 text-foreground',
+              )}
+            >
+              {isDownloading ? <Loader2 className="animate-spin" /> : <Download />}
+            </button>
+          ) : (
+            <button
+              type="button"
+              aria-label={actionLabel}
+              disabled={!canExport || inFlight}
+              onClick={onCutClip}
+              className={cn(
+                buttonVariants({ variant: 'outline', size: 'xs' }),
+                'shrink-0',
+                canExport && !inFlight ? '' : 'opacity-50',
+              )}
+            >
+              {actionLabel}
+            </button>
           )}
-        >
-          Cut clip
-        </span>
+        </div>
       </div>
     </div>
   );

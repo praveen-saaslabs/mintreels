@@ -66,9 +66,9 @@ export function ClipsGrid({
 
   if (isLoading) {
     return (
-      <div className="grid grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-3.5">
+      <div className="grid grid-cols-[repeat(auto-fill,minmax(180px,1fr))] items-stretch gap-3.5">
         {Array.from({ length: 8 }).map((_, index) => (
-          <div key={index} className="glass h-[320px] animate-pulse rounded-2xl" />
+          <div key={index} className="glass h-[280px] animate-pulse rounded-2xl" />
         ))}
       </div>
     );
@@ -83,7 +83,7 @@ export function ClipsGrid({
   }
 
   return (
-    <div className="grid grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-3.5">
+    <div className="grid grid-cols-[repeat(auto-fill,minmax(180px,1fr))] items-stretch gap-3.5">
       {filteredClips.map((clip) => (
         <ClipCard key={clip.id} clip={clip} />
       ))}

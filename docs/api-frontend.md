@@ -39,9 +39,10 @@ Canonical enum strings live in `@mintreels/schema` (`packages/schema/src/enums.t
 | Status | When |
 | --- | --- |
 | `401` | Missing / invalid `auth_token` cookie |
-| `400` | Non-integer `:id` |
+| `400` | Non-integer `:id`, or hook export `INVALID_HOOK_RANGE` |
 | `404` | Not found or not owned |
-| `501` | POST/enqueue not built yet (generate summary/hooks, add-to-global-kb, clip create) |
+| `409` | Hook export when recording has no video (`VIDEO_NOT_AVAILABLE`) |
+| `501` | POST/enqueue not built yet (generate summary/hooks, add-to-global-kb, generic `POST /clips`) |
 | `500` | `{ "error": "Internal server error" }` |
 
 Switch on `error`. Do not show stack traces.
@@ -62,6 +63,7 @@ All paths are under `/api`. All GETs below are implemented and cookie-scoped to 
 | — | GET | `/recordings/:id/transcript.vtt` (`text/vtt`) |
 | `getSummary(id)` | GET | `/recordings/:id/summary` |
 | `getHooks(id)` | GET | `/recordings/:id/hooks` |
+| `exportHookClip(recordingId, hookId)` | POST | `/recordings/:id/hooks/:hookId/export` |
 | `getKnowledgeBases()` | GET | `/knowledge-bases` |
 | `getClip(id)` | GET | `/clips/:id` |
 | `getClips()` | GET | `/clips` |
@@ -200,7 +202,7 @@ Same public DTO as `processing.transcript`. Times are **seconds**. `404` if reco
 
 ### Hooks — `GET /api/recordings/:id/hooks`
 
-Recording `404`; no hooks → `[]`.
+Recording `404`; no hooks → `[]`. `clip` is the latest export for that hook, or `null`.
 
 ```json
 [
@@ -213,9 +215,41 @@ Recording `404`; no hooks → `[]`.
     "startMs": 252000,
     "endMs": 293000,
     "score": 0.91,
-    "createdAt": "2026-08-13T08:00:00.000Z"
+    "createdAt": "2026-08-13T08:00:00.000Z",
+    "clip": {
+      "id": 3,
+      "status": "ready",
+      "videoUrl": "https://cdn.filestackcontent.com/HANDLE",
+      "thumbnailUrl": "https://cdn.filestackcontent.com/THUMB"
+    }
   }
 ]
+```
+
+### Hook export — `POST /api/recordings/:id/hooks/:hookId/export`
+
+Creates a `clips` row (`queued`) and enqueues `render-clip`. **202** with the public clip DTO. Poll `GET /api/clips/:id` while `status` is `queued` or `rendering`.
+
+Idempotent: in-flight (`queued`/`rendering`) or `ready` returns the existing clip; `failed` resets that row and re-enqueues.
+
+Errors: `404` recording/hook, `400 INVALID_HOOK_RANGE`, `409 VIDEO_NOT_AVAILABLE`. Never returns `storageKey`.
+
+```json
+{
+  "id": 3,
+  "title": "The roadmap was never a plan",
+  "recordingId": 10,
+  "hookId": 1,
+  "projectId": 2,
+  "projectName": "Q3 Product Podcast",
+  "recordingTitle": "Ep. 14",
+  "startMs": 252000,
+  "endMs": 293000,
+  "status": "queued",
+  "subtitleStyle": null,
+  "videoUrl": null,
+  "thumbnailUrl": null
+}
 ```
 
 ### Knowledge bases — `GET /api/knowledge-bases`
@@ -240,13 +274,16 @@ Recording `404`; no hooks → `[]`.
 
 ### Clips — `GET /api/clips`, `GET /api/clips/:id`
 
-**No `storageKey`, no signed URL, no `caption`.** `ratio` is derived (`9:16` \| `1:1` \| `16:9`) and **omitted** if recording width/height are null. Status: `queued` \| `rendering` \| `ready` \| `failed`.
+**No `storageKey`, no signed URL, no `caption`.** Playback URL is `videoUrl` (`null` until render finishes). Poster is `thumbnailUrl` (`null` until Filestack/FFmpeg thumb is stored). `hookId` is `null` when the clip was not created from a hook. `ratio` is derived (`9:16` \| `1:1` \| `16:9`) and **omitted** if recording width/height are null. Status: `queued` \| `rendering` \| `ready` \| `failed`.
+
+Generic `POST /api/clips` (arbitrary ranges) is still **501**. Use hook export instead.
 
 ```json
 {
   "id": 1,
   "title": "The roadmap was never a plan",
   "recordingId": 10,
+  "hookId": 4,
   "projectId": 2,
   "projectName": "Q3 Product Podcast",
   "recordingTitle": "Ep. 14",
@@ -254,11 +291,19 @@ Recording `404`; no hooks → `[]`.
   "endMs": 293000,
   "status": "ready",
   "subtitleStyle": "bold_mint",
+  "videoUrl": "https://cdn.filestackcontent.com/HANDLE",
+  "thumbnailUrl": "https://cdn.filestackcontent.com/THUMB",
   "ratio": "9:16"
 }
 ```
 
 Map to mock `ClipSummary` in the UI: `projectLabel` ← `projectName` + `recordingTitle`; `range` / `duration` ← `startMs`/`endMs`; `subtitled` ← `Boolean(subtitleStyle)`; `id` ← `String(id)` only if the router still wants strings.
+
+### Editor + clips UI
+
+- Editor hook card: **Cut clip** until the hook has no ready `videoUrl`; poll `GET /clips/:id` while `queued` / `rendering`. When `status === ready` and `videoUrl` is set, show the **download icon** only.
+- Clips page: list/filter via `GET /clips` + `GET /clips/filters`. Cards use a **4:3** poster (`thumbnailUrl` when present); **Download** when `ready` + `videoUrl`.
+- Download fetches `videoUrl` in the browser (HTTPS Filestack CDN only, `credentials: 'omit'`). Show a loading state while the file is saving. Signed `GET /clips/:id/download` is still unimplemented.
 
 ### Clip filters — `GET /api/clips/filters`
 
@@ -352,7 +397,7 @@ Provider `id`: `speech` \| `llm` \| `kb` \| `storage`. Status: `connected` \| `n
 1. `credentials: 'include'` in `api.ts`.
 2. Update `app/lib/data/types.ts` (and repositories) to integer ids + API field names, **or** map API → mock view-models in the repository layer.
 3. Type `getRecordings` / `getTranscript` / `getHooks` / etc. instead of `unknown`.
-4. POST create / generate / download URLs are still **501** — do not wire those buttons to live calls yet.
+4. POST generate summary/hooks, add-to-global-kb, generic `POST /clips`, and signed `GET /clips/:id/download` are still **501**. Hook export and client download via `videoUrl` are live.
 
 ---
 

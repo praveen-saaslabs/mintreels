@@ -187,6 +187,13 @@ export type SummaryResponse = {
   createdAt: string;
 };
 
+export type HookClipSummary = {
+  id: number;
+  status: ClipSummary['status'];
+  videoUrl: string | null;
+  thumbnailUrl: string | null;
+};
+
 export type HookResponse = {
   id: number;
   recordingId: number;
@@ -197,6 +204,7 @@ export type HookResponse = {
   endMs: number;
   score: number | null;
   createdAt: string;
+  clip?: HookClipSummary | null;
 };
 
 export const api = {
@@ -218,6 +226,11 @@ export const api = {
     request<SummaryResponse>(`/recordings/${encodeURIComponent(id)}/summary`),
   getHooks: (id: number) =>
     request<HookResponse[]>(`/recordings/${encodeURIComponent(id)}/hooks`),
+  exportHookClip: (recordingId: number, hookId: number) =>
+    request<ClipSummary>(
+      `/recordings/${encodeURIComponent(recordingId)}/hooks/${encodeURIComponent(hookId)}/export`,
+      { method: 'POST' },
+    ),
   getKnowledgeBases: () => request<unknown>('/knowledge-bases'),
   getClip: (id: number) => request<ClipSummary>(`/clips/${encodeURIComponent(id)}`),
 

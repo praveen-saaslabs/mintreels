@@ -37,8 +37,9 @@ Placeholder routes:
 - `POST /api/recordings/:id/add-to-global-kb`
 - `GET /api/recordings/:id/hooks`
 - `POST /api/recordings/:id/hooks/generate`
+- `POST /api/recordings/:id/hooks/:hookId/export`
 - `GET/POST /api/knowledge-bases`
-- `POST /api/clips`
+- `POST /api/clips` (501 — use hook export)
 - `GET /api/clips`
 - `GET /api/clips/filters`
 - `GET /api/clips/:id`
@@ -91,4 +92,4 @@ Video Upload → Object Storage → Recording
   → VTT + Summary → Recording KB → Hooks → Ready
 ```
 
-Clip pipeline: selected hook → clip job → FFmpeg (trim / crop / subtitles / encode) → exported MP4.
+Clip pipeline (MVP): selected hook → `POST .../hooks/:hookId/export` → `render-clip` → FFmpeg trim + encode → Filestack video + thumbnail → `clips.storageKey` / `clips.thumbnail_storage_key` (public `videoUrl` / `thumbnailUrl`). Crop, subtitles, and signed download are not implemented yet.

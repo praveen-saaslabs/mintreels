@@ -49,6 +49,8 @@ export type EditorHook = {
   ratio: '9:16' | '1:1' | '16:9';
   status: EditorHookStatus;
   score?: number;
+  clipId?: number;
+  clipVideoUrl?: string;
 };
 
 export type EditorVideoState = {
@@ -78,6 +80,7 @@ type EditorStore = {
   setProjectResult: (result: EditorProjectResult | null) => void;
   resetProject: () => void;
   setHooks: (hooks: EditorHook[]) => void;
+  patchHook: (id: string, patch: Partial<EditorHook>) => void;
   selectHook: (id: string | null) => void;
   selectHookAndSeek: (id: string) => void;
   resetEditor: () => void;
@@ -101,7 +104,7 @@ const seededHooks = editorHooksSeed as EditorHook[];
 
 export const SEEDED_VIDEO_SRC = DEMO_MEDIA.videoUrl;
 
-const emptyVideo = (duration = 0, src = SEEDED_VIDEO_SRC): EditorVideoState => ({
+const emptyVideo = (duration = 0, src: string = SEEDED_VIDEO_SRC): EditorVideoState => ({
   currentTime: 0,
   duration,
   seekEpoch: 0,
@@ -217,6 +220,12 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
 
   setHooks: (hooks) => {
     set({ hooks, selectedHookId: null });
+  },
+
+  patchHook: (id, patch) => {
+    set((state) => ({
+      hooks: state.hooks.map((hook) => (hook.id === id ? { ...hook, ...patch } : hook)),
+    }));
   },
 
   selectHook: (id) => {

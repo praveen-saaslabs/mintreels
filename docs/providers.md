@@ -53,8 +53,8 @@ PyAI Adapter (or Filestack / BullMQ adapter)
 
 `packages/storage/src/provider.ts`
 
-- `upload` / `download` / `getSignedUrl` / `delete`
-- Default: Filestack (`packages/storage/src/filestack.ts`). Frontend uploads and sends a CDN URL; the worker downloads that URL and stores extracted audio.
+- `upload` / `download` / `getSignedUrl` / `delete` / `createVideoThumbnail`
+- Default: Filestack (`packages/storage/src/filestack.ts`). Frontend uploads and sends a CDN URL; the worker downloads that URL, stores extracted audio, and after clip upload requests a Filestack video thumbnail (`video_convert=preset:thumbnail`).
 
 ## QueueProvider
 

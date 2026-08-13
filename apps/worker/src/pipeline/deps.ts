@@ -1,4 +1,5 @@
 import type {
+  ClipRepository,
   HookRepository,
   JobAuditLogRepository,
   JobRepository,
@@ -13,6 +14,7 @@ import type { StorageProvider } from '@mintreels/storage';
 
 export interface WorkerDeps {
   recordings: RecordingRepository;
+  clips: ClipRepository;
   jobs: JobRepository;
   jobSteps: JobStepRepository;
   jobAuditLogs: JobAuditLogRepository;

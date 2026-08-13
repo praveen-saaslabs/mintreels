@@ -22,21 +22,10 @@ import {
   RecordingStatus,
 } from '@mintreels/schema';
 import { HttpError } from '../common/http-error';
+import { publicPlaybackUrl } from '../common/playback-url';
 import { QUEUE_PROVIDER } from '../providers/provider-tokens';
 import { toPublicTranscript } from '../transcripts/public-transcript';
 import type { CreateRecordingRequest } from './recordings.dto';
-
-function publicPlaybackUrl(storageKey: string | null | undefined): string | null {
-  if (typeof storageKey !== 'string' || storageKey.trim() === '') {
-    return null;
-  }
-  try {
-    // Expose Filestack CDN URL for client playback — never the field name storageKey.
-    return parseFilestackRef(storageKey).url;
-  } catch {
-    return null;
-  }
-}
 
 function toPublicRecording(recording: Recording) {
   return {

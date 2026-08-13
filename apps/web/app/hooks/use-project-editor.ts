@@ -8,10 +8,12 @@ import {
   type RecordingSummary,
   type TranscriptResponse,
 } from '@/lib/api';
+import { isHttpsFilestackPlaybackUrl } from '@/lib/filestack-playback';
 import { queryKeys } from '@/lib/query-keys';
 import {
   useEditorStore,
   type EditorHook,
+  type EditorHookStatus,
   type EditorSegment,
   type EditorWord,
 } from '@/stores/editor-store';
@@ -23,24 +25,6 @@ export type EditorLocationState = {
   /** Filestack CDN URL from upload; enables playback before GET recording returns. */
   mediaUrl?: string;
 };
-
-function isHttpsFilestackPlaybackUrl(value: string): boolean {
-  try {
-    const parsed = new URL(value);
-    if (parsed.protocol !== 'https:') {
-      return false;
-    }
-    if (parsed.hostname === 'cdn.filestackcontent.com') {
-      return parsed.pathname.length > 1;
-    }
-    if (parsed.hostname === 'www.filestackapi.com') {
-      return /^\/api\/file\/[^/]+/.test(parsed.pathname);
-    }
-    return false;
-  } catch {
-    return false;
-  }
-}
 
 function pickPlaybackUrl(...candidates: unknown[]): string | null {
   for (const candidate of candidates) {
@@ -112,6 +96,13 @@ function mapPublicTranscriptToEditor(transcript: TranscriptResponse): {
   };
 }
 
+function mapClipStatus(status: string | undefined | null): EditorHookStatus {
+  if (status === 'queued' || status === 'rendering' || status === 'failed' || status === 'ready') {
+    return status;
+  }
+  return 'ready';
+}
+
 function mapHooksToEditor(
   hooks: Array<{
     id: number;
@@ -120,6 +111,7 @@ function mapHooksToEditor(
     startMs: number;
     endMs: number;
     score: number | null;
+    clip?: { id: number; status: string; videoUrl: string | null } | null;
   }>,
 ): EditorHook[] {
   return hooks.map((hook) => ({
@@ -129,8 +121,10 @@ function mapHooksToEditor(
     start: hook.startMs / 1000,
     end: hook.endMs / 1000,
     ratio: '9:16',
-    status: 'ready',
+    status: mapClipStatus(hook.clip?.status),
     ...(hook.score != null ? { score: hook.score } : {}),
+    ...(hook.clip ? { clipId: hook.clip.id } : {}),
+    ...(hook.clip?.videoUrl ? { clipVideoUrl: hook.clip.videoUrl } : {}),
   }));
 }
 

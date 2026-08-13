@@ -14,4 +14,6 @@ export interface StorageProvider {
   download(key: string): Promise<ReadableStream>;
   getSignedUrl(key: string): Promise<string>;
   delete(key: string): Promise<void>;
+  /** Derive a still image from an uploaded video; key is a Filestack CDN URL. */
+  createVideoThumbnail(sourceKey: string): Promise<StoredObject>;
 }
