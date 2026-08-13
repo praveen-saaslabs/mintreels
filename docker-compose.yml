@@ -151,6 +151,8 @@ services:
     environment:
       CI: 'true'
       VITE_API_TARGET: http://api:3000
+      # Browser Filestack key (falls back to worker/API key if unset)
+      VITE_FILESTACK_API_KEY: ${VITE_FILESTACK_API_KEY:-${FILESTACK_API_KEY:-}}
     ports:
       - '5173:5173'
     depends_on:

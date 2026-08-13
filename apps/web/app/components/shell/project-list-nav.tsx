@@ -43,7 +43,7 @@ export function ProjectListNav() {
                   <SidebarMenuButton
                     size="sm"
                     tooltip={project.name}
-                    render={<Link to="/recordings" />}
+                    render={<Link to={`/editor/${String(project.id)}`} />}
                   >
                     <span
                       className={cn(

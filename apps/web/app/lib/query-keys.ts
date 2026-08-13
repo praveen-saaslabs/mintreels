@@ -34,6 +34,9 @@ export const queryKeys = {
     all: () => [...queryKeys.all, 'recordings'] as const,
     list: () => [...queryKeys.recordings.all(), 'list'] as const,
     detail: (id: number) => [...queryKeys.recordings.all(), 'detail', id] as const,
+    processing: (id: number) => [...queryKeys.recordings.all(), 'processing', id] as const,
+    forProject: (projectId: number) =>
+      [...queryKeys.recordings.all(), 'forProject', projectId] as const,
   },
 
   knowledge: {

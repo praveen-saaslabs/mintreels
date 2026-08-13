@@ -6,9 +6,9 @@ import { useRecordingId } from '@/lib/recording-id';
 import { formatTimestamp } from '@/lib/time';
 import { useEditorStore, type EditorHook } from '@/stores/editor-store';
 
-type SummaryProps = {
+type SummaryProps = Readonly<{
   text?: string;
-};
+}>;
 
 function rankHooksByScore(hooks: EditorHook[]): EditorHook[] {
   return [...hooks].sort(
@@ -22,7 +22,8 @@ export function Summary({ text }: SummaryProps) {
   const hooks = useEditorStore((state) => state.hooks);
   const selectedHookId = useEditorStore((state) => state.selectedHookId);
   const selectHookAndSeek = useEditorStore((state) => state.selectHookAndSeek);
-  const summary = text?.trim() ?? '';
+  const storeSummary = useEditorStore((state) => state.project?.result?.text ?? '');
+  const summary = (text?.trim() || storeSummary).trim();
   const rankedHooks = useMemo(() => rankHooksByScore(hooks), [hooks]);
 
   return (

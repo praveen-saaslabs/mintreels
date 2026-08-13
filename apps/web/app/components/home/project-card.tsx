@@ -23,7 +23,7 @@ export function ProjectCard({ project }: { project: ProjectSummary }) {
 
   return (
     <Link
-      to="/recordings"
+      to={`/editor/${String(project.id)}`}
       className="glass block overflow-hidden rounded-2xl text-inherit transition-[border-color,box-shadow] hover:border-[var(--mr-acc)] hover:shadow-[var(--glass-shadow-elevated)]"
     >
       <div className="relative flex h-[118px] items-end bg-[repeating-linear-gradient(135deg,var(--mr-stripe3)_0_10px,var(--mr-stripe4)_10px_20px)] p-3">

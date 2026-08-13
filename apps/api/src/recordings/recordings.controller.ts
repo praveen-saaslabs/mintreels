@@ -35,7 +35,9 @@ import { RecordingsService } from './recordings.service';
 export class RecordingsController {
   constructor(private readonly recordingsService: RecordingsService) {}
 
-  @ApiOperation({ summary: 'Create a project and recording from a Filestack URL, then enqueue ingest' })
+  @ApiOperation({
+    summary: 'Create a project and recording from a Filestack URL, then enqueue ingest',
+  })
   @ApiCreatedResponse({
     description: 'Project and recording created; ingest job enqueued',
     schema: { example: { id: 10, projectId: 4, jobId: 1 } },
@@ -88,9 +90,7 @@ export class RecordingsController {
             srt: 'https://example.com/job.srt',
             vtt: 'https://example.com/job.vtt',
           },
-          segments: [
-            { id: 0, start: 0, end: 1.5, text: 'Hello world', speaker: 'speaker_1' },
-          ],
+          segments: [{ id: 0, start: 0, end: 1.5, text: 'Hello world', speaker: 'speaker_1' }],
           speakers: 1,
           audio_seconds: 1.5,
         },

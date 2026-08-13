@@ -25,6 +25,15 @@ import { HttpError } from '../common/http-error';
 import { QUEUE_PROVIDER } from '../providers/provider-tokens';
 import type { CreateRecordingRequest } from './recordings.dto';
 
+function publicPlaybackUrl(storageKey: string): string | null {
+  try {
+    // Expose Filestack CDN URL for client playback — never the field name storageKey.
+    return parseFilestackRef(storageKey).url;
+  } catch {
+    return null;
+  }
+}
+
 function toPublicRecording(recording: Recording) {
   return {
     id: recording.id,
@@ -108,7 +117,9 @@ function toPublicTranscript(
 ) {
   const extras = readTranscriptExtras(transcript.rawResponse);
   const inferredSpeakers = new Set(
-    segments.map((segment) => segment.speaker).filter((speaker): speaker is string => Boolean(speaker)),
+    segments
+      .map((segment) => segment.speaker)
+      .filter((speaker): speaker is string => Boolean(speaker)),
   );
   const speakers = extras.speakerCount ?? inferredSpeakers.size;
 

@@ -38,7 +38,11 @@ function finiteSeconds(value: number): number | undefined {
   return value;
 }
 
-export function VideoPlayer({ src = DEMO_MEDIA.videoUrl }: Readonly<VideoPlayerProps>) {
+export function VideoPlayer({ src }: Readonly<VideoPlayerProps>) {
+  const storeSrc = useEditorStore((state) => state.video.src);
+  // Explicit `src` (including '') opts out of demo fallback; omitted prop keeps demo default.
+  const resolvedSrc =
+    src !== undefined ? src || storeSrc || '' : storeSrc || DEMO_MEDIA.videoUrl;
   const currentTime = useEditorStore((state) => state.video.currentTime);
   const duration = useEditorStore((state) => state.video.duration);
   const playing = useEditorStore((state) => state.video.playing);
@@ -66,7 +70,7 @@ export function VideoPlayer({ src = DEMO_MEDIA.videoUrl }: Readonly<VideoPlayerP
     return () => {
       setMediaElement(null);
     };
-  }, [setMediaElement, src]);
+  }, [setMediaElement, resolvedSrc]);
 
   // Sole seek driver. WaveSurfer is peaks-only and follows via timeupdate/seeked.
   useEffect(() => {
@@ -89,8 +93,8 @@ export function VideoPlayer({ src = DEMO_MEDIA.videoUrl }: Readonly<VideoPlayerP
       return;
     }
 
-    if (!video.src && !video.currentSrc) {
-      video.src = src;
+    if (!video.src && !video.currentSrc && resolvedSrc) {
+      video.src = resolvedSrc;
     }
 
     try {
@@ -264,7 +268,7 @@ export function VideoPlayer({ src = DEMO_MEDIA.videoUrl }: Readonly<VideoPlayerP
                   draggable={false}
                   preload="auto"
                   playsInline
-                  src={src}
+                  src={resolvedSrc || undefined}
                   onPointerDown={handleSurfacePointerDown}
                   onClick={handleSurfaceClick}
                   onTimeUpdate={(event) => {

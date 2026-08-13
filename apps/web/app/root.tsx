@@ -6,8 +6,6 @@ import { ClipsPage } from './routes/clips';
 import { EditorPage } from './routes/editor.$id';
 import { KnowledgePage } from './routes/knowledge';
 import { LoginPage } from './routes/login';
-import { RecordingsPage } from './routes/recordings';
-import { RecordingDetailPage } from './routes/recordings.$id';
 import { SettingsPage } from './routes/settings';
 import { SignupPage } from './routes/signup';
 import { VerifyEmailPage } from './routes/verify-email';
@@ -32,8 +30,6 @@ const router = createBrowserRouter([
           { index: true, element: <IndexPage /> },
           { path: 'clips', element: <ClipsPage /> },
           { path: 'settings', element: <SettingsPage /> },
-          { path: 'recordings', element: <RecordingsPage /> },
-          { path: 'recordings/:id', element: <RecordingDetailPage /> },
           { path: 'knowledge', element: <KnowledgePage /> },
         ],
       },

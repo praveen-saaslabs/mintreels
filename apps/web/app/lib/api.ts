@@ -79,14 +79,130 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return payload as T;
 }
 
+export type CreateRecordingRequest = {
+  title: string;
+  originalFilename: string;
+  url: string;
+};
+
+export type CreateRecordingResponse = {
+  id: number;
+  projectId: number;
+  jobId: number;
+};
+
+export type RecordingStatus = 'uploaded' | 'processing' | 'ready' | 'failed';
+
+export type RecordingSummary = {
+  id: number;
+  projectId: number;
+  title: string;
+  originalFilename: string;
+  durationMs: number | null;
+  width: number | null;
+  height: number | null;
+  status: RecordingStatus;
+  /** HTTPS Filestack CDN playback URL when available; never a storageKey field. */
+  url: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type ProcessingJobStatus = 'queued' | 'running' | 'success' | 'failed' | 'partial';
+
+export type ProcessingStepStatus =
+  | 'pending'
+  | 'processing'
+  | 'completed'
+  | 'retrying'
+  | 'failed'
+  | 'skipped';
+
+export type RecordingProcessingSnapshot = {
+  recordingId: number;
+  status: RecordingStatus;
+  job: {
+    id: number;
+    status: ProcessingJobStatus;
+    currentStep: string | null;
+    attempt: number;
+    maxAttempts: number;
+    errorCode: string | null;
+    errorMessage: string | null;
+  } | null;
+  steps: Array<{
+    step: string;
+    status: ProcessingStepStatus;
+    attempt: number;
+    provider?: string;
+  }>;
+  transcript: { id: number; language: string | null; segmentCount: number } | null;
+  summary: { id: number; text: string } | null;
+  actionItems: unknown[];
+  hooks: Array<{
+    id: number;
+    title: string;
+    hook: string;
+    reason: string | null;
+    startMs: number;
+    endMs: number;
+    score: number | null;
+  }>;
+};
+
+export type TranscriptResponse = {
+  id: number;
+  recordingId: number;
+  language: string | null;
+  createdAt: string;
+  segments: Array<{
+    id: number;
+    sequence: number;
+    startMs: number;
+    endMs: number;
+    speaker: string | null;
+    text: string;
+  }>;
+};
+
+export type SummaryResponse = {
+  id: number;
+  recordingId: number;
+  text: string;
+  createdAt: string;
+};
+
+export type HookResponse = {
+  id: number;
+  recordingId: number;
+  title: string;
+  hook: string;
+  reason: string | null;
+  startMs: number;
+  endMs: number;
+  score: number | null;
+  createdAt: string;
+};
+
 export const api = {
-  getRecordings: () => request<unknown>('/recordings'),
-  getRecording: (id: number) => request<unknown>(`/recordings/${encodeURIComponent(id)}`),
+  getRecordings: () => request<RecordingSummary[]>('/recordings'),
+  getRecording: (id: number) =>
+    request<RecordingSummary>(`/recordings/${encodeURIComponent(id)}`),
+  createRecording: (body: CreateRecordingRequest) =>
+    request<CreateRecordingResponse>('/recordings', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+  getRecordingProcessing: (id: number) =>
+    request<RecordingProcessingSnapshot>(
+      `/recordings/${encodeURIComponent(id)}/processing`,
+    ),
   getTranscript: (id: number) =>
-    request<unknown>(`/recordings/${encodeURIComponent(id)}/transcript`),
+    request<TranscriptResponse>(`/recordings/${encodeURIComponent(id)}/transcript`),
   getSummary: (id: number) =>
-    request<unknown>(`/recordings/${encodeURIComponent(id)}/summary`),
-  getHooks: (id: number) => request<unknown>(`/recordings/${encodeURIComponent(id)}/hooks`),
+    request<SummaryResponse>(`/recordings/${encodeURIComponent(id)}/summary`),
+  getHooks: (id: number) =>
+    request<HookResponse[]>(`/recordings/${encodeURIComponent(id)}/hooks`),
   getKnowledgeBases: () => request<unknown>('/knowledge-bases'),
   getClip: (id: number) => request<ClipSummary>(`/clips/${encodeURIComponent(id)}`),
 
