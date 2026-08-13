@@ -6,6 +6,7 @@ import {
   api,
   type RecordingProcessingSnapshot,
   type RecordingSummary,
+  type TranscriptResponse,
 } from '@/lib/api';
 import { queryKeys } from '@/lib/query-keys';
 import {
@@ -15,7 +16,7 @@ import {
   type EditorWord,
 } from '@/stores/editor-store';
 
-const POLL_MS = 3000;
+const POLL_MS = 5000;
 
 export type EditorLocationState = {
   recordingId?: number;
@@ -41,15 +42,11 @@ function isHttpsFilestackPlaybackUrl(value: string): boolean {
   }
 }
 
-function pickPlaybackUrl(
-  locationMediaUrl: unknown,
-  recordingUrl: string | null | undefined,
-): string | null {
-  if (typeof locationMediaUrl === 'string' && isHttpsFilestackPlaybackUrl(locationMediaUrl)) {
-    return locationMediaUrl;
-  }
-  if (typeof recordingUrl === 'string' && isHttpsFilestackPlaybackUrl(recordingUrl)) {
-    return recordingUrl;
+function pickPlaybackUrl(...candidates: unknown[]): string | null {
+  for (const candidate of candidates) {
+    if (typeof candidate === 'string' && isHttpsFilestackPlaybackUrl(candidate)) {
+      return candidate;
+    }
   }
   return null;
 }
@@ -75,22 +72,44 @@ function pickRecordingForProject(
   )[0];
 }
 
-function mapSegmentsToEditor(
-  segments: Array<{
-    id: number;
-    startMs: number;
-    endMs: number;
-    speaker: string | null;
-    text: string;
-  }>,
-): EditorSegment[] {
-  return segments.map((segment) => ({
+function mapPublicTranscriptToEditor(transcript: TranscriptResponse): {
+  text: string;
+  words: EditorWord[];
+  formats: { srt: string; vtt: string };
+  segments: EditorSegment[];
+  speakers: number;
+  audio_seconds: number;
+} {
+  const segments = transcript.segments.map((segment) => ({
     id: segment.id,
-    start: segment.startMs / 1000,
-    end: segment.endMs / 1000,
+    start: segment.start,
+    end: segment.end,
     text: segment.text,
     speaker: segment.speaker?.trim() || '?',
   }));
+  const words = (transcript.words ?? []).map((word) => ({
+    word: word.word,
+    start: word.start,
+    end: word.end,
+    speaker: word.speaker?.trim() || '?',
+  }));
+  const durationFromSegments =
+    segments.length > 0 ? Math.max(...segments.map((segment) => segment.end)) : 0;
+
+  return {
+    text: transcript.text ?? '',
+    words,
+    formats: {
+      srt: transcript.formats?.srt ?? '',
+      vtt: transcript.formats?.vtt ?? '',
+    },
+    segments,
+    speakers:
+      transcript.speakers > 0
+        ? transcript.speakers
+        : new Set(segments.map((segment) => segment.speaker)).size,
+    audio_seconds: transcript.audio_seconds ?? durationFromSegments,
+  };
 }
 
 function mapHooksToEditor(
@@ -159,23 +178,21 @@ function ensureEditorProject(recordingId: number, status: string) {
   });
 }
 
-function injectTranscript(recordingId: number, segments: EditorSegment[]) {
+function injectTranscript(recordingId: number, transcript: TranscriptResponse) {
   ensureEditorProject(recordingId, 'processing');
   const project = useEditorStore.getState().project;
   if (!project) {
     return;
   }
-  const durationSec =
-    segments.length > 0 ? Math.max(...segments.map((segment) => segment.end)) : 0;
   const previous = project.result ?? emptyEditorResult();
+  const mapped = mapPublicTranscriptToEditor(transcript);
   useEditorStore.getState().setProject({
     ...project,
     updated_at: Date.now(),
     result: {
       ...previous,
-      segments,
-      speakers: new Set(segments.map((segment) => segment.speaker)).size,
-      audio_seconds: durationSec > 0 ? durationSec : previous.audio_seconds,
+      ...mapped,
+      audio_seconds: mapped.audio_seconds > 0 ? mapped.audio_seconds : previous.audio_seconds,
     },
   });
 }
@@ -238,9 +255,12 @@ async function applyCompletedStepInjections(
   // Action items: no dedicated panel yet — skipped.
 
   if (needsTranscript) {
+    if (snapshot.transcript && snapshot.transcript.segments.length > 0) {
+      injectTranscript(recordingId, snapshot.transcript);
+    }
     try {
       const transcript = await api.getTranscript(recordingId);
-      injectTranscript(recordingId, mapSegmentsToEditor(transcript.segments));
+      injectTranscript(recordingId, transcript);
     } catch {
       // Persist may still be in flight; next completed step or ready bundle will retry.
     }
@@ -458,9 +478,13 @@ export function useProjectEditor(projectId: number | undefined) {
     hydratedRecordingRef.current = recordingId;
   }, [recordingId, phase]);
 
-  // Inject playback URL as soon as we have it (navigate state or GET recording.url).
+  // Inject playback URL as soon as we have it (navigate state, recording, or poll).
   useEffect(() => {
-    const playbackUrl = pickPlaybackUrl(locationMediaUrl, recordingsQuery.data?.url);
+    const playbackUrl = pickPlaybackUrl(
+      locationMediaUrl,
+      recordingsQuery.data?.videoUrl,
+      processingQuery.data?.videoUrl,
+    );
     if (!playbackUrl) {
       return;
     }
@@ -468,7 +492,13 @@ export function useProjectEditor(projectId: number | undefined) {
       return;
     }
     setSrc(playbackUrl);
-  }, [locationMediaUrl, recordingsQuery.data?.url, videoSrc, setSrc]);
+  }, [
+    locationMediaUrl,
+    recordingsQuery.data?.videoUrl,
+    processingQuery.data?.videoUrl,
+    videoSrc,
+    setSrc,
+  ]);
 
   // Diff processing steps → refetch & inject into editor store as each completes.
   useEffect(() => {
@@ -490,24 +520,15 @@ export function useProjectEditor(projectId: number | undefined) {
       return;
     }
 
-    const { transcript, summary, hooks } = editorDataQuery.data;
-    const segments = transcript ? mapSegmentsToEditor(transcript.segments) : [];
-    const durationSec =
-      segments.length > 0 ? Math.max(...segments.map((segment) => segment.end)) : 0;
+    const { transcript, hooks } = editorDataQuery.data;
+    const mapped = transcript ? mapPublicTranscriptToEditor(transcript) : emptyEditorResult();
 
     setProject({
       job_id: String(recordingId),
       status: 'ready',
       created_at: Date.now(),
       updated_at: Date.now(),
-      result: {
-        text: summary?.text ?? '',
-        words: [],
-        formats: { srt: '', vtt: '' },
-        segments,
-        speakers: new Set(segments.map((segment) => segment.speaker)).size,
-        audio_seconds: durationSec,
-      },
+      result: mapped,
     });
     setHooks(mapHooksToEditor(hooks));
   }, [phase, editorDataQuery.data, recordingId, setProject, setHooks]);
@@ -541,11 +562,15 @@ export function useProjectEditor(projectId: number | undefined) {
     return null;
   }, [recordingsQuery.error, processingQuery.error, processingQuery.data, phase]);
 
+  const audioUrl =
+    pickPlaybackUrl(recordingsQuery.data?.audioUrl, processingQuery.data?.audioUrl) ?? '';
+
   return {
     phase,
     recordingId,
     processing: processingQuery.data,
     videoSrc,
+    audioUrl,
     summaryText:
       editorDataQuery.data?.summary?.text ?? processingQuery.data?.summary?.text ?? '',
     isHydratingEditor: phase === 'ready' && editorDataQuery.isLoading,

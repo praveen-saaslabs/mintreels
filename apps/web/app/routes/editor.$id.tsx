@@ -39,7 +39,7 @@ function EditorStatusPanel({
 }
 
 function ProjectEditor({ projectId }: Readonly<{ projectId: number }>) {
-  const { phase, recordingId, processing, videoSrc, summaryText, errorMessage, refetch } =
+  const { phase, recordingId, processing, videoSrc, audioUrl, summaryText, errorMessage, refetch } =
     useProjectEditor(projectId);
 
   if (phase === 'resolving') {
@@ -96,7 +96,7 @@ function ProjectEditor({ projectId }: Readonly<{ projectId: number }>) {
               <VideoPlayer src={videoSrc} />
             </div>
           }
-          area3={<Timeline audioUrl="" />}
+          area3={<Timeline audioUrl={audioUrl || videoSrc} />}
           area4={<Summary text={summaryText} />}
         />
       </div>

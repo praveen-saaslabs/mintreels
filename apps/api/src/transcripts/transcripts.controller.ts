@@ -25,16 +25,21 @@ export class TranscriptsController {
   @ApiOperation({ summary: 'Get the JSON transcript for a recording' })
   @ApiParam({ name: 'id', type: Number })
   @ApiOkResponse({
-    description: 'Transcript with timestamped segments',
+    description: 'Public transcript DTO (seconds, no rawResponse)',
     schema: {
       example: {
         id: 1,
         recordingId: 10,
         language: 'en',
-        createdAt: '2026-08-13T08:00:00.000Z',
-        segments: [
-          { id: 1, sequence: 0, startMs: 0, endMs: 1200, speaker: 'A', text: 'Hello' },
-        ],
+        text: '[speaker_1] Hello world',
+        words: [{ word: 'Hello', start: 0, end: 0.4, speaker: 'speaker_1' }],
+        formats: {
+          srt: 'https://example.com/job.srt',
+          vtt: 'https://example.com/job.vtt',
+        },
+        segments: [{ id: 0, start: 0, end: 1.5, text: 'Hello world', speaker: 'speaker_1' }],
+        speakers: 1,
+        audio_seconds: 1.5,
       },
     },
   })

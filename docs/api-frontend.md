@@ -162,21 +162,28 @@ Job status: `queued` \| `running` \| `success` \| `failed` \| `partial`. Step st
 
 ### Transcript — `GET /api/recordings/:id/transcript`
 
-`404` if recording or transcript row is missing. Empty `segments` is `200`.
+Same public DTO as `processing.transcript`. Times are **seconds**. `404` if recording or transcript row is missing. Empty `segments` / `words` is `200`. Never returns `rawResponse`, `provider`, or `storageKey`.
 
 ```json
 {
   "id": 1,
   "recordingId": 10,
   "language": "en",
-  "createdAt": "2026-08-13T08:00:00.000Z",
+  "text": "[speaker_1] Hello world",
+  "words": [{ "word": "Hello", "start": 0, "end": 0.4, "speaker": "speaker_1" }],
+  "formats": {
+    "srt": "https://example.com/job.srt",
+    "vtt": "https://example.com/job.vtt"
+  },
   "segments": [
-    { "id": 1, "sequence": 0, "startMs": 0, "endMs": 1200, "speaker": "A", "text": "Hello" }
-  ]
+    { "id": 0, "start": 0, "end": 1.5, "text": "Hello world", "speaker": "speaker_1" }
+  ],
+  "speakers": 1,
+  "audio_seconds": 1.5
 }
 ```
 
-`speaker` may be `null`. VTT: `GET /api/recordings/:id/transcript.vtt` (`Content-Type: text/vtt`).
+`speaker` may be omitted on a segment or word. VTT: `GET /api/recordings/:id/transcript.vtt` (`Content-Type: text/vtt`).
 
 ### Summary — `GET /api/recordings/:id/summary`
 

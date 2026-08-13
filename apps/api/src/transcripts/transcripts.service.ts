@@ -7,6 +7,7 @@ import {
   type TranscriptSegment,
 } from '@mintreels/db';
 import { HttpError } from '../common/http-error';
+import { toPublicTranscript } from './public-transcript';
 
 type TranscriptWithSegments = Transcript & { segments: TranscriptSegment[] };
 
@@ -43,7 +44,8 @@ export class TranscriptsService {
   ) {}
 
   async getByRecordingId(recordingId: number, userId: number) {
-    return this.loadForUser(recordingId, userId);
+    const loaded = await this.loadForUser(recordingId, userId);
+    return toPublicTranscript(loaded, loaded.segments);
   }
 
   async getVttByRecordingId(recordingId: number, userId: number): Promise<string> {

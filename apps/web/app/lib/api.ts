@@ -102,8 +102,10 @@ export type RecordingSummary = {
   width: number | null;
   height: number | null;
   status: RecordingStatus;
-  /** HTTPS Filestack CDN playback URL when available; never a storageKey field. */
-  url: string | null;
+  /** HTTPS Filestack CDN playback URL; never a storageKey field. */
+  videoUrl: string | null;
+  /** HTTPS Filestack CDN audio URL; null until extraction finishes. */
+  audioUrl: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -118,9 +120,37 @@ export type ProcessingStepStatus =
   | 'failed'
   | 'skipped';
 
+export type TranscriptResponse = {
+  id: number;
+  recordingId?: number;
+  language: string | null;
+  text: string;
+  words: Array<{
+    word: string;
+    start: number;
+    end: number;
+    speaker?: string;
+  }>;
+  formats?: {
+    srt?: string;
+    vtt?: string;
+  };
+  segments: Array<{
+    id: number;
+    start: number;
+    end: number;
+    text: string;
+    speaker?: string | null;
+  }>;
+  speakers: number;
+  audio_seconds: number | null;
+};
+
 export type RecordingProcessingSnapshot = {
   recordingId: number;
   status: RecordingStatus;
+  videoUrl: string | null;
+  audioUrl: string | null;
   job: {
     id: number;
     status: ProcessingJobStatus;
@@ -136,7 +166,7 @@ export type RecordingProcessingSnapshot = {
     attempt: number;
     provider?: string;
   }>;
-  transcript: { id: number; language: string | null; segmentCount: number } | null;
+  transcript: TranscriptResponse | null;
   summary: { id: number; text: string } | null;
   actionItems: unknown[];
   hooks: Array<{
@@ -147,21 +177,6 @@ export type RecordingProcessingSnapshot = {
     startMs: number;
     endMs: number;
     score: number | null;
-  }>;
-};
-
-export type TranscriptResponse = {
-  id: number;
-  recordingId: number;
-  language: string | null;
-  createdAt: string;
-  segments: Array<{
-    id: number;
-    sequence: number;
-    startMs: number;
-    endMs: number;
-    speaker: string | null;
-    text: string;
   }>;
 };
 
