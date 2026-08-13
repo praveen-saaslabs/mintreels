@@ -38,7 +38,7 @@ export function ProjectsHeader({
         <p className="mt-1.5 mb-0 text-[13px] text-[var(--mr-mfg)]">{subtitle}</p>
       </div>
       <div className="flex items-center gap-2">
-        <label className="glass flex h-[34px] w-[260px] items-center gap-2 rounded px-2.5">
+        <label className="glass flex h-[34px] w-[260px] items-center gap-2 rounded-lg px-2.5">
           <Search className="size-3.5 text-[var(--mr-mfg)]" />
           <input
             ref={searchInputRef}
@@ -52,7 +52,7 @@ export function ProjectsHeader({
         </label>
         <Link
           to="/editor/new"
-          className="inline-flex h-[34px] items-center rounded bg-[var(--mr-acc)] px-3.5 text-[13px] font-semibold text-[var(--mr-accfg)]"
+          className="inline-flex h-[34px] items-center rounded-lg bg-[var(--mr-acc)] px-3.5 text-[13px] font-semibold text-[var(--mr-accfg)]"
         >
           New project
         </Link>

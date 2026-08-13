@@ -248,7 +248,7 @@ Recording `404`; no hooks → `[]`. `clip` is the latest export for that hook, o
 
 One recording-scoped prompt. The API classifies intent; the UI **switches on `kind`**. Do not classify on the client.
 
-Cursor rule for agents: [`.cursor/rules/ask-moments-frontend.mdc`](../.cursor/rules/ask-moments-frontend.mdc). Helpers: `api.askMoments`, `api.createClip`. Reference UI: `apps/web/app/components/summary/moment-search.tsx`.
+Cursor rule for agents: [`.cursor/rules/ask-moments-frontend.mdc`](../.cursor/rules/ask-moments-frontend.mdc). Helpers: `api.askMoments`, `api.createClip`. Reference UI: `AskMint` in `apps/web/app/components/summary/moment-search.tsx` (inline right-pane tab — not a modal, so player seek stays usable).
 
 ```json
 { "query": "What did they say about pricing?", "limit": 8 }
