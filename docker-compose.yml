@@ -53,6 +53,7 @@ services:
     volumes:
       - ./:/app
       - api_node_modules:/app/node_modules
+      - api_app_node_modules:/app/apps/api/node_modules
     environment:
       CI: "true"
       DATABASE_URL: mysql://${MYSQL_USER:-mintreels}:${MYSQL_PASSWORD:-mintreels}@mysql:3306/${MYSQL_DATABASE:-mintreels}
@@ -116,5 +117,6 @@ volumes:
   mysql_data:
   redis_data:
   api_node_modules:
+  api_app_node_modules:
   worker_node_modules:
   web_node_modules:
