@@ -568,6 +568,7 @@ export function useProjectEditor(projectId: number | undefined) {
   return {
     phase,
     recordingId,
+    recordingTitle: recordingsQuery.data?.title ?? '',
     processing: processingQuery.data,
     videoSrc,
     audioUrl,

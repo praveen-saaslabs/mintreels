@@ -31,7 +31,7 @@ export function EditorLayout({ area1, area2, area3, area4 }: EditorLayoutProps) 
   }, []);
 
   return (
-    <Space.ViewPort className="mr-ambient mr-editor">
+    <Space.Fill className="mr-editor">
       <Space.LeftResizable size="25%" minimumSize={180} maximumSize={560}>
         {area1}
       </Space.LeftResizable>
@@ -45,7 +45,7 @@ export function EditorLayout({ area1, area2, area3, area4 }: EditorLayoutProps) 
       <Space.RightResizable size="25%" minimumSize={180} maximumSize={560}>
         {area4}
       </Space.RightResizable>
-    </Space.ViewPort>
+    </Space.Fill>
   );
 }
 
