@@ -70,7 +70,3 @@ export function formatClipCaption(clip: ClipSummary): string {
 export function formatClipFilterLabel(label: string, count: number): string {
   return `${label} · ${String(count)}`;
 }
-
-export function isClipSubtitled(clip: ClipSummary): boolean {
-  return Boolean(clip.subtitleStyle);
-}

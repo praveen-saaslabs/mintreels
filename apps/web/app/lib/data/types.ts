@@ -32,13 +32,7 @@ export type ProjectSummary = {
   failedJobCount: number;
 };
 
-export type ClipFilterId =
-  | 'all'
-  | 'ready'
-  | 'rendering'
-  | 'failed'
-  | 'ratio_9_16'
-  | 'subtitled';
+export type ClipFilterId = 'all' | 'queued' | 'rendering' | 'ready' | 'failed';
 
 export type ClipFilter = {
   id: ClipFilterId;

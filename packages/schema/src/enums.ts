@@ -56,20 +56,18 @@ export enum ClipRatio {
 
 export enum ClipFilterId {
   All = 'all',
-  Ready = 'ready',
+  Queued = 'queued',
   Rendering = 'rendering',
+  Ready = 'ready',
   Failed = 'failed',
-  Ratio916 = 'ratio_9_16',
-  Subtitled = 'subtitled',
 }
 
 export const CLIP_FILTER_LABELS: Record<ClipFilterId, string> = {
   [ClipFilterId.All]: 'All',
-  [ClipFilterId.Ready]: 'Ready',
+  [ClipFilterId.Queued]: 'Queued',
   [ClipFilterId.Rendering]: 'Rendering',
+  [ClipFilterId.Ready]: 'Ready',
   [ClipFilterId.Failed]: 'Failed',
-  [ClipFilterId.Ratio916]: '9:16',
-  [ClipFilterId.Subtitled]: 'Subtitled',
 };
 
 export enum ProviderConnectionStatus {
