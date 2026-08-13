@@ -513,11 +513,14 @@ packages/ai/
     ├── speech-provider.ts
     ├── llm-provider.ts
     ├── embedding-provider.ts
+    ├── vector-store-provider.ts
     └── providers/
-        └── pyai/
-            ├── client.ts
-            ├── speech.ts
-            └── llm.ts
+        ├── pyai/
+        │   ├── client.ts
+        │   ├── speech.ts
+        │   └── llm.ts
+        ├── openai-compatible/
+        └── qdrant/           # vector store adapter
 ```
 
 ## SpeechProvider
@@ -539,22 +542,40 @@ export interface LLMProvider {
   ): Promise<Summary>;
 
   generateHooks(
-    transcript: Transcript
-  ): Promise<Hook[]>;
+    transcript: Transcript,
+    options: HookGenerationOptions
+  ): Promise<HookCandidate[]>;
 }
 ```
+
+`HookGenerationOptions` carries the `loadHookConfig()` weights and candidate cap. `HookCandidate` is a `Hook` plus segment IDs, `hookType`, context text, and 0..1 dimension scores. See `docs/ai-video-analysis-architecture.md`.
 
 ## EmbeddingProvider
 
 ```ts
 export interface EmbeddingProvider {
-  embed(
-    text: string
-  ): Promise<number[]>;
+  readonly provider: string;
+  readonly model: string;
+  readonly dimensions: number;
+  embed(texts: string[]): Promise<number[][]>;
 }
 ```
 
-Even though the current Knowledge Base is PyAI-hosted, keep the embedding capability interface available for future provider implementations.
+Batch embeddings. Do not assume PyAI has an embedding endpoint — production uses the OpenAI-compatible provider (`EMBEDDING_PROVIDER`, `EMBEDDING_MODEL`). See `docs/ai-video-analysis-architecture.md`.
+
+## VectorStoreProvider
+
+```ts
+export interface VectorStoreProvider {
+  upsert(items: VectorItem[]): Promise<void>;
+  search(vector: number[], options: VectorSearchOptions): Promise<VectorSearchResult[]>;
+  delete(ids: string[]): Promise<void>;
+  deleteByRecordingId(recordingId: number): Promise<void>;
+  healthCheck(): Promise<void>;
+}
+```
+
+Hook clustering index only. MySQL remains canonical; vectors are rebuildable. Implementation: self-hosted Qdrant service used by the worker (`VECTOR_STORE_PROVIDER=qdrant`, `QDRANT_URL`, optional `QDRANT_API_KEY`/`QDRANT_COLLECTION`). Search always filters by `recordingId`. Do not call Qdrant from `apps/api` or domain services.
 
 ---
 
@@ -827,6 +848,8 @@ Shareability
 ```
 
 The UI should show suggested hooks and allow the user to preview or create a clip.
+
+Pipeline evolution (LLM discovery, embeddings, dedup, clip boundaries) is tracked in `docs/ai-video-analysis-architecture.md`. `score` stays 0..1. LLM returns transcript segment IDs; the backend derives millisecond timestamps.
 
 ---
 
@@ -1611,6 +1634,12 @@ AI_PROVIDER=pyai
 KNOWLEDGE_BASE_PROVIDER=pyai
 STORAGE_PROVIDER=filestack
 QUEUE_PROVIDER=bullmq
+EMBEDDING_PROVIDER=openai
+EMBEDDING_MODEL=text-embedding-3-small
+VECTOR_STORE_PROVIDER=qdrant
+QDRANT_URL=http://qdrant:6333
+QDRANT_API_KEY=
+QDRANT_COLLECTION=hook_vectors
 ```
 
 Never commit actual credentials.
@@ -1807,7 +1836,7 @@ When using this document as context, Cursor should:
 | Knowledge Base | PyAI KB |
 | KB abstraction | `KnowledgeBaseProvider` |
 | Local KB | Not implemented |
-| Vector DB | Not implemented separately |
+| Vector DB | `VectorStoreProvider`; Qdrant (self-hosted service) |
 | Background processing | Worker |
 | Transcript source of truth | Timestamped transcript segments |
 | Subtitle format | VTT |
@@ -1827,7 +1856,7 @@ Do not implement unless requested:
 - Enterprise permissions
 - Kubernetes
 - Microservices
-- Self-hosted vector database
+- Managed/cloud vector DB services (e.g. Pinecone). Self-hosted Qdrant behind `VectorStoreProvider` is in scope.
 - Local LLM
 - Local STT
 - Provider marketplace

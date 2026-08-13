@@ -23,16 +23,29 @@ AI_PROVIDER=pyai
 KNOWLEDGE_BASE_PROVIDER=pyai
 STORAGE_PROVIDER=filestack
 QUEUE_PROVIDER=bullmq
+EMBEDDING_PROVIDER=openai
+VECTOR_STORE_PROVIDER=qdrant
 ```
 
 ## Placement
 
-- AI interfaces: `packages/ai/src/{speech,llm,embedding}-provider.ts`
+- AI interfaces: `packages/ai/src/{speech,llm,embedding,vector-store}-provider.ts`
 - PyAI AI: `packages/ai/src/providers/pyai/`
+- OpenAI-compatible LLM/embeddings: `packages/ai/src/providers/openai-compatible/`
+- Qdrant vector store: `packages/ai/src/providers/qdrant/` (vendor types stay inside the adapter)
 - KB interface: `packages/knowledge/src/provider.ts`
 - PyAI KB: `packages/knowledge/src/adapters/pyai/` (mapper keeps vendor types inside)
 - Storage: `packages/storage/src/provider.ts` + `filestack.ts` (Filestack REST; HMAC policy only if `FILESTACK_APP_SECRET` is set)
 - Queue: `packages/queue/src/provider.ts` + `bullmq.ts`
+
+## Provider-neutral hook logic
+
+Dedup, diversity ranking, and clip boundaries are product logic, not adapters. They live in
+`packages/ai/src/hook-selection.ts` and `packages/ai/src/clip-boundaries.ts` as pure functions and
+depend only on `VectorStoreProvider` / `EmbeddingProvider` — never on Qdrant/OpenAI types.
+
+`VectorStoreProvider` exposes `fetch(ids)` so downstream steps reuse embeddings already in the index
+instead of re-embedding (cost control). MySQL stays canonical; the index is rebuildable.
 
 ## Do not
 

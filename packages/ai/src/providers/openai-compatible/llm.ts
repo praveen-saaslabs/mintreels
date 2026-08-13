@@ -1,8 +1,16 @@
-import type { Hook, Summary, Transcript } from '@mintreels/domain';
+import type { Summary, Transcript } from '@mintreels/domain';
 import OpenAI from 'openai';
 import { generateExtractiveHooks } from '../../extractive-hooks';
-import type { ActionItem, LLMProvider } from '../../llm-provider';
+import { mapHookCandidates, type HookCandidate } from '../../hook-candidates';
+import type { ActionItem, HookGenerationOptions, LLMProvider } from '../../llm-provider';
+import {
+  buildHooksUserPrompt,
+  HOOKS_JSON_SCHEMA,
+  HOOKS_PROMPT_VERSION,
+  HOOKS_SYSTEM_PROMPT,
+} from '../../prompts/hooks.prompt';
 import { ProviderError } from '../../provider-error';
+import { buildSemanticWindows } from '../../semantic-windows';
 import type { OpenAICompatibleLLMConfig } from './config';
 import { isJsonSchemaUnsupported, mapOpenAICompatibleError } from './errors';
 import {
@@ -49,7 +57,41 @@ export class OpenAICompatibleLLMProvider implements LLMProvider {
     });
   }
 
-  async generateHooks(transcript: Transcript): Promise<Hook[]> {
+  /** LLM discovery over semantic windows; falls back to the extractive heuristic. */
+  async generateHooks(
+    transcript: Transcript,
+    options: HookGenerationOptions,
+  ): Promise<HookCandidate[]> {
+    const windows = buildSemanticWindows(transcript.segments);
+    if (windows.length > 0) {
+      try {
+        const candidates = await this.completeJson({
+          system: HOOKS_SYSTEM_PROMPT,
+          user: buildHooksUserPrompt(windows, options.maxCandidates),
+          schemaName: 'hooks',
+          jsonSchema: HOOKS_JSON_SCHEMA,
+          parse: (raw) =>
+            mapHookCandidates(raw, {
+              recordingId: transcript.recordingId,
+              segments: transcript.segments,
+              weights: options.weights,
+              maxCandidates: options.maxCandidates,
+              provider: this.config.provider,
+              model: this.config.model,
+              promptVersion: HOOKS_PROMPT_VERSION,
+            }),
+        });
+        if (candidates.length > 0) {
+          return candidates;
+        }
+      } catch (error) {
+        console.warn(
+          `[${this.config.provider}] hook discovery failed, using extractive hooks: ${
+            error instanceof Error ? error.message : 'unknown error'
+          }`,
+        );
+      }
+    }
     return generateExtractiveHooks(transcript);
   }
 

@@ -3,3 +3,4 @@ export const LLM_PROVIDER = Symbol('LLM_PROVIDER');
 export const KB_PROVIDER = Symbol('KB_PROVIDER');
 export const STORAGE_PROVIDER = Symbol('STORAGE_PROVIDER');
 export const QUEUE_PROVIDER = Symbol('QUEUE_PROVIDER');
+export const VECTOR_STORE_PROVIDER = Symbol('VECTOR_STORE_PROVIDER');

@@ -1,6 +1,7 @@
-import type { Hook, Summary, Transcript } from '@mintreels/domain';
+import type { Summary, Transcript } from '@mintreels/domain';
 import { generateExtractiveHooks } from '../../extractive-hooks';
-import type { ActionItem, LLMProvider } from '../../llm-provider';
+import type { HookCandidate } from '../../hook-candidates';
+import type { ActionItem, HookGenerationOptions, LLMProvider } from '../../llm-provider';
 import type { EmbeddingProvider } from '../../embedding-provider';
 import type { PyAIClient } from './client';
 
@@ -26,6 +27,10 @@ function substantialSentences(transcript: Transcript): string[] {
  * Hooks still share generateExtractiveHooks with that adapter.
  */
 export class PyAILLMProvider implements LLMProvider, EmbeddingProvider {
+  readonly provider = 'pyai';
+  readonly model = 'unimplemented';
+  readonly dimensions = 0;
+
   constructor(private readonly client: PyAIClient) {
     void this.client;
   }
@@ -54,7 +59,10 @@ export class PyAILLMProvider implements LLMProvider, EmbeddingProvider {
     };
   }
 
-  async generateHooks(transcript: Transcript): Promise<Hook[]> {
+  async generateHooks(
+    transcript: Transcript,
+    _options: HookGenerationOptions,
+  ): Promise<HookCandidate[]> {
     return generateExtractiveHooks(transcript);
   }
 
@@ -70,7 +78,7 @@ export class PyAILLMProvider implements LLMProvider, EmbeddingProvider {
     return items;
   }
 
-  async embed(_text: string): Promise<number[]> {
+  async embed(_texts: string[]): Promise<number[][]> {
     throw new Error('PyAILLMProvider.embed is not implemented');
   }
 }

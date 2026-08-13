@@ -2,9 +2,7 @@ FROM node:22-alpine
 WORKDIR /app
 RUN apk add --no-cache ffmpeg
 RUN corepack enable
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-COPY apps/api/package.json apps/api/package.json
-COPY apps/worker/package.json apps/worker/package.json
-COPY apps/web/package.json apps/web/package.json
-COPY packages ./packages
-RUN pnpm install --frozen-lockfile
+# No dependency install here: the repo is bind-mounted at runtime and each service
+# installs only its own workspace slice (see docker-compose.yml). Keeping the image
+# install-free means it builds in seconds and every service's node_modules volume
+# starts empty instead of being seeded with the full monorepo.

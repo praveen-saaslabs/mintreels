@@ -1,5 +1,6 @@
 import { EnvKey } from '@mintreels/schema';
 import { startWorker } from '@mintreels/queue';
+import { generateHooks, type GenerateHooksPayload } from '../jobs/generate-hooks';
 import { ingestVideo, type IngestVideoPayload } from '../jobs/ingest-video';
 import { renderClip, type RenderClipPayload } from '../jobs/render-clip';
 import { requireRedisUrl } from '../pipeline/config';
@@ -49,6 +50,17 @@ function parseRenderClipPayload(data: unknown): RenderClipPayload {
   return payload;
 }
 
+function parseGenerateHooksPayload(data: unknown): GenerateHooksPayload {
+  if (typeof data !== 'object' || data === null) {
+    throw new Error('generate-hooks payload is required');
+  }
+  const rec = data as Record<string, unknown>;
+  if (typeof rec.recordingId !== 'number' || typeof rec.jobId !== 'number') {
+    throw new Error('generate-hooks payload.recordingId and payload.jobId are required');
+  }
+  return { recordingId: rec.recordingId, jobId: rec.jobId };
+}
+
 export function createProcessors(deps: WorkerDeps): { close: () => Promise<void> } {
   const redisUrl = requireRedisUrl();
   const concurrency = Number(process.env[EnvKey.WorkerConcurrency]) || 1;
@@ -62,6 +74,9 @@ export function createProcessors(deps: WorkerDeps): { close: () => Promise<void>
       },
       'render-clip': async (data) => {
         await renderClip(parseRenderClipPayload(data), deps);
+      },
+      'generate-hooks': async (data) => {
+        await generateHooks(parseGenerateHooksPayload(data), deps);
       },
     },
   });

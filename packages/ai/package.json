@@ -7,6 +7,10 @@
     ".": {
       "types": "./src/index.ts",
       "default": "./src/index.ts"
+    },
+    "./providers/qdrant": {
+      "types": "./src/providers/qdrant/index.ts",
+      "default": "./src/providers/qdrant/index.ts"
     }
   },
   "scripts": {
@@ -19,6 +23,7 @@
     "@mintreels/domain": "workspace:*",
     "@mintreels/schema": "workspace:*",
     "@pyai/sdk": "^0.2.3",
+    "@qdrant/js-client-rest": "^1.11.0",
     "openai": "^4.104.0",
     "zod": "^4.0.0"
   },

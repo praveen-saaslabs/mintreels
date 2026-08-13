@@ -13,6 +13,7 @@ import {
   type JobStep,
   type Recording,
 } from '@mintreels/db';
+import type { VectorStoreProvider } from '@mintreels/ai';
 import { DEFAULT_MAX_ATTEMPTS } from '@mintreels/domain';
 import type { QueueProvider } from '@mintreels/queue';
 import { parseFilestackRef } from '@mintreels/storage';
@@ -26,7 +27,7 @@ import {
 } from '@mintreels/schema';
 import { HttpError } from '../common/http-error';
 import { publicPlaybackUrl } from '../common/playback-url';
-import { QUEUE_PROVIDER } from '../providers/provider-tokens';
+import { QUEUE_PROVIDER, VECTOR_STORE_PROVIDER } from '../providers/provider-tokens';
 import { toPublicTranscript } from '../transcripts/public-transcript';
 import type { CreateRecordingRequest } from './recordings.dto';
 
@@ -132,6 +133,7 @@ export class RecordingsService {
     private readonly summaries: SummaryRepository,
     private readonly hooks: HookRepository,
     @Inject(QUEUE_PROVIDER) private readonly queue: QueueProvider,
+    @Inject(VECTOR_STORE_PROVIDER) private readonly vectorStore: VectorStoreProvider,
   ) {}
 
   async create(body: CreateRecordingRequest, userId: number) {
@@ -353,6 +355,8 @@ export class RecordingsService {
     if (!recording) {
       throw new HttpError(404, 'Not found');
     }
+    // Drop the derived hook vectors before the canonical rows so a delete never leaves stale index data.
+    await this.vectorStore.deleteByRecordingId(id);
     await this.recordings.remove(recording);
   }
 

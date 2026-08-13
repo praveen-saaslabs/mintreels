@@ -11,6 +11,7 @@ import {
   audioExtractionHandler,
   audioUploadHandler,
   clipRecommendationsHandler,
+  hookEmbeddingsHandler,
   hooksHandler,
   summaryHandler,
   transcriptionHandler,
@@ -43,7 +44,8 @@ function handlers(deps: WorkerDeps): Record<JobStepName, StepHandler> {
     [JobStepName.Summary]: summaryHandler(deps),
     [JobStepName.ActionItems]: actionItemsHandler(deps),
     [JobStepName.Hooks]: hooksHandler(deps),
-    [JobStepName.ClipRecommendations]: clipRecommendationsHandler(),
+    [JobStepName.HookEmbeddings]: hookEmbeddingsHandler(deps),
+    [JobStepName.ClipRecommendations]: clipRecommendationsHandler(deps),
   };
 }
 
@@ -60,6 +62,50 @@ async function setRecordingStatus(
   status: RecordingStatus,
 ): Promise<void> {
   await recordings.update({ id: recordingId }, { status });
+}
+
+/** Steps run by the standalone GENERATE_HOOKS job — hook discovery through clip boundaries only. */
+const HOOK_PIPELINE_STEPS: JobStepName[] = [
+  JobStepName.Hooks,
+  JobStepName.HookEmbeddings,
+  JobStepName.ClipRecommendations,
+];
+
+/** Builds the per-step runner shared by the full ingest pipeline and the hooks-only pipeline. */
+function createRunStep(params: {
+  job: Job;
+  deps: WorkerDeps;
+  recordingId: number;
+  config: ReturnType<typeof loadJobConfig>;
+  store: StepStore;
+  stepHandlers: Record<JobStepName, StepHandler>;
+}): (stepName: JobStepName) => Promise<Awaited<ReturnType<typeof executeStep>>> {
+  const { job, deps, recordingId, config, store, stepHandlers } = params;
+  return async (stepName: JobStepName) => {
+    job.currentStep = stepName;
+    await deps.jobs.save(job);
+
+    const outcome = await executeStep({
+      jobId: job.id,
+      recordingId,
+      stepName,
+      store,
+      handler: stepHandlers[stepName],
+      options: {
+        staleTimeoutMs: config.staleTimeoutMs,
+        retryBaseDelayMs: config.retryBaseDelayMs,
+        audit: async (event, message, step) => {
+          await writeAudit(deps.jobAuditLogs, { jobId: job.id, step: step.step, event, message });
+        },
+      },
+    });
+
+    console.log(
+      pipelineLog({ jobId: job.id, recordingId, step: stepName, attempt: job.attempt, message: outcome }),
+    );
+
+    return outcome;
+  };
 }
 
 export async function executePipeline(
@@ -104,46 +150,7 @@ export async function executePipeline(
   const stepHandlers = handlers(deps);
   let analysisFailed = false;
 
-  const audit = async (event: string, message: string, step: { step: string }) => {
-    await writeAudit(deps.jobAuditLogs, {
-      jobId: job.id,
-      step: step.step,
-      event,
-      message,
-    });
-  };
-
-  const runStep = async (stepName: JobStepName) => {
-    job.currentStep = stepName;
-    await deps.jobs.save(job);
-
-    const outcome = await executeStep({
-      jobId: job.id,
-      recordingId: input.recordingId,
-      stepName,
-      store,
-      handler: stepHandlers[stepName],
-      options: {
-        staleTimeoutMs: config.staleTimeoutMs,
-        retryBaseDelayMs: config.retryBaseDelayMs,
-        audit: async (event, message, step) => {
-          await audit(event, message, step);
-        },
-      },
-    });
-
-    console.log(
-      pipelineLog({
-        jobId: job.id,
-        recordingId: input.recordingId,
-        step: stepName,
-        attempt: job.attempt,
-        message: outcome,
-      }),
-    );
-
-    return outcome;
-  };
+  const runStep = createRunStep({ job, deps, recordingId: input.recordingId, config, store, stepHandlers });
 
   try {
     for (const stepName of CRITICAL_STEPS) {
@@ -206,6 +213,60 @@ export async function executePipeline(
     job.finishedAt = new Date();
     await deps.jobs.save(job);
     await setRecordingStatus(deps.recordings, input.recordingId, RecordingStatus.Failed);
+    throw error;
+  }
+}
+
+/**
+ * Standalone hooks pipeline for `POST /recordings/:id/hooks/generate` (plan §20/§26). Reuses the
+ * transcript that ingest already produced and runs hook discovery → embeddings → dedup/clip boundaries.
+ * The job + its `job_steps` are created by the API; this only drives them. Idempotent and resumable per
+ * `job_steps` row, so a retry restarts from the failed step rather than re-running discovery.
+ */
+export async function executeHookPipeline(
+  input: { recordingId: number; jobId: number },
+  deps: WorkerDeps,
+): Promise<DomainJobStatus> {
+  const config = loadJobConfig();
+  const job = await deps.jobs.findOneBy({ id: input.jobId });
+  if (!job) {
+    throw new Error(`GENERATE_HOOKS job ${String(input.jobId)} not found`);
+  }
+
+  job.status = JobStatus.Running;
+  job.startedAt = job.startedAt ?? new Date();
+  job.attempt += 1;
+  job.error = null;
+  await deps.jobs.save(job);
+
+  const store = stepStore(deps);
+  const stepHandlers = handlers(deps);
+  const runStep = createRunStep({ job, deps, recordingId: input.recordingId, config, store, stepHandlers });
+
+  try {
+    let failed = false;
+    for (const stepName of HOOK_PIPELINE_STEPS) {
+      const outcome = await runStep(stepName);
+      if (outcome === 'failed') {
+        failed = true;
+      }
+    }
+
+    job.status = failed ? JobStatus.Partial : JobStatus.Success;
+    job.errorCode = failed ? 'analysis_partial' : null;
+    job.error = null;
+    job.finishedAt = new Date();
+    await deps.jobs.save(job);
+    return job.status;
+  } catch (error) {
+    if (error instanceof StepRetryLaterError) {
+      throw error;
+    }
+    job.status = JobStatus.Failed;
+    job.error = error instanceof Error ? error.message : 'Hook pipeline failed';
+    job.errorCode = 'pipeline_error';
+    job.finishedAt = new Date();
+    await deps.jobs.save(job);
     throw error;
   }
 }

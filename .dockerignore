@@ -1,0 +1,13 @@
+# Keep the build context small — everything here is either reinstalled inside
+# the image or irrelevant to it. Without this, `docker compose build` streams
+# the entire repo (incl. ~1.7GB of node_modules) to the daemon on every build.
+**/node_modules
+**/dist
+**/build
+**/.turbo
+**/coverage
+.git
+.env
+.env.*
+!.env.example
+**/*.log

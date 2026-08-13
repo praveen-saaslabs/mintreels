@@ -1,4 +1,5 @@
-import type { Hook, Summary, Transcript } from '@mintreels/domain';
+import type { Summary, Transcript } from '@mintreels/domain';
+import type { HookCandidate, HookScoreWeights } from './hook-candidates';
 
 export interface ActionItem {
   text: string;
@@ -6,8 +7,16 @@ export interface ActionItem {
   endMs?: number;
 }
 
+export interface HookGenerationOptions {
+  weights: HookScoreWeights;
+  maxCandidates: number;
+}
+
 export interface LLMProvider {
   summarize(transcript: Transcript): Promise<Summary>;
-  generateHooks(transcript: Transcript): Promise<Hook[]>;
+  generateHooks(
+    transcript: Transcript,
+    options: HookGenerationOptions,
+  ): Promise<HookCandidate[]>;
   generateActionItems(transcript: Transcript): Promise<ActionItem[]>;
 }

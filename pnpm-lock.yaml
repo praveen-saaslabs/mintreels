@@ -104,10 +104,10 @@ importers:
     devDependencies:
       '@swc-node/register':
         specifier: ^1.12.1
-        version: 1.12.1(@swc/core@1.15.47)(@swc/types@0.1.28)(typescript@5.9.3)
+        version: 1.12.1(@swc/core@1.15.47(@swc/helpers@0.5.23))(@swc/types@0.1.28)(typescript@5.9.3)
       '@swc/core':
         specifier: ^1.15.47
-        version: 1.15.47
+        version: 1.15.47(@swc/helpers@0.5.23)
       '@types/cookie-parser':
         specifier: ^1.4.10
         version: 1.4.10(@types/express@5.0.6)
@@ -247,10 +247,10 @@ importers:
     devDependencies:
       '@swc-node/register':
         specifier: ^1.12.1
-        version: 1.12.1(@swc/core@1.15.47)(@swc/types@0.1.28)(typescript@5.9.3)
+        version: 1.12.1(@swc/core@1.15.47(@swc/helpers@0.5.23))(@swc/types@0.1.28)(typescript@5.9.3)
       '@swc/core':
         specifier: ^1.15.47
-        version: 1.15.47
+        version: 1.15.47(@swc/helpers@0.5.23)
       '@types/node':
         specifier: ^22.10.2
         version: 22.20.1
@@ -272,6 +272,9 @@ importers:
       '@pyai/sdk':
         specifier: ^0.2.3
         version: 0.2.3
+      '@qdrant/js-client-rest':
+        specifier: ^1.11.0
+        version: 1.19.0(typescript@5.9.3)
       openai:
         specifier: ^4.104.0
         version: 4.104.0(zod@4.4.3)
@@ -318,10 +321,10 @@ importers:
     devDependencies:
       '@swc-node/register':
         specifier: ^1.12.1
-        version: 1.12.1(@swc/core@1.15.47)(@swc/types@0.1.28)(typescript@5.9.3)
+        version: 1.12.1(@swc/core@1.15.47(@swc/helpers@0.5.23))(@swc/types@0.1.28)(typescript@5.9.3)
       '@swc/core':
         specifier: ^1.15.47
-        version: 1.15.47
+        version: 1.15.47(@swc/helpers@0.5.23)
       '@types/node':
         specifier: ^22.10.2
         version: 22.20.1
@@ -1383,6 +1386,16 @@ packages:
     engines: {node: '>=18'}
     hasBin: true
 
+  '@qdrant/js-client-rest@1.19.0':
+    resolution: {integrity: sha512-1+QLUHsWp+WV4PE35FLnH2ckxotWrQEqi/F3t4goF3cCThR0ZxLVtOC4OoOi/E1iyj/iIYBdbuACWMuQ15NAnA==}
+    engines: {node: '>=22.0.0'}
+    peerDependencies:
+      typescript: '>=4.7'
+
+  '@qdrant/openapi-typescript-fetch@1.2.6':
+    resolution: {integrity: sha512-oQG/FejNpItrxRHoyctYvT3rwGZOnK4jr3JdppO/c78ktDvkWiPXPHNsrDf33K9sZdRb6PR7gi4noIapu5q4HA==}
+    engines: {node: '>=18.0.0', pnpm: '>=8'}
+
   '@rolldown/pluginutils@1.0.0-beta.27':
     resolution: {integrity: sha512-+d0F4MKMCbeVUJwG96uQ4SgAznZNSq93I3V+9NHA4OpvqG8mRCpGdKmK8l/dl02h2CCDHwW2FqilnTyDcAnqjA==}
 
@@ -1647,6 +1660,9 @@ packages:
 
   '@swc/counter@0.1.3':
     resolution: {integrity: sha512-e2BR4lsJkkRlKZ/qCHPw9ZaSxc0MVUd7gtbtaB7aMvHeJVYe8sOB8DBZkP2DtISHGSku9sCK6T6cnY0CtXrOCQ==}
+
+  '@swc/helpers@0.5.23':
+    resolution: {integrity: sha512-5lSsMOTXURePglDfvuAQUqkGek9Hg2kksOYay2m0+XR++b2NWYL/4sWyuvVBIs8oKnJaxkdi9whaL/sqN13afw==}
 
   '@swc/types@0.1.28':
     resolution: {integrity: sha512-V6Mnml8v09QALx6K0elJ7o9K/MkVDtW3t6L+7Ou/JcWtb3xwId2AH4FeOceySd2JaO87IMw4+6vSZxLm34LPbw==}
@@ -4293,6 +4309,9 @@ packages:
       use-sync-external-store:
         optional: true
 
+ignoredOptionalDependencies:
+  - '@huggingface/transformers'
+
 snapshots:
 
   '@babel/code-frame@7.29.7':
@@ -5121,6 +5140,14 @@ snapshots:
 
   '@pyai/sdk@0.2.3': {}
 
+  '@qdrant/js-client-rest@1.19.0(typescript@5.9.3)':
+    dependencies:
+      '@qdrant/openapi-typescript-fetch': 1.2.6
+      typescript: 5.9.3
+      undici: 7.29.0
+
+  '@qdrant/openapi-typescript-fetch@1.2.6': {}
+
   '@rolldown/pluginutils@1.0.0-beta.27': {}
 
   '@rollup/rollup-android-arm-eabi@4.62.4':
@@ -5234,17 +5261,17 @@ snapshots:
 
   '@sqltools/formatter@1.2.5': {}
 
-  '@swc-node/core@1.15.0(@swc/core@1.15.47)(@swc/types@0.1.28)':
+  '@swc-node/core@1.15.0(@swc/core@1.15.47(@swc/helpers@0.5.23))(@swc/types@0.1.28)':
     dependencies:
-      '@swc/core': 1.15.47
+      '@swc/core': 1.15.47(@swc/helpers@0.5.23)
       '@swc/types': 0.1.28
 
-  '@swc-node/register@1.12.1(@swc/core@1.15.47)(@swc/types@0.1.28)(typescript@5.9.3)':
+  '@swc-node/register@1.12.1(@swc/core@1.15.47(@swc/helpers@0.5.23))(@swc/types@0.1.28)(typescript@5.9.3)':
     dependencies:
       '@node-rs/xxhash': 1.7.6
-      '@swc-node/core': 1.15.0(@swc/core@1.15.47)(@swc/types@0.1.28)
+      '@swc-node/core': 1.15.0(@swc/core@1.15.47(@swc/helpers@0.5.23))(@swc/types@0.1.28)
       '@swc-node/sourcemap-support': 0.6.1
-      '@swc/core': 1.15.47
+      '@swc/core': 1.15.47(@swc/helpers@0.5.23)
       colorette: 2.0.20
       debug: 4.4.3
       fast-json-stable-stringify: 2.1.0
@@ -5315,7 +5342,31 @@ snapshots:
       '@swc/core-win32-ia32-msvc': 1.15.47
       '@swc/core-win32-x64-msvc': 1.15.47
 
+  '@swc/core@1.15.47(@swc/helpers@0.5.23)':
+    dependencies:
+      '@swc/counter': 0.1.3
+      '@swc/types': 0.1.28
+    optionalDependencies:
+      '@swc/core-darwin-arm64': 1.15.47
+      '@swc/core-darwin-x64': 1.15.47
+      '@swc/core-linux-arm-gnueabihf': 1.15.47
+      '@swc/core-linux-arm64-gnu': 1.15.47
+      '@swc/core-linux-arm64-musl': 1.15.47
+      '@swc/core-linux-ppc64-gnu': 1.15.47
+      '@swc/core-linux-s390x-gnu': 1.15.47
+      '@swc/core-linux-x64-gnu': 1.15.47
+      '@swc/core-linux-x64-musl': 1.15.47
+      '@swc/core-win32-arm64-msvc': 1.15.47
+      '@swc/core-win32-ia32-msvc': 1.15.47
+      '@swc/core-win32-x64-msvc': 1.15.47
+      '@swc/helpers': 0.5.23
+
   '@swc/counter@0.1.3': {}
+
+  '@swc/helpers@0.5.23':
+    dependencies:
+      tslib: 2.8.1
+    optional: true
 
   '@swc/types@0.1.28':
     dependencies:

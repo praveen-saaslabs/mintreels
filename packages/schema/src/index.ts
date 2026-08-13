@@ -4,7 +4,10 @@ export {
   ClipFilterId,
   ClipRatio,
   ClipStatus,
+  EmbeddingStatus,
   EnvKey,
+  HookStatus,
+  HookType,
   JOB_STEP_NAMES,
   JobActivityStatus,
   JobStatus,
@@ -95,7 +98,15 @@ export {
   type KnowledgeDocumentInsert,
   type KnowledgeDocumentRow,
 } from './knowledge';
-export { hookInsertSchema, hookRowSchema, type HookInsert, type HookRow } from './hooks';
+export {
+  embeddingStatusSchema,
+  hookInsertSchema,
+  hookRowSchema,
+  hookStatusSchema,
+  hookTypeSchema,
+  type HookInsert,
+  type HookRow,
+} from './hooks';
 export {
   clipInsertSchema,
   clipRowSchema,
