@@ -30,7 +30,7 @@ The API is a NestJS app (`apps/api`). Feature modules use controller + service +
 Placeholder routes:
 
 - `POST/GET /api/recordings`
-- `GET/DELETE /api/recordings/:id`
+- `GET/DELETE /api/recordings/:id` (soft-delete cascades children; Filestack kept until purge)
 - `GET /api/recordings/:id/transcript`
 - `GET /api/recordings/:id/transcript.vtt`
 - `GET /api/recordings/:id/summary`
@@ -45,8 +45,10 @@ Placeholder routes:
 - `GET /api/clips`
 - `GET /api/clips/filters`
 - `GET /api/clips/:id`
+- `DELETE /api/clips/:id`
 - `GET /api/projects`
 - `GET /api/projects/sidebar`
+- `DELETE /api/projects/:id`
 - `GET /api/workspace/user`
 - `GET /api/workspace/stats`
 - `GET /api/settings`

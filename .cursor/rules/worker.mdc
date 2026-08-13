@@ -8,12 +8,12 @@ alwaysApply: false
 
 Jobs live in `apps/worker/src/jobs`:
 
-- `ingest-video`
+- `ingest-video` (no-op success if the recording row is missing or soft-deleted)
 - `transcribe`
 - `summarize`
 - `generate-hooks`
 - `sync-knowledge-base`
-- `render-clip` (registered; FFmpeg trim + Filestack upload)
+- `render-clip` (registered; FFmpeg trim + Filestack upload; no-op success if the clip or recording row is already gone / soft-deleted)
 
 The worker currently listens for `ingest-video` and `render-clip`. Use provider interfaces. Do not call PyAI or FFmpeg from HTTP.
 

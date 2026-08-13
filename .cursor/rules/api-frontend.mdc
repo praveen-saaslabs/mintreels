@@ -15,4 +15,5 @@ Read `docs/api-frontend.md` before wiring home/recordings/clips/settings to the 
 - Never render `storageKey`, real API keys, or `maskedKey` other than `"configured"` / `"not configured"`.
 - Live data: `VITE_USE_MOCK_DATA=false`. Swagger: `/docs`.
 - Upload ingest: follow `.cursor/rules/upload-ingest-frontend.mdc`. `POST /api/recordings` + poll `GET /api/recordings/:id/processing`.
-- Clip export: `POST /api/recordings/:id/hooks/:hookId/export`, then poll `GET /api/clips/:id`. Ask box: follow `.cursor/rules/ask-moments-frontend.mdc` (`POST .../moments/ask`, switch on `kind`). Download `videoUrl` (HTTPS Filestack only). Do not call generate summary or add-to-global-kb yet (still 501).
+- Clip export: `POST /api/recordings/:id/hooks/:hookId/export`, then poll `GET /api/clips/:id`. Download `videoUrl` (HTTPS Filestack only). Do not call generate summary/hooks, add-to-global-kb, or generic `POST /api/clips` yet (still 501).
+- Delete: `DELETE /api/projects/:id`, `DELETE /api/clips/:id`, `DELETE /api/recordings/:id` → **204** (soft-delete `deleted_at`; lists/gets omit those rows). Confirm in UI before calling. Missing/not owned → **404**. Never render `storageKey`. Filestack + PyAI KB stay until a later purge.

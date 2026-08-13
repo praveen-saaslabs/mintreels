@@ -427,6 +427,7 @@ provider
 provider_knowledge_base_id
 created_at
 updated_at
+deleted_at
 ```
 
 Where:
@@ -468,6 +469,7 @@ recording_id
 source_type
 title
 created_at
+deleted_at
 ```
 
 This gives MintReels its own stable application-level identity while PyAI owns the actual Knowledge Base contents.
@@ -600,7 +602,11 @@ knowledge_documents
 hooks
 clips
 jobs
+job_steps
+job_audit_logs
 ```
+
+Every table has nullable `deleted_at`. `NULL` = active; set = soft-deleted and excluded from lists/gets. Filestack and PyAI KB objects stay until a later purge.
 
 ---
 
@@ -623,6 +629,7 @@ height
 status
 created_at
 updated_at
+deleted_at
 ```
 
 Recording status:
@@ -1039,6 +1046,8 @@ POST   /api/recordings/:id/retry
 DELETE /api/recordings/:id
 ```
 
+`DELETE /api/recordings/:id` is tenant-scoped (**204**). It soft-deletes (sets `deleted_at`) jobs/steps/audit, clips, hooks, transcript, summary, recording-scoped KB rows, and the recording. Filestack media is kept for a later purge. Missing/not owned/already deleted → **404**.
+
 ## Transcript
 
 ```http
@@ -1075,21 +1084,27 @@ POST /api/recordings/:id/moments/ask
 ## Clips
 
 ```http
-POST /api/clips
-GET  /api/clips
-GET  /api/clips/filters
-GET  /api/clips/:id
-GET  /api/clips/:id/download
+POST   /api/clips
+GET    /api/clips
+GET    /api/clips/filters
+GET    /api/clips/:id
+DELETE /api/clips/:id
+GET    /api/clips/:id/download
 ```
 
 Product clip create is hook export (`POST /api/recordings/:id/hooks/:hookId/export`) or prompt-range `POST /api/clips`. `GET /api/clips/:id/download` is still 501; the UI downloads `videoUrl` from `GET /api/clips/:id`.
 
+`DELETE /api/clips/:id` is tenant-scoped (**204**). Soft-deletes the clip row (`deleted_at`). Does not delete the hook. Filestack video + thumbnail stay until a later purge.
+
 ## Projects
 
 ```http
-GET /api/projects
-GET /api/projects/sidebar
+GET    /api/projects
+GET    /api/projects/sidebar
+DELETE /api/projects/:id
 ```
+
+`DELETE /api/projects/:id` soft-deletes every recording (same cascade as recording delete), then remaining project KB metadata in MySQL, then the project. PyAI KB objects are kept until a later purge. **204** / **404**.
 
 ## Workspace
 
@@ -1141,9 +1156,10 @@ finished_at
 metadata
 created_at
 updated_at
+deleted_at
 
-job_steps (one row per VIDEO_INGEST step; UNIQUE job_id+step)
-job_audit_logs (append-only events; never store secrets in metadata)
+job_steps (one row per VIDEO_INGEST step; UNIQUE job_id+step; also has deleted_at)
+job_audit_logs (append-only events; never store secrets in metadata; also has deleted_at)
 ```
 
 Job states:

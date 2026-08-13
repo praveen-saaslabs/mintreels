@@ -48,8 +48,11 @@ A repository is **one table**. If a feature needs recordings + clips + jobs, the
 - `POST /api/recordings/:id/moments/search` (sync embed + transcript-window search; no job)
 - `POST /api/recordings/:id/moments/ask` (sync LLM route: transcript Q&A, clip search, or funny reject)
 - `GET/POST /api/knowledge-bases`
-- `GET /api/clips`, `GET /api/clips/filters`, `GET /api/clips/:id`
-- `POST /api/clips` (owned recording time range; prompt search or arbitrary range)
+- `GET /api/clips`, `GET /api/clips/filters`, `GET /api/clips/:id`, `DELETE /api/clips/:id`
+- `POST /api/clips` (501 — arbitrary ranges; product path is hook export)
+- `GET /api/projects`, `GET /api/projects/sidebar`, `DELETE /api/projects/:id`
+
+`DELETE` is **soft delete**: set `deleted_at` on the row and cascaded children. Lists/gets never return those rows (**404** if already deleted). Do not hard-delete MySQL rows or Filestack/PyAI KB objects from these handlers (purge is a later job).
 
 Wire providers at the composition root (`providers/ProvidersModule`). Do not import PyAI or vendor SDKs in controllers or services.
 
@@ -71,15 +74,15 @@ export class FeatureController { ... }
 
 Apply **all** of the following that are relevant:
 
-| Decorator | When to use |
-|-----------|-------------|
-| `@ApiOperation({ summary: '...' })` | Always — one sentence describing what the endpoint does |
-| `@ApiParam({ name: 'id', type: Number })` | Every `:param` in the path |
-| `@ApiBody({ type: ... })` | POST/PATCH/PUT with a request body |
-| `@ApiOkResponse` / `@ApiCreatedResponse` / `@ApiAcceptedResponse` | Success response — add `description` |
-| `@ApiNotFoundResponse` | When a 404 is possible |
-| `@ApiBadRequestResponse` | When validation can fail |
-| `@ApiProduces('text/vtt')` | Non-JSON response types |
+| Decorator                                                         | When to use                                             |
+| ----------------------------------------------------------------- | ------------------------------------------------------- |
+| `@ApiOperation({ summary: '...' })`                               | Always — one sentence describing what the endpoint does |
+| `@ApiParam({ name: 'id', type: Number })`                         | Every `:param` in the path                              |
+| `@ApiBody({ type: ... })`                                         | POST/PATCH/PUT with a request body                      |
+| `@ApiOkResponse` / `@ApiCreatedResponse` / `@ApiAcceptedResponse` | Success response — add `description`                    |
+| `@ApiNotFoundResponse`                                            | When a 404 is possible                                  |
+| `@ApiBadRequestResponse`                                          | When validation can fail                                |
+| `@ApiProduces('text/vtt')`                                        | Non-JSON response types                                 |
 
 ### Full example
 

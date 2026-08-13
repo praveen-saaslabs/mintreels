@@ -57,6 +57,7 @@ All paths are under `/api`. All GETs below are implemented and cookie-scoped to 
 | --- | --- | --- |
 | `getRecordings()` | GET | `/recordings` |
 | `getRecording(id)` | GET | `/recordings/:id` |
+| `deleteRecording(id)` | DELETE | `/recordings/:id` (**204**) |
 | `getRecordingProcessing(id)` | GET | `/recordings/:id/processing` |
 | `createRecording(body)` | POST | `/recordings` |
 | `retryRecording(id)` | POST | `/recordings/:id/retry` |
@@ -70,9 +71,11 @@ All paths are under `/api`. All GETs below are implemented and cookie-scoped to 
 | `createClip(body)` | POST | `/clips` |
 | `getKnowledgeBases()` | GET | `/knowledge-bases` |
 | `getClip(id)` | GET | `/clips/:id` |
+| `deleteClip(id)` | DELETE | `/clips/:id` (**204**) |
 | `getClips()` | GET | `/clips` |
 | `getClipFilters()` | GET | `/clips/filters` |
 | `getProjects()` | GET | `/projects` |
+| `deleteProject(id)` | DELETE | `/projects/:id` (**204**) |
 | `getSidebarProjects()` | GET | `/projects/sidebar` |
 | `getWorkspaceUser()` | GET | `/workspace/user` |
 | `getWorkspaceStats()` | GET | `/workspace/stats` |
@@ -361,24 +364,31 @@ Errors: `404` recording/hook, `400 INVALID_HOOK_RANGE`, `409 VIDEO_NOT_AVAILABLE
 }
 ```
 
-Map to mock `ClipSummary` in the UI: `projectLabel` ← `projectName` + `recordingTitle`; `range` / `duration` ← `startMs`/`endMs`; `subtitled` ← `Boolean(subtitleStyle)`; `id` ← `String(id)` only if the router still wants strings.
+Map to mock `ClipSummary` in the UI: `projectLabel` ← `projectName` + `recordingTitle`; `range` / `duration` ← `startMs`/`endMs`; `id` ← `String(id)` only if the router still wants strings.
 
 ### Editor + clips UI
 
 - Editor hook card: **Cut clip** until the hook has no ready `videoUrl`; poll `GET /clips/:id` while `queued` / `rendering`. When `status === ready` and `videoUrl` is set, show the **download icon** only.
-- Clips page: list/filter via `GET /clips` + `GET /clips/filters`. Cards use a **4:3** poster (`thumbnailUrl` when present); **Download** when `ready` + `videoUrl`.
+- Clips page: list/filter via `GET /clips` + `GET /clips/filters`. Cards use a **4:3** poster (`thumbnailUrl` when present); **Download** when `ready` + `videoUrl`. **Delete** (confirm dialog) calls `DELETE /clips/:id` for any status.
 - Download fetches `videoUrl` in the browser (HTTPS Filestack CDN only, `credentials: 'omit'`). Show a loading state while the file is saving. Signed `GET /clips/:id/download` is still unimplemented.
+
+### Delete — `DELETE /api/projects/:id`, `/api/clips/:id`, `/api/recordings/:id`
+
+Cookie session required. Success is **204** with an empty body (`api.ts` already treats 204 as `void`). Missing / not owned → **404 `{ "error": "Not found" }`**. List/sidebar/stats/editor GETs never include soft-deleted rows (`deleted_at` set); the UI removes them from React Query cache on 204, then refetches.
+
+- **Project** (home card + editor header): confirm, then `deleteProject(id)`. Soft-deletes recordings, clips, and KB metadata (`deleted_at`). Drop from list/sidebar/stats cache immediately, then invalidate projects, clips, recordings, workspace stats. After editor delete, navigate to `/`.
+- **Clip** (clips page card): confirm, then `deleteClip(id)`. Does not delete the hook. Drop from list/filters/detail/stats cache immediately, then invalidate.
+- **Recording**: `deleteRecording(id)` is available on the client; product UI deletes via the **project**. Server cascade soft-deletes child MySQL rows. Filestack and PyAI KB objects stay until a later purge.
 
 ### Clip filters — `GET /api/clips/filters`
 
 ```json
 [
   { "id": "all", "label": "All", "count": 128 },
-  { "id": "ready", "label": "Ready", "count": 119 },
+  { "id": "queued", "label": "Queued", "count": 5 },
   { "id": "rendering", "label": "Rendering", "count": 6 },
-  { "id": "failed", "label": "Failed", "count": 3 },
-  { "id": "ratio_9_16", "label": "9:16", "count": 90 },
-  { "id": "subtitled", "label": "Subtitled", "count": 80 }
+  { "id": "ready", "label": "Ready", "count": 114 },
+  { "id": "failed", "label": "Failed", "count": 3 }
 ]
 ```
 
@@ -404,6 +414,8 @@ Mock labels like `"All · 128"` — append ` · ${count}` in the UI if you want 
 ```
 
 `jobStatus`: `running` \| `failed` \| `idle`. `kbScope`: `global` \| `recording` \| `null`.
+
+Home project cards: trash overlay + confirm before `DELETE /projects/:id`.
 
 Mock map: `recordings` ← `recordingCount`, `clips` ← `clipCount`, `hooks` ← `hookCount`, `updatedLabel` ← format `updatedAt`, `kbLabel` / `jobText` ← derive from `kbScope` + counts.
 
