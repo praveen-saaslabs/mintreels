@@ -1,13 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import WaveSurfer from 'wavesurfer.js';
 import RegionsPlugin, { type Region } from 'wavesurfer.js/plugins/regions';
+import { SpeakerBadge } from '@/components/transcript/speaker-badge';
 import { HooksStrip } from '@/components/video/hooks-strip';
 import { DEMO_MEDIA } from '@/lib/demo-media';
-import {
-  buildSpeakerColorMap,
-  formatSpeakerLabel,
-  getSpeakerColor,
-} from '@/lib/speaker-colors';
+import { speakerCssColor, speakerSwatchClass } from '@/lib/speaker-style';
+import { uniqueSpeakers } from '@/lib/transcript';
 import { cn } from '@/lib/utils';
 import { useEditorStore, type EditorHook } from '@/stores/editor-store';
 
@@ -27,6 +25,13 @@ const TARGET_PEAKS_MAX = 2400;
 const HOOK_REGION_FILL = 'oklch(0.62 0.13 165 / 0.10)';
 const HOOK_REGION_FILL_SELECTED = 'oklch(0.62 0.13 165 / 0.22)';
 const HOOK_REGION_BORDER = 'oklch(0.62 0.13 165)';
+
+/**
+ * WaveSurfer progress (played) bars — the dual-tone “2nd track” over the unplayed wave.
+ * Not a speaker lane; mapped to speaker_2 (green slot) so it stays on the shared palette
+ * instead of a one-off mint hex. Unplayed bars stay neutral gray.
+ */
+const WAVEFORM_PROGRESS_SPEAKER = 'speaker_2';
 
 /** Fixed wave host height — must stay shrink-0 so cards never crush the canvas. */
 const WAVEFORM_HEIGHT = 72;
@@ -240,13 +245,7 @@ export function Timeline({ audioUrl = DEMO_MEDIA.audioUrl }: Readonly<TimelinePr
   const selectHookAndSeek = useEditorStore((state) => state.selectHookAndSeek);
   const seek = useEditorStore((state) => state.seek);
 
-  const speakers = useMemo(
-    () => [...new Set(segments.map((segment) => segment.speaker).filter(Boolean))].sort((a, b) =>
-      a.localeCompare(b, undefined, { numeric: true }),
-    ),
-    [segments],
-  );
-  const speakerColors = useMemo(() => buildSpeakerColorMap(speakers), [speakers]);
+  const speakers = useMemo(() => uniqueSpeakers(segments), [segments]);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const wavesurferRef = useRef<WaveSurfer | null>(null);
@@ -296,7 +295,7 @@ export function Timeline({ audioUrl = DEMO_MEDIA.audioUrl }: Readonly<TimelinePr
           media,
           height: WAVEFORM_HEIGHT,
           waveColor: '#c4c4c4',
-          progressColor: '#5db89a',
+          progressColor: speakerCssColor(WAVEFORM_PROGRESS_SPEAKER),
           // Mint accent playhead — glow/rounding via `.mint-waveform::part(cursor)` in index.css
           cursorColor: 'oklch(0.55 0.14 165)',
           cursorWidth: 3,
@@ -386,23 +385,13 @@ export function Timeline({ audioUrl = DEMO_MEDIA.audioUrl }: Readonly<TimelinePr
     <section className="flex h-full min-h-0 w-full flex-col overflow-hidden border-t border-border bg-background">
       <div className="flex min-h-0 flex-1 flex-col gap-2 px-4 py-3">
         {speakers.length > 0 ? (
-          <div className="flex shrink-0 flex-wrap items-center gap-2">
-            {speakers.map((speaker) => {
-              const color = getSpeakerColor(speaker, speakerColors);
-              return (
-                <span
-                  key={speaker}
-                  className="inline-flex h-[22px] items-center gap-1.5 rounded-full border border-border bg-background px-2.5 text-[11px] text-foreground"
-                >
-                  <span
-                    className="size-2.5 rounded-full"
-                    style={{ backgroundColor: color.solid }}
-                    aria-hidden
-                  />
-                  {formatSpeakerLabel(speaker)}
-                </span>
-              );
-            })}
+          <div
+            className="flex shrink-0 flex-wrap items-center gap-1.5"
+            aria-label="Speakers"
+          >
+            {speakers.map((speaker) => (
+              <SpeakerBadge key={speaker} speaker={speaker} />
+            ))}
           </div>
         ) : null}
 
@@ -443,23 +432,23 @@ export function Timeline({ audioUrl = DEMO_MEDIA.audioUrl }: Readonly<TimelinePr
             aria-label="Speaker activity"
           >
             {segments.map((segment) => {
-              if (segment.end <= segment.start) {
+              if (!segment.speaker.trim() || segment.end <= segment.start) {
                 return null;
               }
 
               const left = (segment.start / duration) * 100;
               const width = Math.max(0.35, ((segment.end - segment.start) / duration) * 100);
-              const color = getSpeakerColor(segment.speaker, speakerColors);
 
               return (
                 <div
                   key={segment.id}
-                  className="absolute inset-y-0 rounded-sm"
+                  className={cn(
+                    'absolute inset-y-0 rounded-sm opacity-85',
+                    speakerSwatchClass(segment.speaker),
+                  )}
                   style={{
                     left: `${String(left)}%`,
                     width: `${String(width)}%`,
-                    backgroundColor: color.solid,
-                    opacity: 0.85,
                   }}
                 />
               );

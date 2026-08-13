@@ -45,12 +45,20 @@
   --color-speaker-4: var(--speaker-4);
   --color-speaker-5: var(--speaker-5);
   --color-speaker-6: var(--speaker-6);
+  --color-speaker-7: var(--speaker-7);
+  --color-speaker-8: var(--speaker-8);
+  --color-speaker-9: var(--speaker-9);
+  --color-speaker-10: var(--speaker-10);
   --color-speaker-1-bg: var(--speaker-1-bg);
   --color-speaker-2-bg: var(--speaker-2-bg);
   --color-speaker-3-bg: var(--speaker-3-bg);
   --color-speaker-4-bg: var(--speaker-4-bg);
   --color-speaker-5-bg: var(--speaker-5-bg);
   --color-speaker-6-bg: var(--speaker-6-bg);
+  --color-speaker-7-bg: var(--speaker-7-bg);
+  --color-speaker-8-bg: var(--speaker-8-bg);
+  --color-speaker-9-bg: var(--speaker-9-bg);
+  --color-speaker-10-bg: var(--speaker-10-bg);
   --color-mr-acc: var(--mr-acc);
   --color-transcript-active: var(--transcript-active);
   --color-transcript-word: var(--transcript-word);
@@ -108,6 +116,14 @@
   --speaker-5-bg: oklch(0.95 0.03 25);
   --speaker-6: oklch(0.48 0.08 185);
   --speaker-6-bg: oklch(0.95 0.03 185);
+  --speaker-7: oklch(0.5 0.1 75);
+  --speaker-7-bg: oklch(0.95 0.04 75);
+  --speaker-8: oklch(0.5 0.1 340);
+  --speaker-8-bg: oklch(0.95 0.03 340);
+  --speaker-9: oklch(0.48 0.1 120);
+  --speaker-9-bg: oklch(0.95 0.04 120);
+  --speaker-10: oklch(0.5 0.09 275);
+  --speaker-10-bg: oklch(0.95 0.03 275);
 
   /* MintReels Home shell tokens (light) */
   --mr-bg: oklch(1 0 0);
@@ -175,6 +191,14 @@
   --speaker-5-bg: oklch(0.3 0.05 25);
   --speaker-6: oklch(0.8 0.07 185);
   --speaker-6-bg: oklch(0.3 0.04 185);
+  --speaker-7: oklch(0.82 0.08 75);
+  --speaker-7-bg: oklch(0.3 0.05 75);
+  --speaker-8: oklch(0.82 0.08 340);
+  --speaker-8-bg: oklch(0.3 0.05 340);
+  --speaker-9: oklch(0.8 0.08 120);
+  --speaker-9-bg: oklch(0.3 0.05 120);
+  --speaker-10: oklch(0.82 0.07 275);
+  --speaker-10-bg: oklch(0.3 0.04 275);
 
   /* MintReels Home shell tokens (dark) */
   --mr-bg: oklch(0.145 0 0);
