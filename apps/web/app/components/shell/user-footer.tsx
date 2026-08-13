@@ -1,21 +1,12 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Moon, Settings, Sun } from 'lucide-react';
+import { Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { playThemeSwitchSound } from '@/lib/theme-switch-sound';
 import { useProjects } from '@/providers/projects-provider';
-import { useTheme } from '@/providers/theme-provider';
 
 export function UserFooter() {
   const { user } = useProjects();
-  const { theme, toggleTheme } = useTheme();
   const location = useLocation();
   const settingsActive = location.pathname.startsWith('/settings');
-
-  function handleThemeToggle() {
-    const nextTheme = theme === 'dark' ? 'light' : 'dark';
-    playThemeSwitchSound(nextTheme);
-    toggleTheme();
-  }
 
   return (
     <div className="flex w-full items-center gap-1 px-1 py-1">
@@ -43,17 +34,6 @@ export function UserFooter() {
         className="shrink-0"
       >
         <Settings />
-      </Button>
-
-      <Button
-        variant="ghost"
-        size="icon-sm"
-        onClick={handleThemeToggle}
-        aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-        title={theme === 'dark' ? 'Light mode' : 'Dark mode'}
-        className="shrink-0 text-muted-foreground"
-      >
-        {theme === 'dark' ? <Sun /> : <Moon />}
       </Button>
     </div>
   );

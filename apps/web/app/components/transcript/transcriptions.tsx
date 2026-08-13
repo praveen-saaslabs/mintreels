@@ -74,8 +74,8 @@ export function Transcriptions() {
   );
 
   return (
-    <section className="flex h-full min-h-0 w-full flex-col border border-neutral-300 bg-background">
-      <header className="shrink-0 space-y-2 border-b border-neutral-200 px-3 py-2">
+    <section className="flex h-full min-h-0 w-full flex-col border border-border bg-background">
+      <header className="shrink-0 space-y-2 border-b border-border px-3 py-2">
         <h2 className="text-sm font-medium text-foreground">Transcriptions</h2>
         {segments.length > 0 ? (
           <>

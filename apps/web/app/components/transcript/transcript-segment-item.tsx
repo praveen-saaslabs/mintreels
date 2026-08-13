@@ -47,8 +47,10 @@ export const TranscriptSegmentItem = memo(function TranscriptSegmentItem({
         type="button"
         onClick={onClick}
         className={cn(
-          'w-full rounded-lg border border-transparent px-2 py-2 text-left hover:bg-muted/80',
-          isActive && 'border-border bg-muted',
+          'w-full rounded-lg border border-transparent px-2 py-2 text-left',
+          isActive
+            ? 'border-mr-acc bg-transcript-active'
+            : 'hover:bg-muted/80',
         )}
       >
         <span className="mb-1 flex items-center gap-2">
@@ -75,7 +77,7 @@ export const TranscriptSegmentItem = memo(function TranscriptSegmentItem({
                     ref={isCurrentWord ? activeWordRef : undefined}
                     data-word-start={String(word.start)}
                     aria-current={isCurrentWord ? 'true' : undefined}
-                    className={cn('rounded-sm', isCurrentWord && 'bg-primary/15')}
+                    className={cn('rounded-sm', isCurrentWord && 'bg-transcript-word')}
                   >
                     {word.word}
                   </span>

@@ -51,6 +51,9 @@
   --color-speaker-4-bg: var(--speaker-4-bg);
   --color-speaker-5-bg: var(--speaker-5-bg);
   --color-speaker-6-bg: var(--speaker-6-bg);
+  --color-mr-acc: var(--mr-acc);
+  --color-transcript-active: var(--transcript-active);
+  --color-transcript-word: var(--transcript-word);
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -124,6 +127,8 @@
   --mr-accfg: oklch(0.99 0 0);
   --mr-warn: oklch(0.72 0.14 80);
   --mr-bad: oklch(0.577 0.245 27.325);
+  --transcript-active: color-mix(in oklch, var(--mr-acc) 12%, var(--muted));
+  --transcript-word: color-mix(in oklch, var(--mr-acc) 26%, transparent);
 }
 
 .dark {
@@ -189,6 +194,8 @@
   --mr-accfg: oklch(0.18 0.04 165);
   --mr-warn: oklch(0.78 0.13 80);
   --mr-bad: oklch(0.704 0.191 22.216);
+  --transcript-active: color-mix(in oklch, var(--mr-acc) 24%, var(--muted));
+  --transcript-word: color-mix(in oklch, var(--mr-acc) 42%, transparent);
 }
 
 @layer base {
