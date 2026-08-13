@@ -4,6 +4,13 @@ import { generateExtractiveHooks } from '../../extractive-hooks';
 import { mapHookCandidates, type HookCandidate } from '../../hook-candidates';
 import type { ActionItem, HookGenerationOptions, LLMProvider } from '../../llm-provider';
 import {
+  heuristicTranscriptAsk,
+  parseTranscriptAskResponse,
+  TRANSCRIPT_ASK_JSON_SCHEMA,
+  TRANSCRIPT_ASK_SYSTEM,
+  type TranscriptAskResult,
+} from '../../transcript-ask';
+import {
   buildHooksUserPrompt,
   HOOKS_JSON_SCHEMA,
   HOOKS_PROMPT_VERSION,
@@ -104,6 +111,27 @@ export class OpenAICompatibleLLMProvider implements LLMProvider {
       jsonSchema: ACTION_ITEMS_JSON_SCHEMA,
       parse: parseActionItemsResponse,
     });
+  }
+
+  async askTranscript(transcript: Transcript, question: string): Promise<TranscriptAskResult> {
+    const payload = formatTranscriptText(transcript);
+    const user = `Transcript:\n${payload.length > 0 ? payload : '(empty transcript)'}\n\nUser:\n${question.trim()}`;
+    try {
+      return await this.completeJson({
+        system: TRANSCRIPT_ASK_SYSTEM,
+        user,
+        schemaName: 'transcript_ask',
+        jsonSchema: TRANSCRIPT_ASK_JSON_SCHEMA,
+        parse: (raw) => parseTranscriptAskResponse(raw, question),
+      });
+    } catch (error) {
+      console.warn(
+        `[${this.config.provider}] transcript ask failed, using heuristic: ${
+          error instanceof Error ? error.message : 'unknown error'
+        }`,
+      );
+      return heuristicTranscriptAsk(transcript, question);
+    }
   }
 
   private async completeJson<T>(input: {

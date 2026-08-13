@@ -9,6 +9,7 @@ export const jobStepNameSchema = z.enum([
   JobStepName.TranscriptionPersist,
   JobStepName.Summary,
   JobStepName.ActionItems,
+  JobStepName.TranscriptEmbeddings,
   JobStepName.Hooks,
   JobStepName.HookEmbeddings,
   JobStepName.ClipRecommendations,

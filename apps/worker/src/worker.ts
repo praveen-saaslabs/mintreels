@@ -17,6 +17,7 @@ import {
   createLLMProvider,
   createSpeechProvider,
   createStorageProvider,
+  createTranscriptVectorStoreProvider,
   createVectorStoreProvider,
 } from './providers';
 
@@ -38,6 +39,7 @@ async function main(): Promise<void> {
     llm: createLLMProvider(),
     embeddings: createEmbeddingProvider(),
     vectorStore: createVectorStoreProvider(),
+    transcriptVectorStore: createTranscriptVectorStoreProvider(),
     storage: createStorageProvider(),
   };
 

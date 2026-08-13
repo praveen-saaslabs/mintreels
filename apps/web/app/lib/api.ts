@@ -202,6 +202,34 @@ export type HookResponse = {
   clip?: HookClipSummary | null;
 };
 
+export type MomentCandidate = {
+  startMs: number;
+  endMs: number;
+  clipStartMs: number;
+  clipEndMs: number;
+  title: string;
+  excerpt: string;
+  similarity: number;
+};
+
+export type SearchMomentsResponse = {
+  moments: MomentCandidate[];
+};
+
+export type AskMomentsResponse =
+  | { kind: 'answer'; text: string }
+  | { kind: 'moments'; moments: MomentCandidate[] }
+  | { kind: 'reject'; text: string };
+
+export type CreateClipRequest = {
+  recordingId: number;
+  title: string;
+  startMs: number;
+  endMs: number;
+  hookId?: number | null;
+  subtitleStyle?: string | null;
+};
+
 export const api = {
   getRecordings: () => request<RecordingSummary[]>('/recordings'),
   getRecording: (id: number) => request<RecordingSummary>(`/recordings/${encodeURIComponent(id)}`),
@@ -222,11 +250,26 @@ export const api = {
     request<SummaryResponse>(`/recordings/${encodeURIComponent(id)}/summary`),
   getHooks: (id: number) =>
     request<HookResponse[]>(`/recordings/${encodeURIComponent(id)}/hooks`),
+  searchMoments: (id: number, body: { query: string; limit?: number }) =>
+    request<SearchMomentsResponse>(`/recordings/${encodeURIComponent(id)}/moments/search`, {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+  askMoments: (id: number, body: { query: string; limit?: number }) =>
+    request<AskMomentsResponse>(`/recordings/${encodeURIComponent(id)}/moments/ask`, {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
   exportHookClip: (recordingId: number, hookId: number) =>
     request<ClipSummary>(
       `/recordings/${encodeURIComponent(recordingId)}/hooks/${encodeURIComponent(hookId)}/export`,
       { method: 'POST' },
     ),
+  createClip: (body: CreateClipRequest) =>
+    request<ClipSummary>('/clips', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
   getKnowledgeBases: () => request<unknown>('/knowledge-bases'),
   getClip: (id: number) => request<ClipSummary>(`/clips/${encodeURIComponent(id)}`),
 

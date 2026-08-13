@@ -1,5 +1,7 @@
 import { Body, Controller, Get, Param, ParseIntPipe, Post, UseGuards } from '@nestjs/common';
 import {
+  ApiBadRequestResponse,
+  ApiConflictResponse,
   ApiCookieAuth,
   ApiCreatedResponse,
   ApiNotFoundResponse,
@@ -42,11 +44,20 @@ const clipExample = {
 export class ClipsController {
   constructor(private readonly clipsService: ClipsService) {}
 
-  @ApiOperation({ summary: 'Create a clip from a recording segment' })
-  @ApiCreatedResponse({ description: 'Clip created; render job enqueued' })
+  @ApiOperation({ summary: 'Create a clip from a recording time range' })
+  @ApiCreatedResponse({
+    description: 'Clip created; render job enqueued',
+    schema: { example: { ...clipExample, status: ClipStatus.Queued, hookId: null } },
+  })
+  @ApiBadRequestResponse({ description: 'INVALID_CLIP_RANGE' })
+  @ApiConflictResponse({ description: 'VIDEO_NOT_AVAILABLE' })
+  @ApiNotFoundResponse({ description: 'Recording not found' })
   @Post()
-  create(@Body(new ZodValidationPipe(createClipRequestSchema)) body: CreateClipRequest) {
-    return this.clipsService.create(body);
+  create(
+    @CurrentUser() user: RequestUser,
+    @Body(new ZodValidationPipe(createClipRequestSchema)) body: CreateClipRequest,
+  ) {
+    return this.clipsService.create(body, user.id);
   }
 
   @ApiOperation({ summary: 'List clip filter counts for the current user' })

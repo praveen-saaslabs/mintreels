@@ -14,6 +14,7 @@ import {
   hookEmbeddingsHandler,
   hooksHandler,
   summaryHandler,
+  transcriptEmbeddingsHandler,
   transcriptionHandler,
   transcriptionPersistHandler,
 } from './steps';
@@ -28,6 +29,7 @@ const CRITICAL = new Set<JobStepName>([
 const ANALYSIS = new Set<JobStepName>([
   JobStepName.Summary,
   JobStepName.ActionItems,
+  JobStepName.TranscriptEmbeddings,
   JobStepName.Hooks,
 ]);
 
@@ -43,6 +45,7 @@ function handlers(deps: WorkerDeps): Record<JobStepName, StepHandler> {
     [JobStepName.TranscriptionPersist]: transcriptionPersistHandler(deps),
     [JobStepName.Summary]: summaryHandler(deps),
     [JobStepName.ActionItems]: actionItemsHandler(deps),
+    [JobStepName.TranscriptEmbeddings]: transcriptEmbeddingsHandler(deps),
     [JobStepName.Hooks]: hooksHandler(deps),
     [JobStepName.HookEmbeddings]: hookEmbeddingsHandler(deps),
     [JobStepName.ClipRecommendations]: clipRecommendationsHandler(deps),

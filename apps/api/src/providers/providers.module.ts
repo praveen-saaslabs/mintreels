@@ -1,22 +1,26 @@
 import { Global, Module } from '@nestjs/common';
-import type { LLMProvider, SpeechProvider, VectorStoreProvider } from '@mintreels/ai';
+import type { EmbeddingProvider, LLMProvider, SpeechProvider, VectorStoreProvider } from '@mintreels/ai';
 import type { KnowledgeBaseProvider } from '@mintreels/knowledge';
 import type { QueueProvider } from '@mintreels/queue';
 import type { StorageProvider } from '@mintreels/storage';
 import {
+  createEmbeddingProvider,
   createKnowledgeBaseProvider,
   createLLMProvider,
   createQueueProvider,
   createSpeechProvider,
   createStorageProvider,
+  createTranscriptVectorStoreProvider,
   createVectorStoreProvider,
 } from './factories';
 import {
+  EMBEDDING_PROVIDER,
   KB_PROVIDER,
   LLM_PROVIDER,
   QUEUE_PROVIDER,
   SPEECH_PROVIDER,
   STORAGE_PROVIDER,
+  TRANSCRIPT_VECTOR_STORE_PROVIDER,
   VECTOR_STORE_PROVIDER,
 } from './provider-tokens';
 
@@ -72,6 +76,14 @@ function lazy<T extends object>(factory: () => T): T {
       provide: VECTOR_STORE_PROVIDER,
       useFactory: (): VectorStoreProvider => lazy(createVectorStoreProvider),
     },
+    {
+      provide: TRANSCRIPT_VECTOR_STORE_PROVIDER,
+      useFactory: (): VectorStoreProvider => lazy(createTranscriptVectorStoreProvider),
+    },
+    {
+      provide: EMBEDDING_PROVIDER,
+      useFactory: (): EmbeddingProvider => lazy(createEmbeddingProvider),
+    },
   ],
   exports: [
     SPEECH_PROVIDER,
@@ -80,6 +92,8 @@ function lazy<T extends object>(factory: () => T): T {
     STORAGE_PROVIDER,
     QUEUE_PROVIDER,
     VECTOR_STORE_PROVIDER,
+    TRANSCRIPT_VECTOR_STORE_PROVIDER,
+    EMBEDDING_PROVIDER,
   ],
 })
 export class ProvidersModule {}

@@ -9,7 +9,7 @@
     "start": "node --import @swc-node/register/esm-register src/main.ts",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
-    "test": "node --input-type=module -e \"console.log('no tests yet')\"",
+    "test": "node --import tsx --test 'src/**/*.test.ts'",
     "migration:run": "tsx src/migrate.ts run",
     "migration:revert": "tsx src/migrate.ts revert",
     "migration:show": "tsx src/migrate.ts show",

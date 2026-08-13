@@ -45,9 +45,11 @@ A repository is **one table**. If a feature needs recordings + clips + jobs, the
 - `POST /api/recordings/:id/add-to-global-kb`
 - `GET /api/recordings/:id/hooks`, `POST /api/recordings/:id/hooks/generate`
 - `POST /api/recordings/:id/hooks/:hookId/export`
+- `POST /api/recordings/:id/moments/search` (sync embed + transcript-window search; no job)
+- `POST /api/recordings/:id/moments/ask` (sync LLM route: transcript Q&A, clip search, or funny reject)
 - `GET/POST /api/knowledge-bases`
 - `GET /api/clips`, `GET /api/clips/filters`, `GET /api/clips/:id`
-- `POST /api/clips` (501 — arbitrary ranges; product path is hook export)
+- `POST /api/clips` (owned recording time range; prompt search or arbitrary range)
 
 Wire providers at the composition root (`providers/ProvidersModule`). Do not import PyAI or vendor SDKs in controllers or services.
 

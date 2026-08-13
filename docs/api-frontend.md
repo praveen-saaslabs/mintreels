@@ -41,8 +41,8 @@ Canonical enum strings live in `@mintreels/schema` (`packages/schema/src/enums.t
 | `401` | Missing / invalid `auth_token` cookie |
 | `400` | Non-integer `:id`, or hook export `INVALID_HOOK_RANGE` |
 | `404` | Not found or not owned |
-| `409` | Hook export `VIDEO_NOT_AVAILABLE`; ingest retry `INGEST_IN_PROGRESS` or `NOT_RETRYABLE` |
-| `501` | POST/enqueue not built yet (generate summary/hooks, add-to-global-kb, generic `POST /clips`) |
+| `409` | Hook export / clip create `VIDEO_NOT_AVAILABLE`; ingest retry `INGEST_IN_PROGRESS` or `NOT_RETRYABLE`; moment search `TRANSCRIPT_REQUIRED` or `TRANSCRIPT_INDEX_NOT_READY` |
+| `501` | POST/enqueue not built yet (generate summary, add-to-global-kb, signed clip download) |
 | `500` | `{ "error": "Internal server error" }` |
 
 Switch on `error`. Do not show stack traces.
@@ -64,7 +64,10 @@ All paths are under `/api`. All GETs below are implemented and cookie-scoped to 
 | — | GET | `/recordings/:id/transcript.vtt` (`text/vtt`) |
 | `getSummary(id)` | GET | `/recordings/:id/summary` |
 | `getHooks(id)` | GET | `/recordings/:id/hooks` |
+| `searchMoments(id, { query })` | POST | `/recordings/:id/moments/search` |
+| `askMoments(id, { query })` | POST | `/recordings/:id/moments/ask` |
 | `exportHookClip(recordingId, hookId)` | POST | `/recordings/:id/hooks/:hookId/export` |
+| `createClip(body)` | POST | `/clips` |
 | `getKnowledgeBases()` | GET | `/knowledge-bases` |
 | `getClip(id)` | GET | `/clips/:id` |
 | `getClips()` | GET | `/clips` |
@@ -238,6 +241,55 @@ Recording `404`; no hooks → `[]`. `clip` is the latest export for that hook, o
 ]
 ```
 
+### Ask / moments — `POST /api/recordings/:id/moments/ask`
+
+One recording-scoped prompt. The API classifies intent; the UI **switches on `kind`**. Do not classify on the client.
+
+Cursor rule for agents: [`.cursor/rules/ask-moments-frontend.mdc`](../.cursor/rules/ask-moments-frontend.mdc). Helpers: `api.askMoments`, `api.createClip`. Reference UI: `apps/web/app/components/summary/moment-search.tsx`.
+
+```json
+{ "query": "What did they say about pricing?", "limit": 8 }
+```
+
+`query` 3–500 chars. Optional `limit` (default 8) only applies when the result is clip hits. `id` is the **recording** integer.
+
+Discriminated **200** responses:
+
+```json
+{ "kind": "answer", "text": "They said the enterprise plan starts at ninety nine." }
+```
+
+```json
+{
+  "kind": "moments",
+  "moments": [
+    {
+      "startMs": 12000,
+      "endMs": 42000,
+      "clipStartMs": 9000,
+      "clipEndMs": 47000,
+      "title": "The enterprise plan starts at",
+      "excerpt": "We should talk about pricing. The enterprise plan starts at ninety nine.",
+      "similarity": 0.82
+    }
+  ]
+}
+```
+
+```json
+{ "kind": "reject", "text": "I don't do weather, recipes, or existential dread — only this recording." }
+```
+
+| `kind` | UI |
+|---|---|
+| `answer` | Show `text` (transcript Q&A) |
+| `moments` | Cards; seek `startMs / 1000` s; **Cut clip** with `clipStartMs` / `clipEndMs` via `POST /api/clips` (`hookId` omitted). Poll `GET /api/clips/:id`. |
+| `reject` | Show `text` as a funny refusal (**not** an error toast) |
+
+`kind: "moments"` + empty array → “No matching moments.”
+
+`409`: `TRANSCRIPT_REQUIRED` (no transcript yet), `TRANSCRIPT_INDEX_NOT_READY` (retry ingest to build window embeddings — only blocks clip hits). Direct clip-only search remains `POST /recordings/:id/moments/search` (`{ moments }`, no `kind`).
+
 ### Hook export — `POST /api/recordings/:id/hooks/:hookId/export`
 
 Creates a `clips` row (`queued`) and enqueues `render-clip`. **202** with the public clip DTO. Poll `GET /api/clips/:id` while `status` is `queued` or `rendering`.
@@ -288,7 +340,7 @@ Errors: `404` recording/hook, `400 INVALID_HOOK_RANGE`, `409 VIDEO_NOT_AVAILABLE
 
 **No `storageKey`, no signed URL, no `caption`.** Playback URL is `videoUrl` (`null` until render finishes). Poster is `thumbnailUrl` (`null` until Filestack/FFmpeg thumb is stored). `hookId` is `null` when the clip was not created from a hook. `ratio` is derived (`9:16` \| `1:1` \| `16:9`) and **omitted** if recording width/height are null. Status: `queued` \| `rendering` \| `ready` \| `failed`.
 
-Generic `POST /api/clips` (arbitrary ranges) is still **501**. Use hook export instead.
+`POST /api/clips` creates a clip from an owned recording time range (prompt search uses padded `clipStartMs` / `clipEndMs`, `hookId` omitted). Hook export remains `POST /recordings/:id/hooks/:hookId/export`.
 
 ```json
 {
@@ -409,7 +461,7 @@ Provider `id`: `speech` \| `llm` \| `kb` \| `storage`. Status: `connected` \| `n
 1. `credentials: 'include'` in `api.ts`.
 2. Update `app/lib/data/types.ts` (and repositories) to integer ids + API field names, **or** map API → mock view-models in the repository layer.
 3. Type `getRecordings` / `getTranscript` / `getHooks` / etc. instead of `unknown`.
-4. POST generate summary/hooks, add-to-global-kb, generic `POST /clips`, and signed `GET /clips/:id/download` are still **501**. Hook export and client download via `videoUrl` are live.
+4. POST generate summary, add-to-global-kb, and signed `GET /clips/:id/download` are still **501**. Hook export, `POST .../moments/ask`, `POST /clips`, and client download via `videoUrl` are live.
 
 ---
 

@@ -17,9 +17,10 @@ import {
   JobStatus,
   JobType,
 } from '@mintreels/schema';
-import { HttpError, notImplemented } from '../common/http-error';
+import { HttpError } from '../common/http-error';
 import { publicPlaybackUrl } from '../common/playback-url';
 import { QUEUE_PROVIDER } from '../providers/provider-tokens';
+import { clipCreateGuard } from './clip-create-guard';
 import type { CreateClipRequest } from './clips.dto';
 
 const RENDER_QUEUE_MAX_ATTEMPTS = 3;
@@ -79,8 +80,49 @@ export class ClipsService {
     @Inject(QUEUE_PROVIDER) private readonly queue: QueueProvider,
   ) {}
 
-  async create(_body: CreateClipRequest): Promise<never> {
-    notImplemented('clipsService.create');
+  async create(body: CreateClipRequest, userId: number) {
+    const recording = await this.recordings.findOne({
+      where: { id: body.recordingId, project: { userId } },
+      relations: { project: true },
+    });
+    const guard = clipCreateGuard(recording, body.startMs, body.endMs);
+    if (guard === 'not_found') {
+      throw new HttpError(404, 'Not found');
+    }
+    if (guard === 'video_unavailable') {
+      throw new HttpError(409, 'VIDEO_NOT_AVAILABLE');
+    }
+    if (guard === 'invalid_range') {
+      throw new HttpError(400, 'INVALID_CLIP_RANGE');
+    }
+    if (!recording) {
+      throw new HttpError(404, 'Not found');
+    }
+
+    const hookId = body.hookId ?? null;
+    if (hookId != null) {
+      const hook = await this.hooks.findByIdAndRecordingId(hookId, recording.id);
+      if (!hook) {
+        throw new HttpError(404, 'Not found');
+      }
+    }
+
+    const clip = await this.clips.save(
+      this.clips.create({
+        recordingId: recording.id,
+        hookId,
+        title: body.title,
+        startMs: body.startMs,
+        endMs: body.endMs,
+        subtitleStyle: body.subtitleStyle ?? null,
+        storageKey: null,
+        thumbnailStorageKey: null,
+        status: ClipStatus.Queued,
+      }),
+    );
+    clip.recording = recording;
+    await this.enqueueRender(clip);
+    return toPublicClip(clip);
   }
 
   async exportFromHook(recordingId: number, hookId: number, userId: number) {

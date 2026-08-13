@@ -31,5 +31,6 @@ export interface WorkerDeps {
   llm: LLMProvider;
   embeddings: EmbeddingProvider;
   vectorStore: VectorStoreProvider;
+  transcriptVectorStore: VectorStoreProvider;
   storage: StorageProvider;
 }
