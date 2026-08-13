@@ -11,7 +11,7 @@ export type OpenAICompatibleLLMConfig = {
 
 export const DEFAULT_OPENAI_MODEL = 'gpt-4o-mini';
 export const DEFAULT_NVIDIA_BASE_URL = 'https://integrate.api.nvidia.com/v1';
-export const DEFAULT_NVIDIA_MODEL = 'meta/llama-3.3-70b-instruct';
+export const DEFAULT_NVIDIA_MODEL = 'meta/llama-3.1-8b-instruct';
 
 export function openAICompatibleConfigFromEnv(
   provider: OpenAICompatibleProviderId,
