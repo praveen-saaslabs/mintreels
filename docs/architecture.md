@@ -709,11 +709,14 @@ recording.vtt
 This makes the transcript reusable for:
 
 - transcript UI
+- editor player caption overlay (JSON segments/words; karaoke highlight)
 - search
 - summary
 - hooks
 - clipping
 - subtitle export
+
+`GET /api/recordings/:id/transcript.vtt` remains export-only. The editor does not load VTT into `<track>`.
 
 ---
 

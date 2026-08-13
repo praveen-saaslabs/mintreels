@@ -93,6 +93,81 @@ export function matchesSearch(text: string, query: string): boolean {
   return text.toLowerCase().includes(needle);
 }
 
+export const CAPTION_CHUNK_WORDS = 8;
+
+export function chunkItems<T>(items: readonly T[], size: number): T[][] {
+  if (items.length === 0) {
+    return [];
+  }
+  const chunkSize = size < 1 ? items.length : size;
+  const chunks: T[][] = [];
+  for (let index = 0; index < items.length; index += chunkSize) {
+    chunks.push([...items.slice(index, index + chunkSize)]);
+  }
+  return chunks;
+}
+
+export function findWordChunkAtTime(
+  chunks: readonly EditorWord[][],
+  time: number,
+): EditorWord[] | undefined {
+  for (let index = 0; index < chunks.length; index += 1) {
+    const chunk = chunks[index];
+    const first = chunk?.[0];
+    const last = chunk?.at(-1);
+    if (!chunk || !first || !last) {
+      continue;
+    }
+    const nextStart = chunks[index + 1]?.[0]?.start;
+    const end = nextStart ?? last.end;
+    if (time >= first.start && time < end) {
+      return chunk;
+    }
+    if (nextStart === undefined && time === last.end) {
+      return chunk;
+    }
+  }
+
+  return undefined;
+}
+
+export type TextCaptionChunk = {
+  text: string;
+  start: number;
+  end: number;
+};
+
+export function chunkSegmentText(
+  text: string,
+  start: number,
+  end: number,
+  size = CAPTION_CHUNK_WORDS,
+): TextCaptionChunk[] {
+  const tokens = text.trim().split(/\s+/).filter((token) => token.length > 0);
+  if (tokens.length === 0) {
+    return [];
+  }
+
+  const groups = chunkItems(tokens, size);
+  const duration = Math.max(0, end - start);
+  const count = groups.length;
+  return groups.map((group, index) => {
+    const chunkStart = start + (duration * index) / count;
+    const chunkEnd = index === count - 1 ? end : start + (duration * (index + 1)) / count;
+    return { text: group.join(' '), start: chunkStart, end: chunkEnd };
+  });
+}
+
+export function findTextCaptionAtTime(
+  chunks: readonly TextCaptionChunk[],
+  time: number,
+): TextCaptionChunk | undefined {
+  return (
+    chunks.find((chunk) => time >= chunk.start && time < chunk.end) ??
+    chunks.find((chunk) => time === chunk.end)
+  );
+}
+
 export function parseWordStart(value: string | null): number | undefined {
   if (value == null) {
     return undefined;

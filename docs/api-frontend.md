@@ -205,7 +205,7 @@ Same public DTO as `processing.transcript`. Times are **seconds**. `404` if reco
 }
 ```
 
-`speaker` may be omitted on a segment or word. VTT: `GET /api/recordings/:id/transcript.vtt` (`Content-Type: text/vtt`).
+`speaker` may be omitted on a segment or word. VTT: `GET /api/recordings/:id/transcript.vtt` (`Content-Type: text/vtt`) — export-only. The editor player overlays captions from this JSON transcript (segment text + word karaoke); it does not fetch VTT.
 
 ### Summary — `GET /api/recordings/:id/summary`
 

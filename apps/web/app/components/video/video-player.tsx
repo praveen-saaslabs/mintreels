@@ -1,4 +1,4 @@
-import { Pause, Play } from 'lucide-react';
+import { Captions, Pause, Play } from 'lucide-react';
 import {
   useEffect,
   useRef,
@@ -9,7 +9,9 @@ import {
 } from 'react';
 import { VideoSurfaceEmptyState } from '@/components/editor/editor-empty-states';
 import { Button } from '@/components/ui/button';
+import { CaptionSettings, type CaptionStyle } from './caption-settings';
 import { useAmbientGlow } from './use-ambient-glow';
+import { VideoSubtitles } from './video-subtitles';
 import { useHotkey } from '@/hooks/use-hotkey';
 import { beginDragSelectSuppression } from '@/lib/drag-select-guard';
 import { DEMO_MEDIA } from '@/lib/demo-media';
@@ -32,6 +34,12 @@ const ASPECT_RATIO: Record<AspectPreset, { w: number; h: number }> = {
   '9:16': { w: 9, h: 16 },
   '1:1': { w: 1, h: 1 },
   '16:9': { w: 16, h: 9 },
+};
+
+const DEFAULT_CAPTION_STYLE: CaptionStyle = {
+  placement: 'bottom',
+  fontSizePx: 14,
+  backgroundOpacity: 0.55,
 };
 
 function captureMediaDuration(
@@ -110,6 +118,8 @@ export function VideoPlayer({ src, pending = false, poster }: Readonly<VideoPlay
   const surfacePointerDownRef = useRef<{ x: number; y: number } | null>(null);
 
   const [aspect, setAspect] = useState<AspectPreset>('16:9');
+  const [captionsOn, setCaptionsOn] = useState(true);
+  const [captionStyle, setCaptionStyle] = useState<CaptionStyle>(DEFAULT_CAPTION_STYLE);
   const { clockDuration, capture: captureDuration } = useElementClockDuration(
     videoRef,
     resolvedSrc,
@@ -351,9 +361,7 @@ export function VideoPlayer({ src, pending = false, poster }: Readonly<VideoPlay
                   onError={() => {
                     setPlaying(false);
                   }}
-                >
-                  <track kind="captions" srcLang="en" label="English" />
-                </video>
+                />
                 {showVideoEmpty ? <VideoSurfaceEmptyState className="z-3" /> : null}
                 {showVideoUnavailable ? (
                   <p className="pointer-events-none absolute inset-0 z-3 flex items-center justify-center text-sm text-muted-foreground">
@@ -362,19 +370,27 @@ export function VideoPlayer({ src, pending = false, poster }: Readonly<VideoPlay
                 ) : null}
 
                 {!showVideoEmpty && !showVideoUnavailable ? (
-                  <div className="pointer-events-none absolute left-3.5 top-3.5 z-10">
-                    <span className="glass-chip inline-flex h-[22px] items-center rounded-full px-2.5 font-mono text-[11px] text-foreground">
-                      {formatTimestamp(currentTime)}
-                      {clockDuration > 0 ? ` / ${formatTimestamp(clockDuration)}` : ''}
-                    </span>
-                  </div>
+                  <>
+                    <div className="pointer-events-none absolute left-3.5 top-3.5 z-10">
+                      <span className="glass-chip inline-flex h-[22px] items-center rounded-full px-2.5 font-mono text-[11px] text-foreground">
+                        {formatTimestamp(currentTime)}
+                        {clockDuration > 0 ? ` / ${formatTimestamp(clockDuration)}` : ''}
+                      </span>
+                    </div>
+                    <VideoSubtitles
+                      enabled={captionsOn}
+                      placement={captionStyle.placement}
+                      fontSizePx={captionStyle.fontSizePx}
+                      backgroundOpacity={captionStyle.backgroundOpacity}
+                    />
+                  </>
                 ) : null}
               </div>
             </div>
           </div>
 
           {/* Liquid transport tray — glass chrome over ambient, not over media */}
-          <div className="glass-tray glass-materialize flex flex-none flex-wrap items-center gap-2.5 px-3 py-2.5" style={{ animationDelay: '100ms' }}>
+          <div className="glass-tray glass-materialize relative flex flex-none flex-wrap items-center gap-2.5 overflow-visible px-3 py-2.5" style={{ animationDelay: '100ms' }}>
             <Button
               type="button"
               size="icon"
@@ -420,6 +436,27 @@ export function VideoPlayer({ src, pending = false, poster }: Readonly<VideoPlay
             <span className="shrink-0 font-mono text-xs text-foreground/80">
               {clockDuration > 0 ? formatTimestamp(clockDuration) : '--:--'}
             </span>
+
+            <Button
+              type="button"
+              size="icon"
+              variant="ghost"
+              aria-label={captionsOn ? 'Hide captions' : 'Show captions'}
+              aria-pressed={captionsOn}
+              className={cn(
+                'size-[34px] shrink-0 rounded transition-transform duration-100 ease-out active:scale-[0.97]',
+                captionsOn ? 'text-foreground' : 'text-foreground/50',
+              )}
+              disabled={showVideoEmpty || showVideoUnavailable}
+              onClick={() => setCaptionsOn((on) => !on)}
+            >
+              <Captions className="size-3.5" />
+            </Button>
+            <CaptionSettings
+              style={captionStyle}
+              onChange={setCaptionStyle}
+              disabled={showVideoEmpty || showVideoUnavailable}
+            />
 
             <div className="ml-0.5 flex shrink-0 gap-1">
               {ASPECT_PRESETS.map((preset) => (
