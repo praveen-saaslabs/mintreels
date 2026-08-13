@@ -15,6 +15,8 @@ import {
   HookRepository,
   ClipRepository,
   JobRepository,
+  JobStepRepository,
+  JobAuditLogRepository,
 } from './repositories';
 
 const repositories = [
@@ -29,6 +31,8 @@ const repositories = [
   HookRepository,
   ClipRepository,
   JobRepository,
+  JobStepRepository,
+  JobAuditLogRepository,
 ];
 
 export interface DbModuleOptions {

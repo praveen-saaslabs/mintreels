@@ -9,3 +9,5 @@ export { KnowledgeDocument } from './knowledge-document.entity';
 export { Hook } from './hook.entity';
 export { Clip } from './clip.entity';
 export { Job } from './job.entity';
+export { JobStep } from './job-step.entity';
+export { JobAuditLog } from './job-audit-log.entity';

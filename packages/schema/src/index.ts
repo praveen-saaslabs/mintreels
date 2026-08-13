@@ -5,8 +5,11 @@ export {
   ClipRatio,
   ClipStatus,
   EnvKey,
+  JOB_STEP_NAMES,
   JobActivityStatus,
   JobStatus,
+  JobStepName,
+  JobStepStatus,
   JobType,
   KnowledgeBaseScope,
   ProviderConnectionStatus,
@@ -61,11 +64,26 @@ export {
   type TranscriptSegmentRow,
 } from './transcripts';
 export {
+  actionItemSchema,
   summaryInsertSchema,
   summaryRowSchema,
   type SummaryInsert,
   type SummaryRow,
 } from './summaries';
+export {
+  jobStepInsertSchema,
+  jobStepNameSchema,
+  jobStepRowSchema,
+  jobStepStatusSchema,
+  type JobStepInsert,
+  type JobStepRow,
+} from './job-steps';
+export {
+  jobAuditLogInsertSchema,
+  jobAuditLogRowSchema,
+  type JobAuditLogInsert,
+  type JobAuditLogRow,
+} from './job-audit-logs';
 export {
   knowledgeBaseInsertSchema,
   knowledgeBaseRowSchema,

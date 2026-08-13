@@ -16,7 +16,7 @@ MintReels is a transcript-first video intelligence and clipping product. Source 
 - Validation: Zod (`@mintreels/schema`)
 - Queue: Redis + BullMQ
 - Media: FFmpeg
-- Storage: S3-compatible
+- Storage: Filestack
 - AI / KB: PyAI (default)
 
 Use TypeScript with strict typing. Prefer small, composable services.

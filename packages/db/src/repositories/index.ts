@@ -9,3 +9,5 @@ export { KnowledgeDocumentRepository } from './knowledge-document.repository';
 export { HookRepository } from './hook.repository';
 export { ClipRepository } from './clip.repository';
 export { JobRepository } from './job.repository';
+export { JobStepRepository } from './job-step.repository';
+export { JobAuditLogRepository } from './job-audit-log.repository';

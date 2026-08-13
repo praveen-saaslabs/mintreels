@@ -76,7 +76,7 @@ Scopes:
 
 ## Storage
 
-`StorageProvider` is implemented with the official AWS SDK against S3-compatible stores (AWS S3, Cloudflare R2, MinIO).
+`StorageProvider` is Filestack. The frontend uploads and sends a CDN URL; MySQL stores the URL/handle, not file bytes.
 
 ## Queue
 

@@ -9,6 +9,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import {
+  ApiBadRequestResponse,
   ApiCookieAuth,
   ApiCreatedResponse,
   ApiNoContentResponse,
@@ -23,10 +24,7 @@ import { AuthGuard } from '../auth/auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
 import type { RequestUser } from '../auth/auth.types';
 import { ZodValidationPipe } from '../common/zod-validation.pipe';
-import {
-  createRecordingRequestSchema,
-  type CreateRecordingRequest,
-} from './recordings.dto';
+import { createRecordingRequestSchema, type CreateRecordingRequest } from './recordings.dto';
 import { RecordingsService } from './recordings.service';
 
 @ApiTags('Recordings')
@@ -37,8 +35,12 @@ import { RecordingsService } from './recordings.service';
 export class RecordingsController {
   constructor(private readonly recordingsService: RecordingsService) {}
 
-  @ApiOperation({ summary: 'Create a recording and enqueue ingest' })
-  @ApiCreatedResponse({ description: 'Recording created; ingest job enqueued' })
+  @ApiOperation({ summary: 'Create a project and recording from a Filestack URL, then enqueue ingest' })
+  @ApiCreatedResponse({
+    description: 'Project and recording created; ingest job enqueued',
+    schema: { example: { id: 10, projectId: 4, jobId: 1 } },
+  })
+  @ApiBadRequestResponse({ description: 'Invalid request' })
   @Post()
   create(
     @CurrentUser() user: RequestUser,
@@ -52,6 +54,48 @@ export class RecordingsController {
   @Get()
   list(@CurrentUser() user: RequestUser) {
     return this.recordingsService.list(user.id);
+  }
+
+  @ApiOperation({ summary: 'Poll ingest/processing status for a recording' })
+  @ApiParam({ name: 'id', type: Number })
+  @ApiOkResponse({
+    description: 'Processing snapshot (no storage keys or raw provider payloads)',
+    schema: {
+      example: {
+        recordingId: 10,
+        status: 'processing',
+        job: {
+          id: 1,
+          status: 'running',
+          currentStep: 'TRANSCRIPTION',
+          attempt: 1,
+          maxAttempts: 4,
+          errorCode: null,
+          errorMessage: null,
+        },
+        steps: [
+          { step: 'AUDIO_EXTRACTION', status: 'completed', attempt: 1 },
+          { step: 'TRANSCRIPTION', status: 'processing', attempt: 1, provider: 'pyai' },
+        ],
+        transcript: { id: 1, language: 'en', segmentCount: 12 },
+        summary: { id: 1, text: '...' },
+        actionItems: [],
+        hooks: [],
+        audit: [
+          {
+            event: 'step_started',
+            step: 'TRANSCRIPTION',
+            message: 'started attempt 1',
+            createdAt: '2026-08-13T08:00:00.000Z',
+          },
+        ],
+      },
+    },
+  })
+  @ApiNotFoundResponse({ description: 'Recording not found' })
+  @Get(':id/processing')
+  getProcessing(@CurrentUser() user: RequestUser, @Param('id', ParseIntPipe) id: number) {
+    return this.recordingsService.getProcessing(id, user.id);
   }
 
   @ApiOperation({ summary: 'Get a single recording by ID' })

@@ -13,13 +13,15 @@
     "build": "tsc --noEmit",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
-    "test": "node --input-type=module -e \"console.log('no tests yet')\""
+    "test": "node --import tsx --test 'src/**/*.test.ts'"
   },
   "dependencies": {
-    "@mintreels/domain": "workspace:*"
+    "@mintreels/domain": "workspace:*",
+    "@pyai/sdk": "^0.2.3"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",
+    "tsx": "^4.19.2",
     "typescript": "^5.7.2"
   }
 }

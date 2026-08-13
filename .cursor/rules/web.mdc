@@ -8,7 +8,7 @@ alwaysApply: false
 
 React + React Router + ShadCN (Tailwind v4, Base UI primitives). Call the backend only through `apps/web/app/lib/api.ts`.
 
-GET response shapes and mock→API mapping: `docs/api-frontend.md`. Auth: `docs/auth-frontend.md`.
+GET response shapes and mock→API mapping: `docs/api-frontend.md`. Auth: `docs/auth-frontend.md`. Upload → project → poll: `.cursor/rules/upload-ingest-frontend.mdc`.
 
 The UI must not know retrieval is PyAI. Do not import `@mintreels/ai` providers, PyAI clients, AWS SDKs, or BullMQ.
 
@@ -23,5 +23,5 @@ Recording detail is the main surface: video player, timestamped transcript, summ
 ## Do not
 
 - Build a nonlinear timeline editor.
-- Talk to PyAI or object storage from the browser.
+- Talk to PyAI from the browser. Filestack upload from the client is allowed; send only the resulting CDN URL to the API.
 - Bypass the API for transcription, search, or clip rendering.

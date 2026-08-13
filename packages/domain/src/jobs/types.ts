@@ -1,4 +1,4 @@
-export type JobStatus = 'queued' | 'running' | 'success' | 'failed';
+export type JobStatus = 'queued' | 'running' | 'success' | 'failed' | 'partial';
 
 export const JOB_NAMES = [
   'ingest-video',
@@ -20,4 +20,4 @@ export interface Job<T> {
   maxAttempts?: number;
 }
 
-export const DEFAULT_MAX_ATTEMPTS = 3;
+export const DEFAULT_MAX_ATTEMPTS = 4;

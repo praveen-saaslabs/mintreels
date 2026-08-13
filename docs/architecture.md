@@ -121,7 +121,7 @@ MP4 + subtitles
 
 ## Storage
 
-- S3-compatible object storage
+- Filestack
 
 ## Queue
 
@@ -590,6 +590,7 @@ project_id
 title
 original_filename
 storage_key
+audio_storage_key
 duration_ms
 width
 height
@@ -999,6 +1000,7 @@ Initial API:
 POST   /api/recordings
 GET    /api/recordings
 GET    /api/recordings/:id
+GET    /api/recordings/:id/processing
 DELETE /api/recordings/:id
 ```
 
@@ -1089,11 +1091,19 @@ type
 recording_id
 status
 attempt
-max_attempts
+max_attempts          # default 4
 error
+error_code
+error_metadata
+current_step
 started_at
 finished_at
 metadata
+created_at
+updated_at
+
+job_steps (one row per VIDEO_INGEST step; UNIQUE job_id+step)
+job_audit_logs (append-only events; never store secrets in metadata)
 ```
 
 Job states:
@@ -1103,20 +1113,10 @@ queued
   ↓
 running
   ↓
-success
+success | partial | failed
 ```
 
-or:
-
-```text
-running
-  ↓
-failed
-  ↓
-retry
-  ↓
-failed permanently
-```
+`partial` means the transcript exists but later analysis steps failed. Max attempts per step: 4.
 
 ---
 
@@ -1180,28 +1180,9 @@ Long-running AI/media operations should eventually support:
 
 # 31. Storage Architecture
 
-Use an S3-compatible object storage provider.
+Use Filestack. The frontend uploads video/audio and sends the CDN URL. The worker downloads that URL and may store extracted audio back to Filestack.
 
-Store:
-
-```text
-recordings/
-    original.mp4
-
-audio/
-    recording.wav
-
-exports/
-    recording.vtt
-    clip.mp4
-    clip.vtt
-
-thumbnails/
-    recording.jpg
-    clip.jpg
-```
-
-MySQL stores object keys, not video binaries.
+MySQL stores Filestack URLs/handles, not video binaries.
 
 ---
 
@@ -1232,10 +1213,8 @@ export interface StorageProvider {
 Initial implementation:
 
 ```text
-S3-compatible storage
+Filestack
 ```
-
-The design should allow AWS S3, Cloudflare R2, MinIO, etc.
 
 ---
 
@@ -1550,7 +1529,7 @@ mintreels/
 │   ├── storage/
 │   │   ├── src/
 │   │   │   ├── provider.ts
-│   │   │   └── s3.ts
+│   │   │   └── filestack.ts
 │   │   └── package.json
 │   │
 │   ├── queue/
@@ -1608,11 +1587,8 @@ DATABASE_URL=
 REDIS_URL=
 
 # Object storage
-S3_ENDPOINT=
-S3_REGION=
-S3_BUCKET=
-S3_ACCESS_KEY_ID=
-S3_SECRET_ACCESS_KEY=
+FILESTACK_API_KEY=
+FILESTACK_APP_SECRET=
 
 # PyAI
 PYAI_API_KEY=
@@ -1621,7 +1597,7 @@ PYAI_BASE_URL=
 # Providers
 AI_PROVIDER=pyai
 KNOWLEDGE_BASE_PROVIDER=pyai
-STORAGE_PROVIDER=s3
+STORAGE_PROVIDER=filestack
 QUEUE_PROVIDER=bullmq
 ```
 
@@ -1653,42 +1629,30 @@ Example:
 ```text
 POST /api/recordings
         ↓
-Create DB recording
+Create DB recording + VIDEO_INGEST job + job_steps
         ↓
-Upload / register object
+Enqueue ingest-video on queue `mintreels` (payload: recordingId, jobId)
         ↓
-Enqueue VIDEO_INGEST
-        ↓
-Return recording ID
+Return { id, jobId }
 ```
 
-Worker:
+Client polls `GET /api/recordings/:id/processing`. Worker:
 
 ```text
-VIDEO_INGEST
+VIDEO_INGEST (single BullMQ job, sequential job_steps)
     ↓
-Extract audio
+AUDIO_EXTRACTION → AUDIO_UPLOAD
     ↓
-TRANSCRIBE
+TRANSCRIPTION (poll PyAI job; no webhook)
     ↓
-GENERATE_SUMMARY
+TRANSCRIPTION_PERSIST
     ↓
-SYNC_KNOWLEDGE_BASE
+SUMMARY → ACTION_ITEMS → HOOKS
     ↓
-GENERATE_HOOKS
+CLIP_RECOMMENDATIONS (skipped — hooks are clip windows)
 ```
 
-Jobs may be parallelized where safe.
-
-For example:
-
-```text
-Transcript
-   ├── Summary
-   ├── VTT
-   ├── KB sync
-   └── Hook generation
-```
+KB sync and clip render are out of scope for this pipeline.
 
 ---
 
@@ -1825,7 +1789,7 @@ When using this document as context, Cursor should:
 | Validation / DTOs | Zod (`@mintreels/schema`) |
 | Queue | Redis + BullMQ |
 | Media | FFmpeg |
-| Object storage | S3-compatible |
+| Object storage | Filestack |
 | STT | PyAI |
 | LLM | PyAI/default provider |
 | Knowledge Base | PyAI KB |

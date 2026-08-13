@@ -17,6 +17,12 @@ export class Summary implements SummaryRow {
   @Column({ type: 'text' })
   text!: string;
 
+  @Column({ type: 'json', name: 'action_items', nullable: true })
+  actionItems!: SummaryRow['actionItems'];
+
+  @Column({ type: 'json', name: 'key_points', nullable: true })
+  keyPoints!: SummaryRow['keyPoints'];
+
   @CreateDateColumn({ type: 'datetime', name: 'created_at' })
   createdAt!: Date;
 }

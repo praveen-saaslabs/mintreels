@@ -17,6 +17,24 @@ export class Transcript implements TranscriptRow {
   @Column({ type: 'text', nullable: true })
   language!: string | null;
 
+  @Column({ type: 'text', nullable: true })
+  provider!: string | null;
+
+  @Column({ type: 'text', name: 'provider_job_id', nullable: true })
+  providerJobId!: string | null;
+
+  @Column({ type: 'text', nullable: true })
+  status!: string | null;
+
+  @Column({ type: 'text', nullable: true })
+  text!: string | null;
+
+  @Column({ type: 'int', name: 'duration_ms', nullable: true })
+  durationMs!: number | null;
+
+  @Column({ type: 'json', name: 'raw_response', nullable: true })
+  rawResponse!: unknown | null;
+
   @CreateDateColumn({ type: 'datetime', name: 'created_at' })
   createdAt!: Date;
 }

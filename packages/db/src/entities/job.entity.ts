@@ -1,4 +1,12 @@
-import { Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
+import {
+  Column,
+  CreateDateColumn,
+  Entity,
+  JoinColumn,
+  ManyToOne,
+  PrimaryGeneratedColumn,
+  UpdateDateColumn,
+} from 'typeorm';
 import { JobStatus, JobType, type JobRow } from '@mintreels/schema';
 import { Recording } from './recording.entity';
 
@@ -23,11 +31,20 @@ export class Job implements JobRow {
   @Column({ type: 'int', default: 0 })
   attempt!: number;
 
-  @Column({ type: 'int', name: 'max_attempts', default: 3 })
+  @Column({ type: 'int', name: 'max_attempts', default: 4 })
   maxAttempts!: number;
 
   @Column({ type: 'text', nullable: true })
   error!: string | null;
+
+  @Column({ type: 'text', name: 'error_code', nullable: true })
+  errorCode!: string | null;
+
+  @Column({ type: 'json', name: 'error_metadata', nullable: true })
+  errorMetadata!: Record<string, unknown> | null;
+
+  @Column({ type: 'text', name: 'current_step', nullable: true })
+  currentStep!: string | null;
 
   @Column({ type: 'datetime', name: 'started_at', nullable: true })
   startedAt!: Date | null;
@@ -40,4 +57,7 @@ export class Job implements JobRow {
 
   @CreateDateColumn({ type: 'datetime', name: 'created_at' })
   createdAt!: Date;
+
+  @UpdateDateColumn({ type: 'datetime', name: 'updated_at', nullable: true })
+  updatedAt!: Date | null;
 }
