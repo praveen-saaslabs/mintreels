@@ -36,8 +36,8 @@ export function parseFilestackRef(input: string): FilestackRef {
   const segments = parsed.pathname.split('/').filter((part) => part.length > 0);
 
   if (host === CDN_HOST) {
-    const handle = segments[0];
-    if (!handle || !HANDLE_PATTERN.test(handle)) {
+    const handle = [...segments].reverse().find((part) => HANDLE_PATTERN.test(part));
+    if (!handle) {
       throw new Error('Invalid Filestack URL');
     }
     return { handle, url: `https://${CDN_HOST}/${handle}` };

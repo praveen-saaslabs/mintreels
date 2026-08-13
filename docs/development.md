@@ -23,7 +23,7 @@ See `.env.example`. Required later for running services:
 - `DATABASE_URL` (MySQL connection string)
 - `MYSQL_ROOT_PASSWORD`, `MYSQL_USER`, `MYSQL_PASSWORD`, `MYSQL_DATABASE` for Docker Compose
 - `REDIS_URL`
-- `FILESTACK_API_KEY` (and optional `FILESTACK_APP_SECRET` if Filestack security policies are on)
+- `FILESTACK_API_KEY` and `FILESTACK_APP_SECRET` (secret is required for Filestack file delete)
 - `PYAI_API_KEY` and `PYAI_BASE_URL` (default `https://api.pyai.com`) for PyAI
 - `JOB_MAX_ATTEMPTS` (default 4), `JOB_RETRY_BASE_DELAY_MS` (default 5000), `JOB_STEP_STALE_TIMEOUT_MS` (default 1800000)
 

@@ -62,7 +62,7 @@ Inside Docker, Compose always uses `mysql:3306` and `redis:6379` (it ignores a h
 | `PYAI_API_KEY` | PyAI speech / LLM / KB |
 | `PYAI_BASE_URL` | PyAI API base URL |
 | `FILESTACK_API_KEY` | Filestack API key (worker store/delete) |
-| `FILESTACK_APP_SECRET` | Optional; required only if Filestack security policies are enabled |
+| `FILESTACK_APP_SECRET` | Required for Filestack file delete (`remove` policy) |
 
 ### Provider switches (defaults)
 

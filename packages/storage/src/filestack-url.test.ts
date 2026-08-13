@@ -13,6 +13,14 @@ test('parses a bare handle', () => {
   assert.equal(ref.handle, 'AbCdEfGhIjK');
 });
 
+test('parses a CDN transformation URL using the last handle segment', () => {
+  const ref = parseFilestackRef(
+    'https://cdn.filestackcontent.com/resize=width:100/AbCdEfGhIjK',
+  );
+  assert.equal(ref.handle, 'AbCdEfGhIjK');
+  assert.equal(ref.url, 'https://cdn.filestackcontent.com/AbCdEfGhIjK');
+});
+
 test('rejects non-https and non-filestack hosts', () => {
   assert.throws(() => parseFilestackRef('http://cdn.filestackcontent.com/AbCdEfGhIjK'));
   assert.throws(() => parseFilestackRef('https://evil.example/AbCdEfGhIjK'));

@@ -58,15 +58,19 @@ function filenameFromKey(key: string): string {
 export class FilestackStorageProvider implements StorageProvider {
   constructor(private readonly config: FilestackConfig = loadConfig()) {}
 
-  private securityQuery(calls: string[]): string {
+  private securityQuery(calls: string[], handle?: string): string {
     const secret = this.config.appSecret;
     if (!secret) {
       return '';
     }
-    const policy = encodePolicy({
+    const body: Record<string, unknown> = {
       expiry: Math.floor(Date.now() / 1000) + POLICY_TTL_SEC,
       call: calls,
-    });
+    };
+    if (handle) {
+      body.handle = handle;
+    }
+    const policy = encodePolicy(body);
     const signature = signPolicy(policy, secret);
     return `&policy=${encodeURIComponent(policy)}&signature=${encodeURIComponent(signature)}`;
   }
@@ -160,8 +164,11 @@ export class FilestackStorageProvider implements StorageProvider {
   }
 
   async delete(key: string): Promise<void> {
+    if (!this.config.appSecret) {
+      throw new Error('Filestack delete requires FILESTACK_APP_SECRET');
+    }
     const ref = parseFilestackRef(key);
-    const url = `${FILE_API}/${ref.handle}?key=${encodeURIComponent(this.config.apiKey)}${this.securityQuery(['remove'])}`;
+    const url = `${FILE_API}/${ref.handle}?key=${encodeURIComponent(this.config.apiKey)}${this.securityQuery(['remove'], ref.handle)}`;
     const response = await fetch(url, { method: 'DELETE' });
     if (!response.ok && response.status !== 404) {
       throw new Error(`Filestack delete failed (${String(response.status)})`);
