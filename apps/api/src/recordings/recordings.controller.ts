@@ -1,4 +1,4 @@
-import { Controller, Delete, Get, Param, ParseIntPipe, Post, Body } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseIntPipe, Post } from '@nestjs/common';
 import { ZodValidationPipe } from '../common/zod-validation.pipe';
 import {
   createRecordingRequestSchema,
@@ -11,11 +11,10 @@ export class RecordingsController {
   constructor(private readonly recordingsService: RecordingsService) {}
 
   @Post()
-  create(@Body() body: unknown) {
-    console.error('[RecordingsController.create] body=', JSON.stringify(body));
-    return this.recordingsService.create(
-      createRecordingRequestSchema.parse(body) as CreateRecordingRequest,
-    );
+  create(
+    @Body(new ZodValidationPipe(createRecordingRequestSchema)) body: CreateRecordingRequest,
+  ) {
+    return this.recordingsService.create(body);
   }
 
   @Get()

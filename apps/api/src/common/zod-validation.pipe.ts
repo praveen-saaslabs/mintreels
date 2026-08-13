@@ -8,11 +8,6 @@ export class ZodValidationPipe<T> implements PipeTransform<unknown, T> {
   transform(value: unknown): T {
     const result = this.schema.safeParse(value);
     if (!result.success) {
-      // Debug: confirm which schema shape the Nest process is using.
-      console.error(
-        '[ZodValidationPipe]',
-        JSON.stringify({ value, issues: result.error.issues }),
-      );
       throw new BadRequestException({
         error: 'Invalid request',
         issues: result.error instanceof ZodError ? result.error.issues : [],
