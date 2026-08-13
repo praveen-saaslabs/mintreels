@@ -10,6 +10,7 @@ import { isAudioFilename } from '@mintreels/storage';
 import type { WorkerDeps } from '../deps';
 import { requireActiveRecording } from '../recording-gone';
 import type { StepHandler } from '../step-runner';
+import { ensureRecordingThumbnail } from '../video-thumbnail';
 
 async function writeStreamToFile(stream: ReadableStream, filePath: string): Promise<void> {
   await pipeline(
@@ -35,6 +36,12 @@ export function audioExtractionHandler(deps: WorkerDeps): StepHandler {
     const audioPath = join(tmpDir, 'audio.wav');
     const stream = await deps.storage.download(recording.storageKey);
     await writeStreamToFile(stream, videoPath);
+    await ensureRecordingThumbnail({
+      deps,
+      recordingId: ctx.recordingId,
+      localVideoPath: videoPath,
+      tmpDir,
+    });
     await extractAudio({ videoPath, outputPath: audioPath });
     return { audioPath, tmpDir };
   };

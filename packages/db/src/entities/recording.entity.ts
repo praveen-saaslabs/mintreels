@@ -44,6 +44,9 @@ export class Recording implements RecordingRow {
   @Column({ type: 'text', name: 'audio_storage_key', nullable: true })
   audioStorageKey!: string | null;
 
+  @Column({ type: 'text', name: 'thumbnail_storage_key', nullable: true })
+  thumbnailStorageKey!: string | null;
+
   @Column({ type: 'int', name: 'duration_ms', nullable: true })
   durationMs!: number | null;
 

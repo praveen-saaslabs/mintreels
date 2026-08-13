@@ -25,7 +25,7 @@ export class RecordingRepository extends Repository<Recording> {
     }
     return this.find({
       where: { projectId: In(projectIds) },
-      select: ['id', 'projectId'],
+      select: ['id', 'projectId', 'createdAt', 'thumbnailStorageKey'],
     });
   }
 }

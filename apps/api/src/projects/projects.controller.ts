@@ -62,6 +62,7 @@ export class ProjectsController {
           jobStatus: JobActivityStatus.Running,
           runningJobCount: 2,
           failedJobCount: 0,
+          thumbnailUrl: 'https://cdn.filestackcontent.com/THUMB',
         },
       ],
     },

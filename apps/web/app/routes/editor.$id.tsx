@@ -82,6 +82,7 @@ function ProjectEditor({ projectId }: Readonly<{ projectId: number }>) {
     recordingTitle,
     processing,
     videoSrc,
+    thumbnailUrl,
     audioUrl,
     summaryText,
     pending,
@@ -154,7 +155,7 @@ function ProjectEditor({ projectId }: Readonly<{ projectId: number }>) {
                   void retryIngest();
                 }}
               />
-              <VideoPlayer src={videoSrc} pending={pending.video} />
+              <VideoPlayer src={videoSrc} pending={pending.video} poster={thumbnailUrl} />
             </div>
           }
           area3={<Timeline audioUrl={audioUrl} pending={pending.waveform} />}

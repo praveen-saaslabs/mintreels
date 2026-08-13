@@ -623,6 +623,7 @@ title
 original_filename
 storage_key
 audio_storage_key
+thumbnail_storage_key
 duration_ms
 width
 height
@@ -640,6 +641,8 @@ processing
 ready
 failed
 ```
+
+Public GETs expose `videoUrl` / `audioUrl` / `thumbnailUrl` (HTTPS Filestack CDN). Never return `storageKey` or `thumbnail_storage_key`. Thumbnail generation is best-effort during ingest.
 
 ---
 
@@ -706,11 +709,14 @@ recording.vtt
 This makes the transcript reusable for:
 
 - transcript UI
+- editor player caption overlay (JSON segments/words; karaoke highlight)
 - search
 - summary
 - hooks
 - clipping
 - subtitle export
+
+`GET /api/recordings/:id/transcript.vtt` remains export-only. The editor does not load VTT into `<track>`.
 
 ---
 
@@ -1706,6 +1712,8 @@ Return { id, jobId }
 ```
 
 Client polls `GET /api/recordings/:id/processing`. Worker:
+
+Best-effort recording thumbnail (Filestack `video_convert=preset:thumbnail`, FFmpeg frame upload as fallback) runs at ingest start and again after audio extraction has a local video. Failure never fails ingest. Stored as `recordings.thumbnail_storage_key`; public `thumbnailUrl` on recording/processing/project GETs.
 
 ```text
 VIDEO_INGEST (single BullMQ job, sequential job_steps)

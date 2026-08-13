@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { ConfirmDeleteDialog } from '@/components/ui/confirm-delete-dialog';
 import { buttonVariants } from '@/components/ui/button';
 import { useDeleteProject } from '@/hooks/use-delete-project';
+import { isHttpsFilestackPlaybackUrl } from '@/lib/filestack-playback';
 import { cn } from '@/lib/utils';
 import {
   formatKbLabel,
@@ -27,6 +28,10 @@ export function ProjectCard({ project }: { project: ProjectSummary }) {
   const jobText = formatProjectJobText(project);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const { deleteProject, isDeleting, errorMessage, reset } = useDeleteProject();
+  const thumbnailUrl =
+    typeof project.thumbnailUrl === 'string' && isHttpsFilestackPlaybackUrl(project.thumbnailUrl)
+      ? project.thumbnailUrl
+      : null;
 
   function onDeleteClick(event: MouseEvent<HTMLButtonElement>) {
     event.preventDefault();
@@ -41,10 +46,17 @@ export function ProjectCard({ project }: { project: ProjectSummary }) {
         to={`/editor/${String(project.id)}`}
         className="glass relative block overflow-hidden rounded-lg text-inherit transition-[border-color,box-shadow] hover:border-[var(--mr-acc)] hover:shadow-[var(--glass-shadow-elevated)]"
       >
-        <div className="relative flex h-[118px] items-end bg-[repeating-linear-gradient(135deg,var(--mr-stripe3)_0_10px,var(--mr-stripe4)_10px_20px)] p-3">
+        <div className="relative flex h-[118px] items-end overflow-hidden bg-[repeating-linear-gradient(135deg,var(--mr-stripe3)_0_10px,var(--mr-stripe4)_10px_20px)] p-3">
+          {thumbnailUrl ? (
+            <img
+              src={thumbnailUrl}
+              alt=""
+              className="pointer-events-none absolute inset-0 h-full w-full object-cover"
+            />
+          ) : null}
           <span
             className={cn(
-              'glass-chip inline-flex h-[21px] items-center gap-1.5 rounded-full px-2.5 text-[10.5px] font-medium',
+              'glass-chip relative z-10 inline-flex h-[21px] items-center gap-1.5 rounded-full px-2.5 text-[10.5px] font-medium',
               jobTone(project.jobStatus),
             )}
           >

@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import {
@@ -347,8 +347,10 @@ export function useProjectEditor(projectId: number | undefined) {
   const segmentCount = useEditorStore((state) => state.project?.result?.segments.length ?? 0);
   const hookCount = useEditorStore((state) => state.hooks.length);
   const storeSummary = useEditorStore((state) => state.project?.result?.text ?? '');
+  const queryClient = useQueryClient();
   const prevStepStatusRef = useRef<Map<string, string>>(new Map());
   const hydratedRecordingRef = useRef<number | undefined>(undefined);
+  const seenProjectThumbRef = useRef(false);
 
   const recordingsQuery = useQuery({
     queryKey: queryKeys.recordings.forProject(projectId ?? 0),
@@ -506,6 +508,10 @@ export function useProjectEditor(projectId: number | undefined) {
     hydratedRecordingRef.current = recordingId;
   }, [recordingId, phase]);
 
+  useEffect(() => {
+    seenProjectThumbRef.current = false;
+  }, [recordingId]);
+
   // Inject playback URL as soon as we have it (navigate state, recording, or poll).
   useEffect(() => {
     const playbackUrl = pickPlaybackUrl(
@@ -527,6 +533,17 @@ export function useProjectEditor(projectId: number | undefined) {
     videoSrc,
     setSrc,
   ]);
+
+  const thumbnailUrl =
+    pickPlaybackUrl(recordingsQuery.data?.thumbnailUrl, processingQuery.data?.thumbnailUrl) ?? '';
+
+  useEffect(() => {
+    if (!thumbnailUrl || seenProjectThumbRef.current) {
+      return;
+    }
+    seenProjectThumbRef.current = true;
+    void queryClient.invalidateQueries({ queryKey: queryKeys.projects.list() });
+  }, [thumbnailUrl, queryClient]);
 
   // Diff processing steps → refetch & inject into editor store as each completes.
   useEffect(() => {
@@ -663,6 +680,7 @@ export function useProjectEditor(projectId: number | undefined) {
     recordingTitle: recordingsQuery.data?.title ?? '',
     processing: processingQuery.data,
     videoSrc,
+    thumbnailUrl,
     audioUrl,
     summaryText,
     isHydratingEditor,

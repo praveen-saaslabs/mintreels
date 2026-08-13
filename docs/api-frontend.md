@@ -89,7 +89,7 @@ All paths are under `/api`. All GETs below are implemented and cookie-scoped to 
 
 ### Recordings — `GET /api/recordings`, `GET /api/recordings/:id`
 
-**No `storageKey`.** Playback URLs are `videoUrl` / `audioUrl` (`audioUrl` is `null` until extraction finishes). Status: `uploaded` \| `processing` \| `ready` \| `failed`.
+**No `storageKey`.** Playback URLs are `videoUrl` / `audioUrl` (`audioUrl` is `null` until extraction finishes). Poster is `thumbnailUrl` (`null` until ingest thumbnail finishes). Status: `uploaded` \| `processing` \| `ready` \| `failed`.
 
 ```json
 {
@@ -103,6 +103,7 @@ All paths are under `/api`. All GETs below are implemented and cookie-scoped to 
   "status": "ready",
   "videoUrl": "https://cdn.filestackcontent.com/HANDLE",
   "audioUrl": "https://cdn.filestackcontent.com/AUDIO",
+  "thumbnailUrl": "https://cdn.filestackcontent.com/THUMB",
   "createdAt": "2026-08-13T08:00:00.000Z",
   "updatedAt": "2026-08-13T08:00:00.000Z"
 }
@@ -133,7 +134,7 @@ Re-enqueues the latest `VIDEO_INGEST` job after a **failed** or **partial** run.
 
 ### Processing poll — `GET /api/recordings/:id/processing`
 
-Poll while `status` is `processing`. No `storageKey`, no `raw_response`, no secrets. `videoUrl` / `audioUrl` are playback URLs (`audioUrl` is `null` until audio upload completes).
+Poll while `status` is `processing`. No `storageKey`, no `raw_response`, no secrets. `videoUrl` / `audioUrl` are playback URLs (`audioUrl` is `null` until audio upload completes). `thumbnailUrl` is the recording poster (`null` until Filestack/FFmpeg thumb is stored).
 
 When transcription has persisted, `transcript` is the full result (`text`, word-level timings in seconds, `segments`, `speakers`, `audio_seconds`, optional caption `formats`). Older recordings without stored words return `words: []`.
 
@@ -143,6 +144,7 @@ When transcription has persisted, `transcript` is the full result (`text`, word-
   "status": "processing",
   "videoUrl": "https://cdn.filestackcontent.com/HANDLE",
   "audioUrl": "https://cdn.filestackcontent.com/AUDIO",
+  "thumbnailUrl": "https://cdn.filestackcontent.com/THUMB",
   "job": {
     "id": 1,
     "status": "running",
@@ -203,7 +205,7 @@ Same public DTO as `processing.transcript`. Times are **seconds**. `404` if reco
 }
 ```
 
-`speaker` may be omitted on a segment or word. VTT: `GET /api/recordings/:id/transcript.vtt` (`Content-Type: text/vtt`).
+`speaker` may be omitted on a segment or word. VTT: `GET /api/recordings/:id/transcript.vtt` (`Content-Type: text/vtt`) — export-only. The editor player overlays captions from this JSON transcript (segment text + word karaoke); it does not fetch VTT.
 
 ### Summary — `GET /api/recordings/:id/summary`
 
@@ -408,14 +410,15 @@ Mock labels like `"All · 128"` — append ` · ${count}` in the UI if you want 
     "kbScope": "global",
     "jobStatus": "running",
     "runningJobCount": 2,
-    "failedJobCount": 0
+    "failedJobCount": 0,
+    "thumbnailUrl": "https://cdn.filestackcontent.com/THUMB"
   }
 ]
 ```
 
-`jobStatus`: `running` \| `failed` \| `idle`. `kbScope`: `global` \| `recording` \| `null`.
+`jobStatus`: `running` \| `failed` \| `idle`. `kbScope`: `global` \| `recording` \| `null`. `thumbnailUrl` is the latest recording poster on that project (`null` until ingest thumbnail finishes). Never `storageKey`.
 
-Home project cards: trash overlay + confirm before `DELETE /projects/:id`.
+Home project cards: 4:3-style poster from `thumbnailUrl` when present (HTTPS Filestack only); trash overlay + confirm before `DELETE /projects/:id`.
 
 Mock map: `recordings` ← `recordingCount`, `clips` ← `clipCount`, `hooks` ← `hookCount`, `updatedLabel` ← format `updatedAt`, `kbLabel` / `jobText` ← derive from `kbScope` + counts.
 

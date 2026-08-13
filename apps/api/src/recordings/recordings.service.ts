@@ -128,6 +128,7 @@ function toPublicRecording(recording: Recording) {
     status: recording.status,
     videoUrl: publicPlaybackUrl(recording.storageKey),
     audioUrl: publicPlaybackUrl(recording.audioStorageKey),
+    thumbnailUrl: publicPlaybackUrl(recording.thumbnailStorageKey),
     createdAt: recording.createdAt,
     updatedAt: recording.updatedAt,
   };
@@ -176,6 +177,7 @@ export class RecordingsService {
         originalFilename: body.originalFilename,
         storageKey,
         audioStorageKey: null,
+        thumbnailStorageKey: null,
         durationMs: null,
         width: null,
         height: null,
@@ -358,6 +360,7 @@ export class RecordingsService {
       status: recording.status,
       videoUrl: publicPlaybackUrl(recording.storageKey),
       audioUrl: publicPlaybackUrl(recording.audioStorageKey),
+      thumbnailUrl: publicPlaybackUrl(recording.thumbnailStorageKey),
       job: job
         ? {
             id: job.id,

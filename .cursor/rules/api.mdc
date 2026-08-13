@@ -52,7 +52,7 @@ A repository is **one table**. If a feature needs recordings + clips + jobs, the
 - `POST /api/clips` (501 — arbitrary ranges; product path is hook export)
 - `GET /api/projects`, `GET /api/projects/sidebar`, `DELETE /api/projects/:id`
 
-`DELETE` is **soft delete**: set `deleted_at` on the row and cascaded children. Lists/gets never return those rows (**404** if already deleted). Do not hard-delete MySQL rows or Filestack/PyAI KB objects from these handlers (purge is a later job).
+`DELETE` is **soft delete**: set `deleted_at` on the row and cascaded children. Lists/gets never return those rows (**404** if already deleted). Do not hard-delete MySQL rows or Filestack/PyAI KB objects from these handlers (purge is a later job). Recording/project/clip GETs expose `thumbnailUrl` (HTTPS Filestack) — never `storageKey` / `thumbnailStorageKey`.
 
 Wire providers at the composition root (`providers/ProvidersModule`). Do not import PyAI or vendor SDKs in controllers or services.
 

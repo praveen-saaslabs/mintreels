@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import WaveSurfer from 'wavesurfer.js';
 import RegionsPlugin, { type Region } from 'wavesurfer.js/plugins/regions';
 import { WaveformEmptyState } from '@/components/editor/editor-empty-states';
@@ -7,7 +7,7 @@ import { DEMO_MEDIA } from '@/lib/demo-media';
 import { suppressSelectionOnPointerDown } from '@/lib/drag-select-guard';
 import { speakerCssColor, speakerSwatchClass } from '@/lib/speaker-style';
 import { finiteDuration, maxClockDuration } from '@/lib/time';
-import { EMPTY_SEGMENTS, uniqueSpeakers } from '@/lib/transcript';
+import { EMPTY_SEGMENTS, formatSpeakerLabel, uniqueSpeakers } from '@/lib/transcript';
 import { cn } from '@/lib/utils';
 import { useEditorStore, type EditorHook } from '@/stores/editor-store';
 
@@ -312,6 +312,22 @@ export function Timeline({
   const seek = useEditorStore((state) => state.seek);
 
   const speakers = useMemo(() => uniqueSpeakers(segments), [segments]);
+  const segmentsBySpeaker = useMemo(() => {
+    const grouped = new Map<string, typeof segments>();
+    for (const segment of segments) {
+      const speaker = segment.speaker.trim();
+      if (!speaker || segment.end <= segment.start) {
+        continue;
+      }
+      const lane = grouped.get(speaker);
+      if (lane) {
+        lane.push(segment);
+      } else {
+        grouped.set(speaker, [segment]);
+      }
+    }
+    return grouped;
+  }, [segments]);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const waveformShellRef = useRef<HTMLDivElement>(null);
@@ -576,57 +592,16 @@ export function Timeline({
   const showWaveformEmpty = !waveformReady && !loadError && (pending || Boolean(audioUrl));
   const showWaveformUnavailable = !waveformReady && !showWaveformEmpty && (loadError || !pending);
 
-  let speakerRow: ReactNode = null;
-  if (speakers.length > 0) {
-    speakerRow = (
-      <div className="flex shrink-0 flex-wrap items-center gap-1.5" aria-label="Speakers">
-        {speakers.map((speaker) => (
-          <SpeakerBadge key={speaker} speaker={speaker} />
-        ))}
-      </div>
-    );
-  }
-
-  let speakerActivity: ReactNode = null;
-  if (speakers.length > 0 && duration > 0) {
-    speakerActivity = (
-      <div
-        className="relative h-2.5 w-full shrink-0 overflow-hidden rounded-full bg-muted"
-        aria-label="Speaker activity"
-      >
-        {segments.map((segment) => {
-          if (!segment.speaker.trim() || segment.end <= segment.start) {
-            return null;
-          }
-
-          const left = (segment.start / duration) * 100;
-          const width = Math.max(0.35, ((segment.end - segment.start) / duration) * 100);
-
-          return (
-            <div
-              key={segment.id}
-              className={cn(
-                'absolute inset-y-0 rounded opacity-85',
-                speakerSwatchClass(segment.speaker),
-              )}
-              style={{
-                left: `${String(left)}%`,
-                width: `${String(width)}%`,
-              }}
-            />
-          );
-        })}
-      </div>
-    );
-  }
-
   return (
-    <section
-      className="glass-panel glass-materialize m-1.5 flex h-[calc(100%-0.75rem)] min-h-0 w-[calc(100%-0.75rem)] select-none flex-col overflow-hidden"
-      style={{ animationDelay: '80ms' }}
-    >
-      <div className="glass-pane-body flex min-h-0 flex-1 flex-col gap-2 px-4 py-3">
-        {speakerRow}
+    <section className="border-t border-[var(--glass-border-subtle)] flex h-full min-h-0 w-full select-none flex-col overflow-hidden border-x-0!">
+      <div className="flex min-h-0 flex-1 flex-col gap-2 px-4 py-3">
+        {speakers.length > 0 ? (
+          <div className="flex shrink-0 flex-wrap items-center gap-1.5" aria-label="Speakers">
+            {speakers.map((speaker) => (
+              <SpeakerBadge key={speaker} speaker={speaker} />
+            ))}
+          </div>
+        ) : null}
 
         {/*
           Block-level host (not absolute). Absolute + react-spaces often measured
@@ -654,7 +629,40 @@ export function Timeline({
           ) : null}
         </div>
 
-        {speakerActivity}
+        {speakers.length > 0 ? (
+          <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-auto">
+            {speakers.map((speaker) => (
+              <div key={speaker} className="shrink-0" aria-label={formatSpeakerLabel(speaker)}>
+                <div className="relative h-[12px] w-full overflow-hidden rounded-full bg-muted">
+                  {duration > 0
+                    ? (segmentsBySpeaker.get(speaker) ?? []).map((segment) => {
+                        const left = Math.min(100, Math.max(0, (segment.start / duration) * 100));
+                        const widthPct = Math.min(
+                          100 - left,
+                          Math.max(0.35, ((segment.end - segment.start) / duration) * 100),
+                        );
+
+                        return (
+                          <div
+                            key={segment.id}
+                            className={cn(
+                              'absolute top-0 h-[12px] opacity-85',
+                              speakerSwatchClass(segment.speaker),
+                            )}
+                            style={{
+                              left: `${String(left)}%`,
+                              width: `${String(widthPct)}%`,
+                              borderRadius: 999,
+                            }}
+                          />
+                        );
+                      })
+                    : null}
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : null}
       </div>
     </section>
   );

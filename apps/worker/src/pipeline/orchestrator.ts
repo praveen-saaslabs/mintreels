@@ -7,6 +7,7 @@ import type { WorkerDeps } from './deps';
 import { pipelineLog } from './log';
 import { RecordingGoneError } from './recording-gone';
 import { executeStep, StepRetryLaterError, type StepHandler, type StepStore } from './step-runner';
+import { ensureRecordingThumbnail } from './video-thumbnail';
 import {
   actionItemsHandler,
   audioExtractionHandler,
@@ -152,6 +153,7 @@ export async function executePipeline(
   await deps.jobs.save(job);
 
   await setRecordingStatus(deps.recordings, input.recordingId, RecordingStatus.Processing);
+  await ensureRecordingThumbnail({ deps, recordingId: input.recordingId });
 
   const store = stepStore(deps);
   const stepHandlers = handlers(deps);

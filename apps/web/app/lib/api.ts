@@ -106,6 +106,8 @@ export type RecordingSummary = {
   videoUrl: string | null;
   /** HTTPS Filestack CDN audio URL; null until extraction finishes. */
   audioUrl: string | null;
+  /** HTTPS Filestack CDN poster; null until ingest thumbnail finishes. */
+  thumbnailUrl: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -146,6 +148,7 @@ export type RecordingProcessingSnapshot = {
   status: RecordingStatus;
   videoUrl: string | null;
   audioUrl: string | null;
+  thumbnailUrl: string | null;
   job: {
     id: number;
     status: ProcessingJobStatus;

@@ -6,10 +6,10 @@ import { pipeline } from 'node:stream/promises';
 import { Readable } from 'node:stream';
 import type { ReadableStream as WebReadableStream } from 'node:stream/web';
 import type { JobStatus as DomainJobStatus } from '@mintreels/domain';
-import { generateThumbnail, trimVideo } from '@mintreels/media';
+import { trimVideo } from '@mintreels/media';
 import { ClipStatus, JobStatus, JobType } from '@mintreels/schema';
-import type { StorageProvider } from '@mintreels/storage';
 import type { WorkerDeps } from '../pipeline/deps';
+import { storeVideoThumbnail } from '../pipeline/video-thumbnail';
 
 export interface RenderClipPayload {
   clipId: number;
@@ -42,37 +42,6 @@ function failMessage(error: unknown): string {
   return 'Clip render failed';
 }
 
-async function storeClipThumbnail(input: {
-  storage: StorageProvider;
-  videoStorageKey: string;
-  localVideoPath: string | null;
-  clipId: number;
-  tmpDir: string | null;
-}): Promise<string | null> {
-  try {
-    const fromProvider = await input.storage.createVideoThumbnail(input.videoStorageKey);
-    return fromProvider.key;
-  } catch {
-    // Filestack video convert may be unavailable; fall back to a local frame upload.
-  }
-  if (input.localVideoPath === null || input.tmpDir === null) {
-    return null;
-  }
-  try {
-    const thumbPath = join(input.tmpDir, `clip-${String(input.clipId)}.jpg`);
-    await generateThumbnail({ videoPath: input.localVideoPath, outputPath: thumbPath, atMs: 0 });
-    const body = await readFile(thumbPath);
-    const stored = await input.storage.upload({
-      key: `clip-${String(input.clipId)}-thumb.jpg`,
-      body,
-      contentType: 'image/jpeg',
-    });
-    return stored.key;
-  } catch {
-    return null;
-  }
-}
-
 export async function renderClip(payload: RenderClipPayload, deps: WorkerDeps): Promise<DomainJobStatus> {
   const clip = await deps.clips.findOneBy({ id: payload.clipId });
   if (!clip) {
@@ -91,12 +60,12 @@ export async function renderClip(payload: RenderClipPayload, deps: WorkerDeps): 
 
   if (clip.status === ClipStatus.Ready && clip.storageKey) {
     if (!clip.thumbnailStorageKey) {
-      const thumbKey = await storeClipThumbnail({
+      const thumbKey = await storeVideoThumbnail({
         storage: deps.storage,
         videoStorageKey: clip.storageKey,
         localVideoPath: null,
-        clipId: clip.id,
         tmpDir: null,
+        uploadKey: `clip-${String(clip.id)}-thumb.jpg`,
       });
       if (thumbKey) {
         clip.thumbnailStorageKey = thumbKey;
@@ -154,12 +123,12 @@ export async function renderClip(payload: RenderClipPayload, deps: WorkerDeps): 
       contentType: 'video/mp4',
     });
 
-    const thumbKey = await storeClipThumbnail({
+    const thumbKey = await storeVideoThumbnail({
       storage: deps.storage,
       videoStorageKey: stored.key,
       localVideoPath: outputPath,
-      clipId: clip.id,
       tmpDir,
+      uploadKey: `clip-${String(clip.id)}-thumb.jpg`,
     });
 
     clip.storageKey = stored.key;
