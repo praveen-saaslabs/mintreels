@@ -14,4 +14,8 @@ coverage
 *.tsbuildinfo
 .vite
 .react-router
+
+# Local demo media (large binaries; copy into apps/web/public/media/)
+apps/web/public/media/*
+!apps/web/public/media/.gitkeep
 .pnpm-store

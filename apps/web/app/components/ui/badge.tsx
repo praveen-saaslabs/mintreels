@@ -18,6 +18,14 @@ const speakerVariantClasses = {
     "bg-speaker-5-bg text-speaker-5 focus-visible:ring-speaker-5/20 [a]:hover:bg-speaker-5-bg/80",
   speaker6:
     "bg-speaker-6-bg text-speaker-6 focus-visible:ring-speaker-6/20 [a]:hover:bg-speaker-6-bg/80",
+  speaker7:
+    "bg-speaker-7-bg text-speaker-7 focus-visible:ring-speaker-7/20 [a]:hover:bg-speaker-7-bg/80",
+  speaker8:
+    "bg-speaker-8-bg text-speaker-8 focus-visible:ring-speaker-8/20 [a]:hover:bg-speaker-8-bg/80",
+  speaker9:
+    "bg-speaker-9-bg text-speaker-9 focus-visible:ring-speaker-9/20 [a]:hover:bg-speaker-9-bg/80",
+  speaker10:
+    "bg-speaker-10-bg text-speaker-10 focus-visible:ring-speaker-10/20 [a]:hover:bg-speaker-10-bg/80",
 } as const satisfies Record<SpeakerBadgeVariant, string>
 
 const badgeVariants = cva(
