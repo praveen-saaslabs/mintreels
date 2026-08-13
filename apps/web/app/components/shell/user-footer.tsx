@@ -2,9 +2,9 @@ import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { LogOut, Moon, Settings, Sun } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useWorkspaceUserQuery } from '@/hooks/use-home-queries';
 import { playThemeSwitchSound } from '@/lib/theme-switch-sound';
 import { useAuth } from '@/providers/auth-provider';
-import { useProjects } from '@/providers/projects-provider';
 import { useTheme } from '@/providers/theme-provider';
 
 function initialsFromEmail(email: string) {
@@ -13,7 +13,7 @@ function initialsFromEmail(email: string) {
 }
 
 export function UserFooter() {
-  const { user: workspaceUser } = useProjects();
+  const { data: workspaceUser } = useWorkspaceUserQuery();
   const { user: authUser, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const location = useLocation();
@@ -21,9 +21,10 @@ export function UserFooter() {
   const [isSigningOut, setIsSigningOut] = useState(false);
   const settingsActive = location.pathname.startsWith('/settings');
 
-  const displayName = authUser?.email ?? workspaceUser?.displayName ?? 'Loading…';
-  const initials = authUser ? initialsFromEmail(authUser.email) : (workspaceUser?.initials ?? '—');
-  const subtitle = workspaceUser?.subtitle ?? 'Signed in';
+  const displayName =
+    workspaceUser?.displayName ?? authUser?.email ?? 'Loading…';
+  const initials = workspaceUser?.initials
+    ?? (authUser ? initialsFromEmail(authUser.email) : '—');
 
   function handleThemeToggle() {
     const nextTheme = theme === 'dark' ? 'light' : 'dark';
@@ -49,7 +50,6 @@ export function UserFooter() {
         </div>
         <div className="min-w-0 flex-1 group-data-[collapsible=icon]:hidden">
           <div className="truncate text-xs font-medium">{displayName}</div>
-          <div className="truncate text-[10.5px] text-muted-foreground">{subtitle}</div>
         </div>
       </div>
 

@@ -1,9 +1,16 @@
 import { cn } from '@/lib/utils';
+import { formatClipFilterLabel } from '@/lib/data/format';
 import type { ClipFilterId } from '@/lib/data/types';
-import { useClips } from '@/providers/clips-provider';
+import { useClipFiltersQuery } from '@/hooks/use-home-queries';
 
-export function ClipFilters() {
-  const { filters, activeFilterId, setActiveFilterId } = useClips();
+export function ClipFilters({
+  activeFilterId,
+  onActiveFilterIdChange,
+}: {
+  activeFilterId: ClipFilterId;
+  onActiveFilterIdChange: (id: ClipFilterId) => void;
+}) {
+  const { data: filters = [] } = useClipFiltersQuery();
 
   return (
     <div className="flex flex-wrap items-center gap-1.5">
@@ -13,7 +20,7 @@ export function ClipFilters() {
           <button
             key={filter.id}
             type="button"
-            onClick={() => setActiveFilterId(filter.id as ClipFilterId)}
+            onClick={() => onActiveFilterIdChange(filter.id)}
             className={cn(
               'inline-flex h-7 items-center rounded-[9px] px-2.5 text-xs font-medium transition-colors',
               active
@@ -21,7 +28,7 @@ export function ClipFilters() {
                 : 'border border-[var(--mr-bd)] bg-transparent text-[var(--mr-mfg)] hover:text-[var(--mr-fg)]',
             )}
           >
-            {filter.label}
+            {formatClipFilterLabel(filter.label, filter.count)}
           </button>
         );
       })}

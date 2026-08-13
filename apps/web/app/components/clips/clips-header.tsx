@@ -1,10 +1,15 @@
 import { Search } from 'lucide-react';
-import { useClips } from '@/providers/clips-provider';
-import { useProjects } from '@/providers/projects-provider';
+import { useClipsQuery, useWorkspaceStatsQuery } from '@/hooks/use-home-queries';
 
-export function ClipsHeader() {
-  const { clips, searchQuery, setSearchQuery } = useClips();
-  const { stats } = useProjects();
+export function ClipsHeader({
+  searchQuery,
+  onSearchQueryChange,
+}: {
+  searchQuery: string;
+  onSearchQueryChange: (query: string) => void;
+}) {
+  const { data: clips = [] } = useClipsQuery();
+  const { data: stats } = useWorkspaceStatsQuery();
 
   const subtitle = stats
     ? `${stats.clipCount} clips across ${stats.projectCount} projects`
@@ -20,7 +25,7 @@ export function ClipsHeader() {
         <Search className="size-3.5 text-[var(--mr-mfg)]" />
         <input
           value={searchQuery}
-          onChange={(event) => setSearchQuery(event.target.value)}
+          onChange={(event) => onSearchQueryChange(event.target.value)}
           placeholder="Search clips, captions, transcript"
           className="min-w-0 flex-1 bg-transparent text-[12.5px] text-[var(--mr-fg)] outline-none placeholder:text-[var(--mr-mfg)]"
         />

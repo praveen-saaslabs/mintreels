@@ -1,15 +1,31 @@
+import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Plus } from 'lucide-react';
-import { useProjects } from '@/providers/projects-provider';
+import { useProjectsQuery } from '@/hooks/use-home-queries';
 import { ProjectCard } from './project-card';
 
-export function ProjectsGrid() {
-  const { filteredProjects, isLoading, error } = useProjects();
+export function ProjectsGrid({ searchQuery }: { searchQuery: string }) {
+  const { data: projects = [], isLoading, error, refetch } = useProjectsQuery();
+
+  const filteredProjects = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) {
+      return projects;
+    }
+    return projects.filter((project) => project.name.toLowerCase().includes(q));
+  }, [projects, searchQuery]);
 
   if (error) {
     return (
-      <div className="rounded-[14px] border border-[var(--mr-bad)]/40 bg-[var(--mr-card)] p-4 text-sm text-[var(--mr-bad)]">
-        {error}
+      <div className="space-y-3 rounded-[14px] border border-[var(--mr-bad)]/40 bg-[var(--mr-card)] p-4 text-sm text-[var(--mr-bad)]">
+        <p>{error instanceof Error ? error.message : 'Failed to load projects'}</p>
+        <button
+          type="button"
+          className="text-[var(--mr-fg)] underline"
+          onClick={() => void refetch()}
+        >
+          Retry
+        </button>
       </div>
     );
   }

@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/sidebar';
 import { cn } from '@/lib/utils';
 import type { SidebarProject } from '@/lib/data/types';
-import { useProjects } from '@/providers/projects-provider';
+import { useSidebarProjectsQuery } from '@/hooks/use-home-queries';
 
 function accentClass(accent: SidebarProject['accent']) {
   switch (accent) {
@@ -25,7 +25,7 @@ function accentClass(accent: SidebarProject['accent']) {
 }
 
 export function ProjectListNav() {
-  const { sidebarProjects, isLoading } = useProjects();
+  const { data: sidebarProjects = [], isLoading } = useSidebarProjectsQuery();
 
   return (
     <SidebarGroup>
