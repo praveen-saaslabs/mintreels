@@ -8,6 +8,7 @@ import type { ReadableStream as WebReadableStream } from 'node:stream/web';
 import { extractAudio } from '@mintreels/media';
 import { isAudioFilename } from '@mintreels/storage';
 import type { WorkerDeps } from '../deps';
+import { requireActiveRecording } from '../recording-gone';
 import type { StepHandler } from '../step-runner';
 
 async function writeStreamToFile(stream: ReadableStream, filePath: string): Promise<void> {
@@ -19,7 +20,7 @@ async function writeStreamToFile(stream: ReadableStream, filePath: string): Prom
 
 export function audioExtractionHandler(deps: WorkerDeps): StepHandler {
   return async (ctx) => {
-    const recording = await deps.recordings.findOneByOrFail({ id: ctx.recordingId });
+    const recording = await requireActiveRecording(deps.recordings, ctx.recordingId);
     if (recording.audioStorageKey) {
       return { key: recording.audioStorageKey, skipped: true };
     }

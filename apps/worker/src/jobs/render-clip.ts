@@ -76,12 +76,12 @@ async function storeClipThumbnail(input: {
 export async function renderClip(payload: RenderClipPayload, deps: WorkerDeps): Promise<DomainJobStatus> {
   const clip = await deps.clips.findOneBy({ id: payload.clipId });
   if (!clip) {
-    throw new Error('Clip not found');
+    return 'success';
   }
 
   const recording = await deps.recordings.findOneBy({ id: payload.recordingId });
   if (!recording) {
-    throw new Error('Recording not found');
+    return 'success';
   }
 
   const job =

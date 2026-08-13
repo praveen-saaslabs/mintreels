@@ -1,6 +1,7 @@
 import { isProviderError, ProviderError } from '@mintreels/ai';
 import { JobStepName } from '@mintreels/schema';
 import type { WorkerDeps } from '../deps';
+import { requireActiveRecording } from '../recording-gone';
 import { loadJobConfig } from '../config';
 import { pipelineLog } from '../log';
 import { sleep } from '../retry';
@@ -53,7 +54,7 @@ async function resolveAudioStorageKey(
   recordingId: number,
   jobId: number,
 ): Promise<string | null> {
-  const recording = await deps.recordings.findOneByOrFail({ id: recordingId });
+  const recording = await requireActiveRecording(deps.recordings, recordingId);
   if (typeof recording.audioStorageKey === 'string' && recording.audioStorageKey.trim() !== '') {
     return recording.audioStorageKey;
   }

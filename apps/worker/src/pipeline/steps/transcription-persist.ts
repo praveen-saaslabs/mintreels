@@ -5,6 +5,7 @@ import type {
 } from '@mintreels/domain';
 import { JobStepName } from '@mintreels/schema';
 import type { WorkerDeps } from '../deps';
+import { requireActiveRecording } from '../recording-gone';
 import type { StepHandler } from '../step-runner';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -109,7 +110,7 @@ export function transcriptionPersistHandler(deps: WorkerDeps): StepHandler {
       );
     }
 
-    const recording = await deps.recordings.findOneByOrFail({ id: ctx.recordingId });
+    const recording = await requireActiveRecording(deps.recordings, ctx.recordingId);
     if (durationMs !== null) {
       recording.durationMs = durationMs;
       await deps.recordings.save(recording);

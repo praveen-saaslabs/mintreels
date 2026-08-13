@@ -5,6 +5,7 @@ import { writeAudit } from './audit';
 import { loadJobConfig } from './config';
 import type { WorkerDeps } from './deps';
 import { pipelineLog } from './log';
+import { RecordingGoneError } from './recording-gone';
 import { executeStep, StepRetryLaterError, type StepHandler, type StepStore } from './step-runner';
 import {
   actionItemsHandler,
@@ -116,7 +117,10 @@ export async function executePipeline(
   deps: WorkerDeps,
 ): Promise<DomainJobStatus> {
   const config = loadJobConfig();
-  await deps.recordings.findOneByOrFail({ id: input.recordingId });
+  const recording = await deps.recordings.findOneBy({ id: input.recordingId });
+  if (!recording) {
+    return JobStatus.Success;
+  }
   let job: Job | null =
     input.jobId !== undefined
       ? await deps.jobs.findOneBy({ id: input.jobId })
@@ -207,6 +211,9 @@ export async function executePipeline(
     );
     return transcript ? JobStatus.Success : JobStatus.Failed;
   } catch (error) {
+    if (error instanceof RecordingGoneError) {
+      return JobStatus.Success;
+    }
     if (error instanceof StepRetryLaterError) {
       throw error;
     }
