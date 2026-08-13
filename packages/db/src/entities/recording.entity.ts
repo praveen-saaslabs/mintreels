@@ -8,15 +8,16 @@ import {
   OneToOne,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
+  type Relation,
 } from 'typeorm';
 import { RecordingStatus, type RecordingRow } from '@mintreels/schema';
-import { Clip } from './clip.entity';
-import { Hook } from './hook.entity';
-import { Job } from './job.entity';
+import type { Clip } from './clip.entity';
+import type { Hook } from './hook.entity';
+import type { Job } from './job.entity';
 import { Project } from './project.entity';
-import { Summary } from './summary.entity';
-import { Transcript } from './transcript.entity';
-import { TranscriptSegment } from './transcript-segment.entity';
+import type { Summary } from './summary.entity';
+import type { Transcript } from './transcript.entity';
+import type { TranscriptSegment } from './transcript-segment.entity';
 
 @Entity({ name: 'recordings' })
 export class Recording implements RecordingRow {
@@ -28,7 +29,7 @@ export class Recording implements RecordingRow {
 
   @ManyToOne(() => Project, (project) => project.recordings)
   @JoinColumn({ name: 'project_id' })
-  project?: Project;
+  project?: Relation<Project>;
 
   @Column({ type: 'text' })
   title!: string;
@@ -57,21 +58,21 @@ export class Recording implements RecordingRow {
   @UpdateDateColumn({ type: 'datetime', name: 'updated_at' })
   updatedAt!: Date;
 
-  @OneToOne(() => Transcript, (transcript) => transcript.recording)
-  transcript?: Transcript | null;
+  @OneToOne('Transcript', (transcript: Transcript) => transcript.recording)
+  transcript?: Relation<Transcript | null>;
 
-  @OneToOne(() => Summary, (summary) => summary.recording)
-  summary?: Summary | null;
+  @OneToOne('Summary', (summary: Summary) => summary.recording)
+  summary?: Relation<Summary | null>;
 
-  @OneToMany(() => TranscriptSegment, (segment) => segment.recording)
-  segments?: TranscriptSegment[];
+  @OneToMany('TranscriptSegment', (segment: TranscriptSegment) => segment.recording)
+  segments?: Relation<TranscriptSegment[]>;
 
-  @OneToMany(() => Hook, (hook) => hook.recording)
-  hooks?: Hook[];
+  @OneToMany('Hook', (hook: Hook) => hook.recording)
+  hooks?: Relation<Hook[]>;
 
-  @OneToMany(() => Clip, (clip) => clip.recording)
-  clips?: Clip[];
+  @OneToMany('Clip', (clip: Clip) => clip.recording)
+  clips?: Relation<Clip[]>;
 
-  @OneToMany(() => Job, (job) => job.recording)
-  jobs?: Job[];
+  @OneToMany('Job', (job: Job) => job.recording)
+  jobs?: Relation<Job[]>;
 }
