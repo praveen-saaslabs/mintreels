@@ -1,7 +1,7 @@
-import { useSettings } from '@/providers/settings-provider';
+import { useSettingsQuery } from '@/hooks/use-home-queries';
 
 export function StorageJobs() {
-  const { settings, isLoading } = useSettings();
+  const { data: settings, isLoading } = useSettingsQuery();
   const stats = settings?.storageJobs;
 
   return (

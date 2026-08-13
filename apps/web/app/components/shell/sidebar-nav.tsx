@@ -8,13 +8,12 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from '@/components/ui/sidebar';
-import { useClips } from '@/providers/clips-provider';
-import { useProjects } from '@/providers/projects-provider';
+import { useClipsQuery, useWorkspaceStatsQuery } from '@/hooks/use-home-queries';
 
 export function SidebarNav() {
   const location = useLocation();
-  const { stats } = useProjects();
-  const { clips } = useClips();
+  const { data: stats } = useWorkspaceStatsQuery();
+  const { data: clips = [] } = useClipsQuery();
 
   const projectCount = stats?.projectCount ?? 0;
   const clipCount = stats?.clipCount ?? clips.length;

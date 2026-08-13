@@ -1,6 +1,6 @@
 import { cn } from '@/lib/utils';
 import type { ProviderRow } from '@/lib/data/types';
-import { useSettings } from '@/providers/settings-provider';
+import { useSettingsQuery } from '@/hooks/use-home-queries';
 
 function statusClasses(status: ProviderRow['status']) {
   if (status === 'connected') {
@@ -14,12 +14,19 @@ function statusLabel(status: ProviderRow['status']) {
 }
 
 export function ProvidersSection() {
-  const { settings, isLoading, error } = useSettings();
+  const { data: settings, isLoading, error, refetch } = useSettingsQuery();
 
   if (error) {
     return (
-      <div className="rounded-[14px] border border-[var(--mr-bad)]/40 bg-[var(--mr-card)] p-4 text-sm text-[var(--mr-bad)]">
-        {error}
+      <div className="space-y-3 rounded-[14px] border border-[var(--mr-bad)]/40 bg-[var(--mr-card)] p-4 text-sm text-[var(--mr-bad)]">
+        <p>{error instanceof Error ? error.message : 'Failed to load settings'}</p>
+        <button
+          type="button"
+          className="text-[var(--mr-fg)] underline"
+          onClick={() => void refetch()}
+        >
+          Retry
+        </button>
       </div>
     );
   }
@@ -51,9 +58,6 @@ export function ProvidersSection() {
                 <div className="flex h-8 min-w-0 items-center gap-2 rounded-[9px] border border-[var(--mr-bd)] bg-[var(--mr-bg)] px-2.5">
                   <span className="truncate font-mono text-[11.5px] text-[var(--mr-fg2)]">
                     {provider.maskedKey}
-                  </span>
-                  <span className="ml-auto shrink-0 text-[10.5px] text-[var(--mr-mfg)]">
-                    reveal
                   </span>
                 </div>
                 <span className="text-xs text-[var(--mr-mfg)]">{provider.model}</span>

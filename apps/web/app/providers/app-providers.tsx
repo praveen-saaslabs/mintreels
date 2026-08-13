@@ -1,33 +1,15 @@
-import { useMemo, type ReactNode } from 'react';
-import { createClipsRepository } from '@/lib/data/clips-repository';
-import { createProjectsRepository } from '@/lib/data/projects-repository';
-import { createSettingsRepository } from '@/lib/data/settings-repository';
+import { QueryClientProvider } from '@tanstack/react-query';
+import type { ReactNode } from 'react';
+import { queryClient } from '@/lib/query-client';
 import { AuthProvider } from './auth-provider';
-import { ClipsProvider } from './clips-provider';
-import { ProjectsProvider } from './projects-provider';
-import { SettingsProvider } from './settings-provider';
 import { ThemeProvider } from './theme-provider';
 
-function useMockData(): boolean {
-  return import.meta.env.VITE_USE_MOCK_DATA !== 'false';
-}
-
 export function AppProviders({ children }: { children: ReactNode }) {
-  const useMock = useMockData();
-
-  const projectsRepository = useMemo(() => createProjectsRepository(useMock), [useMock]);
-  const clipsRepository = useMemo(() => createClipsRepository(useMock), [useMock]);
-  const settingsRepository = useMemo(() => createSettingsRepository(useMock), [useMock]);
-
   return (
     <ThemeProvider>
-      <AuthProvider>
-        <ProjectsProvider repository={projectsRepository}>
-          <ClipsProvider repository={clipsRepository}>
-            <SettingsProvider repository={settingsRepository}>{children}</SettingsProvider>
-          </ClipsProvider>
-        </ProjectsProvider>
-      </AuthProvider>
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>{children}</AuthProvider>
+      </QueryClientProvider>
     </ThemeProvider>
   );
 }

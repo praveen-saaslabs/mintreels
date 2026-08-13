@@ -88,7 +88,7 @@ export const api = {
     request<unknown>(`/recordings/${encodeURIComponent(id)}/summary`),
   getHooks: (id: number) => request<unknown>(`/recordings/${encodeURIComponent(id)}/hooks`),
   getKnowledgeBases: () => request<unknown>('/knowledge-bases'),
-  getClip: (id: number) => request<unknown>(`/clips/${encodeURIComponent(id)}`),
+  getClip: (id: number) => request<ClipSummary>(`/clips/${encodeURIComponent(id)}`),
 
   getWorkspaceUser: () => request<WorkspaceUser>('/workspace/user'),
   getWorkspaceStats: () => request<WorkspaceStats>('/workspace/stats'),

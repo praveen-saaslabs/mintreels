@@ -14,6 +14,8 @@ import type {
   VerifyEmailRequest,
 } from '@mintreels/schema';
 import { ApiError, api } from '@/lib/api';
+import { queryClient } from '@/lib/query-client';
+import { queryKeys } from '@/lib/query-keys';
 
 type AuthStatus = 'loading' | 'authenticated' | 'unauthenticated';
 
@@ -80,6 +82,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } finally {
       setUser(null);
       setStatus('unauthenticated');
+      void queryClient.removeQueries({ queryKey: queryKeys.all });
     }
   }, []);
 

@@ -1,5 +1,10 @@
 import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
+import {
+  formatKbLabel,
+  formatProjectJobText,
+  formatRelativeUpdatedAt,
+} from '@/lib/data/format';
 import type { ProjectSummary } from '@/lib/data/types';
 
 function jobTone(status: ProjectSummary['jobStatus']) {
@@ -14,6 +19,8 @@ function jobTone(status: ProjectSummary['jobStatus']) {
 }
 
 export function ProjectCard({ project }: { project: ProjectSummary }) {
+  const jobText = formatProjectJobText(project);
+
   return (
     <Link
       to="/recordings"
@@ -32,7 +39,7 @@ export function ProjectCard({ project }: { project: ProjectSummary }) {
               project.jobStatus === 'running' && 'animate-mr-pulse',
             )}
           />
-          {project.jobText}
+          {jobText}
         </span>
       </div>
       <div className="flex flex-col gap-2.5 p-3.5">
@@ -40,25 +47,27 @@ export function ProjectCard({ project }: { project: ProjectSummary }) {
           <div className="text-[15px] leading-snug font-semibold tracking-[-0.01em]">
             {project.name}
           </div>
-          <div className="mt-1 text-xs text-[var(--mr-mfg)]">{project.updatedLabel}</div>
+          <div className="mt-1 text-xs text-[var(--mr-mfg)]">
+            {formatRelativeUpdatedAt(project.updatedAt)}
+          </div>
         </div>
         <div className="flex gap-4">
           <div>
-            <div className="font-mono text-[15px] font-medium">{project.recordings}</div>
+            <div className="font-mono text-[15px] font-medium">{project.recordingCount}</div>
             <div className="text-[10.5px] text-[var(--mr-mfg)]">recordings</div>
           </div>
           <div>
-            <div className="font-mono text-[15px] font-medium">{project.clips}</div>
+            <div className="font-mono text-[15px] font-medium">{project.clipCount}</div>
             <div className="text-[10.5px] text-[var(--mr-mfg)]">clips</div>
           </div>
           <div>
             <div className="font-mono text-[15px] font-medium text-[var(--mr-acc)]">
-              {project.hooks}
+              {project.hookCount}
             </div>
             <div className="text-[10.5px] text-[var(--mr-mfg)]">open hooks</div>
           </div>
         </div>
-        <div className="text-[11px] text-[var(--mr-mfg)]">{project.kbLabel}</div>
+        <div className="text-[11px] text-[var(--mr-mfg)]">{formatKbLabel(project.kbScope)}</div>
       </div>
     </Link>
   );

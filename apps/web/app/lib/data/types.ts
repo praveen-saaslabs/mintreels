@@ -4,6 +4,8 @@ export type ClipRenderStatus = 'ready' | 'rendering' | 'queued' | 'failed';
 
 export type ProviderConnectionStatus = 'connected' | 'not_set';
 
+export type KbScope = 'global' | 'recording' | null;
+
 export type WorkspaceStats = {
   projectCount: number;
   recordingCount: number;
@@ -11,22 +13,23 @@ export type WorkspaceStats = {
 };
 
 export type SidebarProject = {
-  id: string;
+  id: number;
   name: string;
   recordingCount: number;
   accent: 'mint' | 'warn' | 'muted';
 };
 
 export type ProjectSummary = {
-  id: string;
+  id: number;
   name: string;
-  updatedLabel: string;
-  recordings: number;
-  clips: number;
-  hooks: number;
-  kbLabel: string;
+  updatedAt: string;
+  recordingCount: number;
+  clipCount: number;
+  hookCount: number;
+  kbScope: KbScope;
   jobStatus: JobActivityStatus;
-  jobText: string;
+  runningJobCount: number;
+  failedJobCount: number;
 };
 
 export type ClipFilterId =
@@ -40,26 +43,29 @@ export type ClipFilterId =
 export type ClipFilter = {
   id: ClipFilterId;
   label: string;
+  count: number;
 };
 
 export type ClipSummary = {
-  id: string;
+  id: number;
   title: string;
-  projectLabel: string;
-  range: string;
-  ratio: '9:16' | '1:1' | '16:9';
-  duration: string;
-  caption: string;
+  recordingId: number;
+  projectId: number;
+  projectName: string;
+  recordingTitle: string;
+  startMs: number;
+  endMs: number;
   status: ClipRenderStatus;
-  subtitled: boolean;
+  subtitleStyle: string | null;
+  ratio?: '9:16' | '1:1' | '16:9';
 };
 
 export type ProviderRow = {
-  id: string;
+  id: 'speech' | 'llm' | 'kb' | 'storage' | string;
   label: string;
   envKey: string;
-  /** Always masked / placeholder — never a real secret. */
-  maskedKey: string;
+  /** Only `"configured"` | `"not configured"` from the API. */
+  maskedKey: 'configured' | 'not configured' | string;
   model: string;
   status: ProviderConnectionStatus;
 };

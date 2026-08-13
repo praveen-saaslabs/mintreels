@@ -1,9 +1,15 @@
-import { Link } from 'react-router-dom';
 import { Search } from 'lucide-react';
-import { useProjects } from '@/providers/projects-provider';
+import { Link } from 'react-router-dom';
+import { useWorkspaceStatsQuery } from '@/hooks/use-home-queries';
 
-export function ProjectsHeader() {
-  const { stats, searchQuery, setSearchQuery } = useProjects();
+export function ProjectsHeader({
+  searchQuery,
+  onSearchQueryChange,
+}: {
+  searchQuery: string;
+  onSearchQueryChange: (query: string) => void;
+}) {
+  const { data: stats } = useWorkspaceStatsQuery();
 
   const subtitle = stats
     ? `${stats.projectCount} projects · ${stats.recordingCount} recordings · ${stats.clipCount} clips`
@@ -20,7 +26,7 @@ export function ProjectsHeader() {
           <Search className="size-3.5 text-[var(--mr-mfg)]" />
           <input
             value={searchQuery}
-            onChange={(event) => setSearchQuery(event.target.value)}
+            onChange={(event) => onSearchQueryChange(event.target.value)}
             placeholder="Search projects"
             className="min-w-0 flex-1 bg-transparent text-[12.5px] text-[var(--mr-fg)] outline-none placeholder:text-[var(--mr-mfg)]"
           />
