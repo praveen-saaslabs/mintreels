@@ -73,7 +73,7 @@ export function EditorPane({
           <h2 className="text-sm font-medium tracking-[-0.01em] text-foreground">{title}</h2>
         )}
       </header>
-      <div className="glass-pane-body min-h-0 flex-1 overflow-auto p-3">{children}</div>
+      <div className="glass-pane-body flex min-h-0 flex-1 flex-col overflow-hidden p-3">{children}</div>
     </section>
   );
 }

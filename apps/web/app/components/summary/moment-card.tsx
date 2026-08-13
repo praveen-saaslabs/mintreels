@@ -2,6 +2,7 @@ import { Download, Loader2 } from 'lucide-react';
 import type { KeyboardEvent, MouseEvent } from 'react';
 import { HookThumb } from '@/components/summary/hook-thumb';
 import { buttonVariants } from '@/components/ui/button';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useClipDownload } from '@/hooks/use-clip-download';
 import { useMomentClipExport } from '@/hooks/use-moment-clip-export';
 import type { MomentCandidate } from '@/lib/api';
@@ -22,6 +23,21 @@ function formatDuration(startMs: number, endMs: number): string {
   return `${Math.max(0, Math.round((endMs - startMs) / 1000))}s`;
 }
 
+/** Pitch API similarity (0..1) as a readable match strength for new users. */
+function formatMatchLabel(similarity: number): string {
+  const pct = Math.round(Math.min(1, Math.max(0, similarity)) * 100);
+  return `${String(pct)}% match`;
+}
+
+function matchScoreTooltip(similarity: number): string {
+  const clamped = Math.min(1, Math.max(0, similarity));
+  const pct = Math.round(clamped * 100);
+  return (
+    `Mint looked at your ask and this bit of the video, then guessed how alike they feel. ` +
+    `${String(pct)}% means “pretty close” — closer to 100% is a better fit.`
+  );
+}
+
 function cutLabel(status: string | undefined, isExporting: boolean): string {
   if (isExporting) {
     return 'Starting…';
@@ -38,7 +54,12 @@ function cutLabel(status: string | undefined, isExporting: boolean): string {
   return 'Cut clip';
 }
 
-export function MomentCard({ moment, selected, recordingId, onPreview }: MomentCardProps) {
+function stopCardActivate(event: MouseEvent<HTMLElement>) {
+  event.preventDefault();
+  event.stopPropagation();
+}
+
+export function MomentCard({ moment, selected, recordingId, onPreview }: Readonly<MomentCardProps>) {
   const mediaSrc = useEditorStore((state) => state.mediaElement?.currentSrc);
   const storeSrc = useEditorStore((state) => state.video.src);
   const videoUrl = mediaSrc || storeSrc || DEMO_MEDIA.videoUrl;
@@ -49,6 +70,8 @@ export function MomentCard({ moment, selected, recordingId, onPreview }: MomentC
   const actionLabel = cutLabel(clip?.status, isExporting);
   const startSec = moment.startMs / 1000;
   const endSec = moment.endMs / 1000;
+  const matchLabel = formatMatchLabel(moment.similarity);
+  const scoreTooltip = matchScoreTooltip(moment.similarity);
 
   function onKeyDown(event: KeyboardEvent<HTMLDivElement>) {
     if (event.key === 'Enter' || event.key === ' ') {
@@ -79,7 +102,7 @@ export function MomentCard({ moment, selected, recordingId, onPreview }: MomentC
     <div
       role="button"
       tabIndex={0}
-      aria-label={`Preview moment ${moment.title}`}
+      aria-label={`Preview moment ${moment.title}, ${matchLabel}`}
       onClick={onPreview}
       onKeyDown={onKeyDown}
       className={cn(
@@ -101,9 +124,26 @@ export function MomentCard({ moment, selected, recordingId, onPreview }: MomentC
           <p className="line-clamp-2 text-[13px] font-semibold leading-snug text-pretty text-foreground">
             {moment.title}
           </p>
-          <span className="shrink-0 pt-0.5 font-mono text-xs tabular-nums text-[var(--mr-acc)]">
-            {moment.similarity.toFixed(2)}
-          </span>
+          <TooltipProvider delay={200}>
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <button
+                    type="button"
+                    aria-label={`${matchLabel}. How this score is calculated`}
+                    className="glass-chip shrink-0 cursor-help rounded-full px-1.5 py-0.5 text-[10px] font-medium tabular-nums text-mr-acc"
+                    onClick={stopCardActivate}
+                    onPointerDown={stopCardActivate}
+                  />
+                }
+              >
+                {matchLabel}
+              </TooltipTrigger>
+              <TooltipContent side="left" align="start" className="max-w-[240px] text-left text-pretty leading-relaxed">
+                {scoreTooltip}
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </div>
         {moment.excerpt ? (
           <p className="line-clamp-2 text-[11px] leading-snug text-muted-foreground">{moment.excerpt}</p>

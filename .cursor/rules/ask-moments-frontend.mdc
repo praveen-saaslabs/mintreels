@@ -8,7 +8,7 @@ alwaysApply: false
 
 Read [`docs/api-frontend.md`](../../docs/api-frontend.md) § Ask / moments. Call the API **only** through [`apps/web/app/lib/api.ts`](../../apps/web/app/lib/api.ts) with `credentials: 'include'`. Never send `Authorization: Bearer`.
 
-Reference UI: [`moment-search.tsx`](../../apps/web/app/components/summary/moment-search.tsx), [`use-moment-clip-export.ts`](../../apps/web/app/hooks/use-moment-clip-export.ts).
+Reference UI: [`moment-search.tsx`](../../apps/web/app/components/summary/moment-search.tsx) (`AskMint` continuous thread in the right editor pane — default **Ask Mint** tab; no modal. Append turns on each ask; composer stays available). Clip export: [`use-moment-clip-export.ts`](../../apps/web/app/hooks/use-moment-clip-export.ts).
 
 The **backend** classifies intent. Do **not** regex-detect question vs clip on the client.
 
@@ -60,7 +60,7 @@ type AskMomentsResponse =
 - Preview / seek: `seek(startMs / 1000)` (player is **seconds**).
 - Labels: format `startMs` / `endMs` in the UI.
 - **Cut clip** must send **padded** bounds: `clipStartMs` / `clipEndMs`, not `startMs` / `endMs`.
-- `similarity` is 0..1 (optional badge). `title` / `excerpt` are display-only.
+- `similarity` is 0..1 — show as a friendly match badge (e.g. `82% match`), not a raw `0.82`. Tooltip should be ELI5 (no cosine/jargon): Mint compared your ask to this video bit; closer to 100% is a better fit. `title` / `excerpt` are display-only.
 
 ## Cut clip — `api.createClip`
 
