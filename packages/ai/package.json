@@ -17,7 +17,10 @@
   },
   "dependencies": {
     "@mintreels/domain": "workspace:*",
-    "@pyai/sdk": "^0.2.3"
+    "@mintreels/schema": "workspace:*",
+    "@pyai/sdk": "^0.2.3",
+    "openai": "^4.104.0",
+    "zod": "^4.0.0"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",

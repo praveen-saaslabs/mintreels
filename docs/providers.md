@@ -27,7 +27,10 @@ PyAI Adapter (or Filestack / BullMQ adapter)
 - `summarize(transcript)` → `Summary`
 - `generateHooks(transcript)` → `Hook[]`
 - `generateActionItems(transcript)` → timestamped action items
-- Default: PyAI (`packages/ai/src/providers/pyai/llm.ts`) — extractive MVP until Recap/chat is available
+- Default: OpenAI-compatible (`packages/ai/src/providers/openai-compatible/llm.ts`) via `LLM_PROVIDER=openai` (or `nvidia`)
+- `summarize` / `generateActionItems` call Chat Completions with `response_format` (`json_schema` strict, fallback `json_object`)
+- `generateHooks` stays extractive (`packages/ai/src/extractive-hooks.ts`)
+- Speech stays `AI_PROVIDER=pyai`. Do not point LLM at PyAI — `@pyai/sdk` has Recap only, no chat/summarize/action-items API
 
 ## EmbeddingProvider
 
@@ -64,7 +67,15 @@ PyAI Adapter (or Filestack / BullMQ adapter)
 
 ```env
 AI_PROVIDER=pyai
+LLM_PROVIDER=openai
 KNOWLEDGE_BASE_PROVIDER=pyai
 STORAGE_PROVIDER=filestack
 QUEUE_PROVIDER=bullmq
 ```
+
+LLM adapter (`openai` | `nvidia`) reads:
+
+| Provider | Key | Base URL | Model default |
+| --- | --- | --- | --- |
+| `openai` | `OPENAI_API_KEY` | optional `OPENAI_BASE_URL` | `gpt-4o-mini` (`OPENAI_MODEL`) |
+| `nvidia` | `NVIDIA_API_KEY` | `https://integrate.api.nvidia.com/v1` | `meta/llama-3.3-70b-instruct` (`NVIDIA_MODEL`) |

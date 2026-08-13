@@ -80,10 +80,13 @@ export class SettingsService {
   async getSnapshot(userId: number) {
     const pyaiKey = envSet(EnvKey.PyaiApiKey);
     const aiProvider = envValue(EnvKey.AiProvider);
+    const llmProvider = envValue(EnvKey.LlmProvider) || 'openai';
     const kbProvider = envValue(EnvKey.KnowledgeBaseProvider);
     const storageProvider = envValue(EnvKey.StorageProvider);
     const storageConfigured = envSet(EnvKey.FilestackApiKey);
     const speechConfigured = Boolean(aiProvider) && pyaiKey;
+    const llmConfigured =
+      llmProvider === 'nvidia' ? envSet(EnvKey.NvidiaApiKey) : envSet(EnvKey.OpenaiApiKey);
     const kbConfigured = Boolean(kbProvider) && pyaiKey;
 
     const failedJobs = await this.jobs.find({
@@ -107,10 +110,10 @@ export class SettingsService {
         {
           id: SettingsProviderId.Llm,
           label: 'LLM (hooks, summary)',
-          envKey: EnvKey.AiProvider,
-          maskedKey: maskedKey(speechConfigured),
-          model: aiProvider || 'not set',
-          status: connectionStatus(speechConfigured),
+          envKey: EnvKey.LlmProvider,
+          maskedKey: maskedKey(llmConfigured),
+          model: llmProvider,
+          status: connectionStatus(llmConfigured),
         },
         {
           id: SettingsProviderId.Knowledge,

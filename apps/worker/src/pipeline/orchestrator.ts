@@ -24,6 +24,16 @@ const CRITICAL = new Set<JobStepName>([
   JobStepName.TranscriptionPersist,
 ]);
 
+const ANALYSIS = new Set<JobStepName>([
+  JobStepName.Summary,
+  JobStepName.ActionItems,
+  JobStepName.Hooks,
+]);
+
+const CRITICAL_STEPS = JOB_STEP_NAMES.filter((step) => CRITICAL.has(step));
+const ANALYSIS_STEPS = JOB_STEP_NAMES.filter((step) => ANALYSIS.has(step));
+const TRAILING_STEPS = JOB_STEP_NAMES.filter((step) => !CRITICAL.has(step) && !ANALYSIS.has(step));
+
 function handlers(deps: WorkerDeps): Record<JobStepName, StepHandler> {
   return {
     [JobStepName.AudioExtraction]: audioExtractionHandler(deps),
@@ -96,47 +106,61 @@ export async function executePipeline(
     });
   };
 
-  try {
-    for (const stepName of JOB_STEP_NAMES) {
-      job.currentStep = stepName;
-      await deps.jobs.save(job);
+  const runStep = async (stepName: JobStepName) => {
+    job.currentStep = stepName;
+    await deps.jobs.save(job);
 
-      const outcome = await executeStep({
+    const outcome = await executeStep({
+      jobId: job.id,
+      recordingId: input.recordingId,
+      stepName,
+      store,
+      handler: stepHandlers[stepName],
+      options: {
+        staleTimeoutMs: config.staleTimeoutMs,
+        retryBaseDelayMs: config.retryBaseDelayMs,
+        audit: async (event, message, step) => {
+          await audit(event, message, step);
+        },
+      },
+    });
+
+    console.log(
+      pipelineLog({
         jobId: job.id,
         recordingId: input.recordingId,
-        stepName,
-        store,
-        handler: stepHandlers[stepName],
-        options: {
-          staleTimeoutMs: config.staleTimeoutMs,
-          retryBaseDelayMs: config.retryBaseDelayMs,
-          audit: async (event, message, step) => {
-            await audit(event, message, step);
-          },
-        },
-      });
+        step: stepName,
+        attempt: job.attempt,
+        message: outcome,
+      }),
+    );
 
-      console.log(
-        pipelineLog({
-          jobId: job.id,
-          recordingId: input.recordingId,
-          step: stepName,
-          attempt: job.attempt,
-          message: outcome,
-        }),
-      );
+    return outcome;
+  };
 
+  try {
+    for (const stepName of CRITICAL_STEPS) {
+      const outcome = await runStep(stepName);
       if (outcome === 'failed') {
-        if (CRITICAL.has(stepName)) {
-          job.status = JobStatus.Failed;
-          job.error = `${stepName} failed`;
-          job.errorCode = 'step_failed';
-          job.finishedAt = new Date();
-          await deps.jobs.save(job);
-          recording.status = RecordingStatus.Failed;
-          await deps.recordings.save(recording);
-          return JobStatus.Failed;
-        }
+        job.status = JobStatus.Failed;
+        job.error = `${stepName} failed`;
+        job.errorCode = 'step_failed';
+        job.finishedAt = new Date();
+        await deps.jobs.save(job);
+        recording.status = RecordingStatus.Failed;
+        await deps.recordings.save(recording);
+        return JobStatus.Failed;
+      }
+    }
+
+    const analysisOutcomes = await Promise.all(ANALYSIS_STEPS.map((stepName) => runStep(stepName)));
+    if (analysisOutcomes.includes('failed')) {
+      analysisFailed = true;
+    }
+
+    for (const stepName of TRAILING_STEPS) {
+      const outcome = await runStep(stepName);
+      if (outcome === 'failed') {
         analysisFailed = true;
       }
     }
