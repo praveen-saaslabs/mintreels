@@ -1,6 +1,7 @@
 import {
   Column,
   CreateDateColumn,
+  DeleteDateColumn,
   Entity,
   JoinColumn,
   ManyToOne,
@@ -42,4 +43,7 @@ export class KnowledgeBase implements KnowledgeBaseRow {
 
   @UpdateDateColumn({ type: 'datetime', name: 'updated_at' })
   updatedAt!: Date;
+
+  @DeleteDateColumn({ type: 'datetime', name: 'deleted_at', nullable: true })
+  deletedAt!: Date | null;
 }

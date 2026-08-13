@@ -1,6 +1,7 @@
 import {
   Column,
   CreateDateColumn,
+  DeleteDateColumn,
   Entity,
   JoinColumn,
   ManyToOne,
@@ -60,4 +61,7 @@ export class Job implements JobRow {
 
   @UpdateDateColumn({ type: 'datetime', name: 'updated_at', nullable: true })
   updatedAt!: Date | null;
+
+  @DeleteDateColumn({ type: 'datetime', name: 'deleted_at', nullable: true })
+  deletedAt!: Date | null;
 }

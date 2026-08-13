@@ -1,4 +1,12 @@
-import { Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
+import {
+  Column,
+  CreateDateColumn,
+  DeleteDateColumn,
+  Entity,
+  JoinColumn,
+  ManyToOne,
+  PrimaryGeneratedColumn,
+} from 'typeorm';
 import { ClipStatus, type ClipRow } from '@mintreels/schema';
 import { Recording } from './recording.entity';
 
@@ -40,4 +48,7 @@ export class Clip implements ClipRow {
 
   @CreateDateColumn({ type: 'datetime', name: 'created_at' })
   createdAt!: Date;
+
+  @DeleteDateColumn({ type: 'datetime', name: 'deleted_at', nullable: true })
+  deletedAt!: Date | null;
 }

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { idSchema, timestampsSchema } from './common';
+import { deletedAtSchema, idSchema, timestampsSchema } from './common';
 import { RecordingStatus } from './enums';
 
 /**
@@ -27,7 +27,8 @@ export const recordingRowSchema = z
     height: z.number().int().positive().nullable(),
     status: recordingStatusSchema,
   })
-  .merge(timestampsSchema);
+  .merge(timestampsSchema)
+  .merge(deletedAtSchema);
 
 export const recordingInsertSchema = recordingRowSchema.partial({
   id: true,
@@ -37,6 +38,7 @@ export const recordingInsertSchema = recordingRowSchema.partial({
   height: true,
   createdAt: true,
   updatedAt: true,
+  deletedAt: true,
 });
 
 export { RecordingStatus } from './enums';

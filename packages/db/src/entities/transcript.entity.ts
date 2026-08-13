@@ -1,4 +1,12 @@
-import { Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
+import {
+  Column,
+  CreateDateColumn,
+  DeleteDateColumn,
+  Entity,
+  JoinColumn,
+  ManyToOne,
+  PrimaryGeneratedColumn,
+} from 'typeorm';
 import type { TranscriptRow } from '@mintreels/schema';
 import { Recording } from './recording.entity';
 
@@ -37,4 +45,7 @@ export class Transcript implements TranscriptRow {
 
   @CreateDateColumn({ type: 'datetime', name: 'created_at' })
   createdAt!: Date;
+
+  @DeleteDateColumn({ type: 'datetime', name: 'deleted_at', nullable: true })
+  deletedAt!: Date | null;
 }

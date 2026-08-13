@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { idSchema } from './common';
+import { deletedAtSchema, idSchema } from './common';
 
 /**
  * transcripts — entity in docs/architecture.md §15 (parent for segments).
@@ -7,18 +7,20 @@ import { idSchema } from './common';
  *
  * Segments are the canonical transcript representation (recording_id, not a blob).
  */
-export const transcriptRowSchema = z.object({
-  id: idSchema,
-  recordingId: idSchema,
-  language: z.string().nullable(),
-  provider: z.string().nullable(),
-  providerJobId: z.string().nullable(),
-  status: z.string().nullable(),
-  text: z.string().nullable(),
-  durationMs: z.number().int().nonnegative().nullable(),
-  rawResponse: z.unknown().nullable(),
-  createdAt: z.coerce.date(),
-});
+export const transcriptRowSchema = z
+  .object({
+    id: idSchema,
+    recordingId: idSchema,
+    language: z.string().nullable(),
+    provider: z.string().nullable(),
+    providerJobId: z.string().nullable(),
+    status: z.string().nullable(),
+    text: z.string().nullable(),
+    durationMs: z.number().int().nonnegative().nullable(),
+    rawResponse: z.unknown().nullable(),
+    createdAt: z.coerce.date(),
+  })
+  .merge(deletedAtSchema);
 
 export const transcriptInsertSchema = transcriptRowSchema.partial({
   id: true,
@@ -30,21 +32,25 @@ export const transcriptInsertSchema = transcriptRowSchema.partial({
   durationMs: true,
   rawResponse: true,
   createdAt: true,
+  deletedAt: true,
 });
 
-export const transcriptSegmentRowSchema = z.object({
-  id: idSchema,
-  recordingId: idSchema,
-  sequence: z.number().int().nonnegative(),
-  startMs: z.number().int().nonnegative(),
-  endMs: z.number().int().nonnegative(),
-  speaker: z.string().nullable(),
-  text: z.string(),
-});
+export const transcriptSegmentRowSchema = z
+  .object({
+    id: idSchema,
+    recordingId: idSchema,
+    sequence: z.number().int().nonnegative(),
+    startMs: z.number().int().nonnegative(),
+    endMs: z.number().int().nonnegative(),
+    speaker: z.string().nullable(),
+    text: z.string(),
+  })
+  .merge(deletedAtSchema);
 
 export const transcriptSegmentInsertSchema = transcriptSegmentRowSchema.partial({
   id: true,
   speaker: true,
+  deletedAt: true,
 });
 
 export type TranscriptRow = z.infer<typeof transcriptRowSchema>;

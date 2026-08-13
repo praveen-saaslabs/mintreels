@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { idSchema, timestampsSchema } from './common';
+import { deletedAtSchema, idSchema, timestampsSchema } from './common';
 
 /**
  * users — listed in docs/architecture.md §15 (columns not fully specified;
@@ -15,7 +15,8 @@ export const userRowSchema = z
     emailVerificationCodeHash: z.string().nullable(),
     emailVerificationExpiresAt: z.coerce.date().nullable(),
   })
-  .merge(timestampsSchema);
+  .merge(timestampsSchema)
+  .merge(deletedAtSchema);
 
 export const userInsertSchema = userRowSchema.partial({
   id: true,
@@ -25,6 +26,7 @@ export const userInsertSchema = userRowSchema.partial({
   emailVerificationExpiresAt: true,
   createdAt: true,
   updatedAt: true,
+  deletedAt: true,
 });
 
 export const userPublicSchema = userRowSchema.pick({

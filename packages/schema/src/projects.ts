@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { idSchema, timestampsSchema } from './common';
+import { deletedAtSchema, idSchema, timestampsSchema } from './common';
 
 /**
  * projects — listed in docs/architecture.md §15 (columns not fully specified;
@@ -11,12 +11,14 @@ export const projectRowSchema = z
     userId: idSchema,
     name: z.string().min(1),
   })
-  .merge(timestampsSchema);
+  .merge(timestampsSchema)
+  .merge(deletedAtSchema);
 
 export const projectInsertSchema = projectRowSchema.partial({
   id: true,
   createdAt: true,
   updatedAt: true,
+  deletedAt: true,
 });
 
 export type ProjectRow = z.infer<typeof projectRowSchema>;

@@ -6,4 +6,9 @@ export const timestampsSchema = z.object({
   updatedAt: z.coerce.date(),
 });
 
+/** Soft delete — null means active; set means hidden from lists/gets. */
+export const deletedAtSchema = z.object({
+  deletedAt: z.coerce.date().nullable(),
+});
+
 export const idSchema = z.number().int().positive();

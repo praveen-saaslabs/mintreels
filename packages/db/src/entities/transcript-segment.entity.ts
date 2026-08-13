@@ -1,4 +1,12 @@
-import { Column, Entity, Index, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
+import {
+  Column,
+  DeleteDateColumn,
+  Entity,
+  Index,
+  JoinColumn,
+  ManyToOne,
+  PrimaryGeneratedColumn,
+} from 'typeorm';
 import type { TranscriptSegmentRow } from '@mintreels/schema';
 import { Recording } from './recording.entity';
 
@@ -29,4 +37,7 @@ export class TranscriptSegment implements TranscriptSegmentRow {
 
   @Column({ type: 'text' })
   text!: string;
+
+  @DeleteDateColumn({ type: 'datetime', name: 'deleted_at', nullable: true })
+  deletedAt!: Date | null;
 }

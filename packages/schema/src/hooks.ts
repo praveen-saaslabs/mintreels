@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { idSchema } from './common';
+import { deletedAtSchema, idSchema } from './common';
 import { EmbeddingStatus, HookStatus, HookType } from './enums';
 
 export const hookTypeSchema = z.enum([
@@ -32,35 +32,37 @@ export const embeddingStatusSchema = z.enum([
  * hooks — docs/architecture.md §22 (AI-suggested clip windows).
  * Score fields are 0..1. LLM 0–10 scores are divided by 10 before persist.
  */
-export const hookRowSchema = z.object({
-  id: idSchema,
-  recordingId: idSchema,
-  title: z.string().min(1),
-  hook: z.string().min(1),
-  reason: z.string().min(1),
-  startMs: z.number().int().nonnegative(),
-  endMs: z.number().int().nonnegative(),
-  score: z.number().min(0).max(1).nullable(),
-  startSegmentId: idSchema.nullable(),
-  endSegmentId: idSchema.nullable(),
-  hookType: hookTypeSchema.nullable(),
-  contextText: z.string().nullable(),
-  qualityScore: z.number().min(0).max(1).nullable(),
-  standaloneScore: z.number().min(0).max(1).nullable(),
-  curiosityScore: z.number().min(0).max(1).nullable(),
-  emotionalScore: z.number().min(0).max(1).nullable(),
-  specificityScore: z.number().min(0).max(1).nullable(),
-  shareabilityScore: z.number().min(0).max(1).nullable(),
-  noveltyScore: z.number().min(0).max(1).nullable(),
-  status: hookStatusSchema,
-  embeddingStatus: embeddingStatusSchema,
-  clipStartMs: z.number().int().nonnegative().nullable(),
-  clipEndMs: z.number().int().nonnegative().nullable(),
-  provider: z.string().nullable(),
-  model: z.string().nullable(),
-  promptVersion: z.string().nullable(),
-  createdAt: z.coerce.date(),
-});
+export const hookRowSchema = z
+  .object({
+    id: idSchema,
+    recordingId: idSchema,
+    title: z.string().min(1),
+    hook: z.string().min(1),
+    reason: z.string().min(1),
+    startMs: z.number().int().nonnegative(),
+    endMs: z.number().int().nonnegative(),
+    score: z.number().min(0).max(1).nullable(),
+    startSegmentId: idSchema.nullable(),
+    endSegmentId: idSchema.nullable(),
+    hookType: hookTypeSchema.nullable(),
+    contextText: z.string().nullable(),
+    qualityScore: z.number().min(0).max(1).nullable(),
+    standaloneScore: z.number().min(0).max(1).nullable(),
+    curiosityScore: z.number().min(0).max(1).nullable(),
+    emotionalScore: z.number().min(0).max(1).nullable(),
+    specificityScore: z.number().min(0).max(1).nullable(),
+    shareabilityScore: z.number().min(0).max(1).nullable(),
+    noveltyScore: z.number().min(0).max(1).nullable(),
+    status: hookStatusSchema,
+    embeddingStatus: embeddingStatusSchema,
+    clipStartMs: z.number().int().nonnegative().nullable(),
+    clipEndMs: z.number().int().nonnegative().nullable(),
+    provider: z.string().nullable(),
+    model: z.string().nullable(),
+    promptVersion: z.string().nullable(),
+    createdAt: z.coerce.date(),
+  })
+  .merge(deletedAtSchema);
 
 export const hookInsertSchema = hookRowSchema.partial({
   id: true,
@@ -84,6 +86,7 @@ export const hookInsertSchema = hookRowSchema.partial({
   model: true,
   promptVersion: true,
   createdAt: true,
+  deletedAt: true,
 });
 
 export type HookRow = z.infer<typeof hookRowSchema>;

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { idSchema } from './common';
+import { deletedAtSchema, idSchema } from './common';
 import { ClipStatus } from './enums';
 
 /**
@@ -14,19 +14,21 @@ export const clipStatusSchema = z.enum([
   ClipStatus.Failed,
 ]);
 
-export const clipRowSchema = z.object({
-  id: idSchema,
-  recordingId: idSchema,
-  hookId: idSchema.nullable(),
-  title: z.string().min(1),
-  startMs: z.number().int().nonnegative(),
-  endMs: z.number().int().nonnegative(),
-  subtitleStyle: z.string().nullable(),
-  storageKey: z.string().nullable(),
-  thumbnailStorageKey: z.string().nullable(),
-  status: clipStatusSchema,
-  createdAt: z.coerce.date(),
-});
+export const clipRowSchema = z
+  .object({
+    id: idSchema,
+    recordingId: idSchema,
+    hookId: idSchema.nullable(),
+    title: z.string().min(1),
+    startMs: z.number().int().nonnegative(),
+    endMs: z.number().int().nonnegative(),
+    subtitleStyle: z.string().nullable(),
+    storageKey: z.string().nullable(),
+    thumbnailStorageKey: z.string().nullable(),
+    status: clipStatusSchema,
+    createdAt: z.coerce.date(),
+  })
+  .merge(deletedAtSchema);
 
 export const clipInsertSchema = clipRowSchema.partial({
   id: true,
@@ -35,6 +37,7 @@ export const clipInsertSchema = clipRowSchema.partial({
   storageKey: true,
   thumbnailStorageKey: true,
   createdAt: true,
+  deletedAt: true,
 });
 
 export { ClipStatus } from './enums';

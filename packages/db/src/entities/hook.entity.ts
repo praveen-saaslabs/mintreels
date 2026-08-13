@@ -1,18 +1,14 @@
+import { EmbeddingStatus, HookStatus, HookType, type HookRow } from '@mintreels/schema';
 import {
   Column,
   CreateDateColumn,
+  DeleteDateColumn,
   Entity,
   Index,
   JoinColumn,
   ManyToOne,
   PrimaryGeneratedColumn,
 } from 'typeorm';
-import {
-  EmbeddingStatus,
-  HookStatus,
-  HookType,
-  type HookRow,
-} from '@mintreels/schema';
 import { Recording } from './recording.entity';
 
 @Index('hooks_recording_start_idx', ['recordingId', 'startMs'])
@@ -108,4 +104,7 @@ export class Hook implements HookRow {
 
   @CreateDateColumn({ type: 'datetime', name: 'created_at' })
   createdAt!: Date;
+
+  @DeleteDateColumn({ type: 'datetime', name: 'deleted_at', nullable: true })
+  deletedAt!: Date | null;
 }

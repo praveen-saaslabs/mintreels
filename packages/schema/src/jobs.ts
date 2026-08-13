@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { idSchema } from './common';
+import { deletedAtSchema, idSchema } from './common';
 import { JobStatus, JobType } from './enums';
 
 /**
@@ -25,23 +25,25 @@ export const jobStatusSchema = z.enum([
   JobStatus.Partial,
 ]);
 
-export const jobRowSchema = z.object({
-  id: idSchema,
-  type: jobTypeSchema,
-  recordingId: idSchema.nullable(),
-  status: jobStatusSchema,
-  attempt: z.number().int().nonnegative(),
-  maxAttempts: z.number().int().positive(),
-  error: z.string().nullable(),
-  errorCode: z.string().nullable(),
-  errorMetadata: z.record(z.string(), z.unknown()).nullable(),
-  currentStep: z.string().nullable(),
-  startedAt: z.coerce.date().nullable(),
-  finishedAt: z.coerce.date().nullable(),
-  metadata: z.record(z.string(), z.unknown()).nullable(),
-  createdAt: z.coerce.date(),
-  updatedAt: z.coerce.date().nullable(),
-});
+export const jobRowSchema = z
+  .object({
+    id: idSchema,
+    type: jobTypeSchema,
+    recordingId: idSchema.nullable(),
+    status: jobStatusSchema,
+    attempt: z.number().int().nonnegative(),
+    maxAttempts: z.number().int().positive(),
+    error: z.string().nullable(),
+    errorCode: z.string().nullable(),
+    errorMetadata: z.record(z.string(), z.unknown()).nullable(),
+    currentStep: z.string().nullable(),
+    startedAt: z.coerce.date().nullable(),
+    finishedAt: z.coerce.date().nullable(),
+    metadata: z.record(z.string(), z.unknown()).nullable(),
+    createdAt: z.coerce.date(),
+    updatedAt: z.coerce.date().nullable(),
+  })
+  .merge(deletedAtSchema);
 
 export const jobInsertSchema = jobRowSchema.partial({
   id: true,
@@ -57,6 +59,7 @@ export const jobInsertSchema = jobRowSchema.partial({
   metadata: true,
   createdAt: true,
   updatedAt: true,
+  deletedAt: true,
 });
 
 export { JobStatus, JobType } from './enums';

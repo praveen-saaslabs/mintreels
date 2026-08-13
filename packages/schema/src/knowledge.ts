@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { idSchema, timestampsSchema } from './common';
+import { deletedAtSchema, idSchema, timestampsSchema } from './common';
 import { KnowledgeBaseScope } from './enums';
 
 /**
@@ -23,29 +23,34 @@ export const knowledgeBaseRowSchema = z
     providerKnowledgeBaseId: z.string().min(1),
     recordingId: idSchema.nullable(),
   })
-  .merge(timestampsSchema);
+  .merge(timestampsSchema)
+  .merge(deletedAtSchema);
 
 export const knowledgeBaseInsertSchema = knowledgeBaseRowSchema.partial({
   id: true,
   recordingId: true,
   createdAt: true,
   updatedAt: true,
+  deletedAt: true,
 });
 
-export const knowledgeDocumentRowSchema = z.object({
-  id: idSchema,
-  knowledgeBaseId: idSchema,
-  providerDocumentId: z.string().min(1),
-  recordingId: idSchema.nullable(),
-  sourceType: z.string().min(1),
-  title: z.string().min(1),
-  createdAt: z.coerce.date(),
-});
+export const knowledgeDocumentRowSchema = z
+  .object({
+    id: idSchema,
+    knowledgeBaseId: idSchema,
+    providerDocumentId: z.string().min(1),
+    recordingId: idSchema.nullable(),
+    sourceType: z.string().min(1),
+    title: z.string().min(1),
+    createdAt: z.coerce.date(),
+  })
+  .merge(deletedAtSchema);
 
 export const knowledgeDocumentInsertSchema = knowledgeDocumentRowSchema.partial({
   id: true,
   recordingId: true,
   createdAt: true,
+  deletedAt: true,
 });
 
 export { KnowledgeBaseScope } from './enums';

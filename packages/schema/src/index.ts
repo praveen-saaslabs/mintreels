@@ -1,4 +1,4 @@
-export { idSchema, timestampsSchema } from './common';
+export { deletedAtSchema, idSchema, timestampsSchema } from './common';
 export {
   CLIP_FILTER_LABELS,
   ClipFilterId,

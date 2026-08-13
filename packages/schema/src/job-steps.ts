@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { idSchema, timestampsSchema } from './common';
+import { deletedAtSchema, idSchema, timestampsSchema } from './common';
 import { JobStepName, JobStepStatus } from './enums';
 
 export const jobStepNameSchema = z.enum([
@@ -40,7 +40,8 @@ export const jobStepRowSchema = z
     startedAt: z.coerce.date().nullable(),
     completedAt: z.coerce.date().nullable(),
   })
-  .merge(timestampsSchema);
+  .merge(timestampsSchema)
+  .merge(deletedAtSchema);
 
 export const jobStepInsertSchema = jobStepRowSchema.partial({
   id: true,
@@ -54,6 +55,7 @@ export const jobStepInsertSchema = jobStepRowSchema.partial({
   completedAt: true,
   createdAt: true,
   updatedAt: true,
+  deletedAt: true,
 });
 
 export { JobStepName, JobStepStatus } from './enums';

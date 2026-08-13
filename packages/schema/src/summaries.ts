@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { idSchema } from './common';
+import { deletedAtSchema, idSchema } from './common';
 
 /**
  * summaries — entity in docs/architecture.md §15 / §21.
@@ -11,20 +11,23 @@ export const actionItemSchema = z.object({
   endMs: z.number().int().nonnegative().optional(),
 });
 
-export const summaryRowSchema = z.object({
-  id: idSchema,
-  recordingId: idSchema,
-  text: z.string().min(1),
-  actionItems: z.array(actionItemSchema).nullable(),
-  keyPoints: z.array(z.string()).nullable(),
-  createdAt: z.coerce.date(),
-});
+export const summaryRowSchema = z
+  .object({
+    id: idSchema,
+    recordingId: idSchema,
+    text: z.string().min(1),
+    actionItems: z.array(actionItemSchema).nullable(),
+    keyPoints: z.array(z.string()).nullable(),
+    createdAt: z.coerce.date(),
+  })
+  .merge(deletedAtSchema);
 
 export const summaryInsertSchema = summaryRowSchema.partial({
   id: true,
   actionItems: true,
   keyPoints: true,
   createdAt: true,
+  deletedAt: true,
 });
 
 export type SummaryRow = z.infer<typeof summaryRowSchema>;
