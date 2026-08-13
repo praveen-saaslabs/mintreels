@@ -1,28 +1,13 @@
-const API_BASE = '/api';
+import { getJson } from './http';
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const normalized = path.startsWith('/') ? path : `/${path}`;
-  const response = await fetch(`${API_BASE}${normalized}`, {
-    ...init,
-    headers: {
-      Accept: 'application/json',
-      ...(init?.headers ?? {}),
-    },
-  });
-
-  if (!response.ok) {
-    throw new Error(`API request failed with status ${String(response.status)}`);
-  }
-
-  return (await response.json()) as T;
-}
+export { ApiError } from './http';
 
 export const api = {
-  getRecordings: () => request<unknown>('/recordings'),
-  getRecording: (id: number) => request<unknown>(`/recordings/${encodeURIComponent(id)}`),
-  getTranscript: (id: number) => request<unknown>(`/recordings/${encodeURIComponent(id)}/transcript`),
-  getSummary: (id: number) => request<unknown>(`/recordings/${encodeURIComponent(id)}/summary`),
-  getHooks: (id: number) => request<unknown>(`/recordings/${encodeURIComponent(id)}/hooks`),
-  getKnowledgeBases: () => request<unknown>('/knowledge-bases'),
-  getClip: (id: number) => request<unknown>(`/clips/${encodeURIComponent(id)}`),
+  getRecordings: () => getJson<unknown>('/recordings'),
+  getRecording: (id: number) => getJson<unknown>(`/recordings/${encodeURIComponent(id)}`),
+  getTranscript: (id: number) => getJson<unknown>(`/recordings/${encodeURIComponent(id)}/transcript`),
+  getSummary: (id: number) => getJson<unknown>(`/recordings/${encodeURIComponent(id)}/summary`),
+  getHooks: (id: number) => getJson<unknown>(`/recordings/${encodeURIComponent(id)}/hooks`),
+  getKnowledgeBases: () => getJson<unknown>('/knowledge-bases'),
+  getClip: (id: number) => getJson<unknown>(`/clips/${encodeURIComponent(id)}`),
 };

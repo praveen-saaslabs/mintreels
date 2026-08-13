@@ -1,33 +1,15 @@
-import { createBrowserRouter, Link, Outlet, RouterProvider } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
+import { createBrowserRouter, Outlet, RouterProvider } from 'react-router-dom';
+import { IndexPage } from './routes/_index';
 import { ClipsPage } from './routes/clips';
+import { EditorPage } from './routes/editor.$id';
 import { KnowledgePage } from './routes/knowledge';
 import { RecordingsPage } from './routes/recordings';
 import { RecordingDetailPage } from './routes/recordings.$id';
-import { IndexPage } from './routes/_index';
 
 function Layout() {
   return (
     <div className="min-h-screen">
-      <header className="border-b px-6 py-4">
-        <nav className="flex items-center gap-1 text-sm">
-          <Button variant="ghost" nativeButton={false} render={<Link to="/" />} className="font-semibold">
-            MintReels
-          </Button>
-          <Button variant="ghost" nativeButton={false} render={<Link to="/recordings" />}>
-            Recordings
-          </Button>
-          <Button variant="ghost" nativeButton={false} render={<Link to="/knowledge" />}>
-            Knowledge
-          </Button>
-          <Button variant="ghost" nativeButton={false} render={<Link to="/clips" />}>
-            Clips
-          </Button>
-        </nav>
-      </header>
-      <main className="p-6">
-        <Outlet />
-      </main>
+      <Outlet />
     </div>
   );
 }
@@ -40,6 +22,7 @@ const router = createBrowserRouter([
       { index: true, element: <IndexPage /> },
       { path: 'recordings', element: <RecordingsPage /> },
       { path: 'recordings/:id', element: <RecordingDetailPage /> },
+      { path: 'editor/:id', element: <EditorPage /> },
       { path: 'knowledge', element: <KnowledgePage /> },
       { path: 'clips', element: <ClipsPage /> },
     ],
