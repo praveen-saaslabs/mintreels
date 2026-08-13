@@ -19,10 +19,10 @@ export function HookCard({ hook, selected, onPreview }: HookCardProps) {
   return (
     <article
       className={cn(
-        'flex flex-col gap-3 rounded-xl border bg-card p-3 transition-shadow',
+        'glass flex flex-col gap-3 rounded-xl p-3 transition-shadow',
         selected
-          ? 'border-mr-acc ring-2 ring-mr-acc/35'
-          : 'border-border hover:border-foreground/20',
+          ? 'border-[var(--mr-acc)] shadow-[var(--glass-shadow-elevated)] ring-2 ring-[color-mix(in_oklch,var(--mr-acc)_35%,transparent)]'
+          : 'hover:border-[var(--glass-border)]',
       )}
     >
       <button

@@ -47,14 +47,14 @@ function HookThumb({
         playsInline
         preload="metadata"
         tabIndex={-1}
-        className="pointer-events-none h-full w-full object-cover"
+        draggable={false}
+        className="mr-no-drag pointer-events-none h-full w-full select-none object-cover"
       />
       <span
         className={cn(
-          'pointer-events-none absolute left-1.5 top-1.5 z-10',
+          'glass-chip pointer-events-none absolute left-1.5 top-1.5 z-10',
           'inline-flex h-[18px] items-center rounded-full',
-          'bg-background/90 px-1.5 font-mono text-[10px] font-medium text-foreground',
-          'ring-1 ring-border/80',
+          'px-1.5 font-mono text-[10px] font-medium text-foreground',
         )}
       >
         {ratio}
@@ -73,7 +73,7 @@ export function HooksStrip({ videoUrl = DEMO_MEDIA.videoUrl }: Readonly<{ videoU
   }
 
   return (
-    <div className="flex shrink-0 gap-2.5 overflow-x-auto pb-0.5">
+    <div className="flex shrink-0 touch-pan-x gap-2.5 overflow-x-auto pb-0.5 select-none">
       {hooks.map((hook) => {
         const selected = hook.id === selectedHookId;
 
@@ -85,11 +85,11 @@ export function HooksStrip({ videoUrl = DEMO_MEDIA.videoUrl }: Readonly<{ videoU
               selectHookAndSeek(hook.id);
             }}
             className={cn(
-              'flex w-[172px] shrink-0 flex-col overflow-hidden rounded-[11px] border bg-card text-left transition-shadow',
+              'glass flex w-[172px] shrink-0 select-none flex-col overflow-hidden rounded-xl text-left transition-shadow',
               'min-h-[132px]',
               selected
-                ? 'border-[oklch(0.62_0.13_165)] ring-2 ring-[oklch(0.62_0.13_165/0.35)]'
-                : 'border-border hover:border-foreground/20',
+                ? 'border-[var(--mr-acc)] shadow-[var(--glass-shadow-elevated)] ring-2 ring-[color-mix(in_oklch,var(--mr-acc)_35%,transparent)]'
+                : 'hover:border-[var(--glass-border)]',
             )}
           >
             <HookThumb start={hook.start} ratio={hook.ratio} videoUrl={videoUrl} />

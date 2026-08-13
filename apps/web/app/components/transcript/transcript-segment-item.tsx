@@ -47,10 +47,10 @@ export const TranscriptSegmentItem = memo(function TranscriptSegmentItem({
         type="button"
         onClick={onClick}
         className={cn(
-          'w-full rounded-lg border border-transparent px-2 py-2 text-left',
+          'w-full rounded-xl border border-transparent px-2 py-2 text-left transition-colors',
           isActive
-            ? 'border-mr-acc bg-transcript-active'
-            : 'hover:bg-muted/80',
+            ? 'border-mr-acc bg-transcript-active shadow-[var(--glass-highlight)]'
+            : 'hover:bg-[var(--glass-bg)]',
         )}
       >
         <span className="mb-1 flex items-center gap-2">

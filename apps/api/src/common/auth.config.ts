@@ -28,6 +28,15 @@ export function isProduction(): boolean {
   return process.env.NODE_ENV === 'production';
 }
 
+/**
+ * When true, login skips the email-verified check (local/dev convenience).
+ * Default off — never enable in production.
+ */
+export function shouldSkipEmailVerify(): boolean {
+  const raw = process.env.AUTH_SKIP_EMAIL_VERIFY?.trim().toLowerCase();
+  return raw === 'true' || raw === '1';
+}
+
 export function loadWebOrigin(): string {
   const value = process.env.WEB_ORIGIN;
   if (!value || value.trim() === '') {

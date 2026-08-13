@@ -38,7 +38,7 @@ export function RenderDefaults() {
       <div className="text-[11px] font-semibold tracking-[0.06em] text-[var(--mr-mfg)] uppercase">
         Render defaults
       </div>
-      <div className="overflow-hidden rounded-[14px] border border-[var(--mr-bd)] bg-[var(--mr-card)]">
+      <div className="glass overflow-hidden rounded-2xl">
         {isLoading
           ? Array.from({ length: 3 }).map((_, index) => (
               <div
@@ -75,8 +75,8 @@ export function RenderDefaults() {
                             className={cn(
                               'inline-flex h-7 items-center rounded-[9px] px-2.5 text-xs font-medium',
                               active
-                                ? 'bg-[var(--mr-muted)] text-[var(--mr-fg)]'
-                                : 'border border-[var(--mr-bd)] text-[var(--mr-mfg)]',
+                                ? 'glass-strong text-[var(--mr-fg)]'
+                                : 'glass-chip text-[var(--mr-mfg)] hover:text-[var(--mr-fg)]',
                             )}
                           >
                             {option.label}

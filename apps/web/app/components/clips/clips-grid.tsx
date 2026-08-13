@@ -51,7 +51,7 @@ export function ClipsGrid({
 
   if (error) {
     return (
-      <div className="space-y-3 rounded-[14px] border border-[var(--mr-bad)]/40 bg-[var(--mr-card)] p-4 text-sm text-[var(--mr-bad)]">
+      <div className="space-y-3 glass rounded-2xl border-[color-mix(in_oklch,var(--mr-bad)_40%,transparent)] p-4 text-sm text-[var(--mr-bad)]">
         <p>{error instanceof Error ? error.message : 'Failed to load clips'}</p>
         <button
           type="button"
@@ -68,10 +68,7 @@ export function ClipsGrid({
     return (
       <div className="grid grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-3.5">
         {Array.from({ length: 8 }).map((_, index) => (
-          <div
-            key={index}
-            className="h-[320px] animate-pulse rounded-[14px] border border-[var(--mr-bd)] bg-[var(--mr-card)]"
-          />
+          <div key={index} className="glass h-[320px] animate-pulse rounded-2xl" />
         ))}
       </div>
     );
@@ -79,7 +76,7 @@ export function ClipsGrid({
 
   if (filteredClips.length === 0) {
     return (
-      <div className="rounded-[14px] border border-[var(--mr-bd)] bg-[var(--mr-card)] p-6 text-sm text-[var(--mr-mfg)]">
+      <div className="glass rounded-2xl p-6 text-sm text-[var(--mr-mfg)]">
         No clips match this filter.
       </div>
     );

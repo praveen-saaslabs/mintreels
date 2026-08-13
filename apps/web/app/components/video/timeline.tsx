@@ -4,6 +4,7 @@ import RegionsPlugin, { type Region } from 'wavesurfer.js/plugins/regions';
 import { SpeakerBadge } from '@/components/transcript/speaker-badge';
 import { HooksStrip } from '@/components/video/hooks-strip';
 import { DEMO_MEDIA } from '@/lib/demo-media';
+import { suppressSelectionOnPointerDown } from '@/lib/drag-select-guard';
 import { speakerCssColor, speakerSwatchClass } from '@/lib/speaker-style';
 import { uniqueSpeakers } from '@/lib/transcript';
 import { cn } from '@/lib/utils';
@@ -182,12 +183,13 @@ function createHookLabel(label: string): HTMLElement {
     'font-weight:600',
     "font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,'Liberation Mono','Courier New',monospace",
     `color:${HOOK_REGION_BORDER}`,
-    'background:var(--background, oklch(1 0 0))',
+    'background:var(--glass-bg-strong, oklch(1 0 0 / 78%))',
     'padding:1px 4px',
-    'border-radius:3px',
+    'border-radius:6px',
     'line-height:1.2',
     'pointer-events:none',
     'white-space:nowrap',
+    'backdrop-filter:blur(8px)',
     `box-shadow:0 0 0 1px ${HOOK_REGION_BORDER}`,
   ].join(';');
   return el;
@@ -382,7 +384,7 @@ export function Timeline({ audioUrl = DEMO_MEDIA.audioUrl }: Readonly<TimelinePr
   }, [duration, hooks, selectedHookId, waveformReady]);
 
   return (
-    <section className="flex h-full min-h-0 w-full flex-col overflow-hidden border-t border-border bg-background">
+    <section className="glass-panel m-1.5 flex h-[calc(100%-0.75rem)] min-h-0 w-[calc(100%-0.75rem)] select-none flex-col overflow-hidden">
       <div className="flex min-h-0 flex-1 flex-col gap-2 px-4 py-3">
         {speakers.length > 0 ? (
           <div
@@ -398,12 +400,14 @@ export function Timeline({ audioUrl = DEMO_MEDIA.audioUrl }: Readonly<TimelinePr
         {/*
           Block-level host (not absolute). Absolute + react-spaces often measured
           0×0 at WaveSurfer.create → blank canvas with a reserved white gap.
+          Opaque enough for waveform bars; glass sits on the pane chrome only.
         */}
         <div
-          className="relative w-full shrink-0 overflow-hidden rounded-md bg-muted/40"
+          className="relative w-full shrink-0 touch-none overflow-hidden rounded-xl bg-muted/55 ring-1 ring-[var(--glass-border-subtle)]"
           style={{ height: WAVEFORM_HEIGHT, minHeight: WAVEFORM_HEIGHT }}
+          onPointerDown={suppressSelectionOnPointerDown}
         >
-          <div ref={containerRef} className="mint-waveform h-full w-full" />
+          <div ref={containerRef} className="mint-waveform h-full w-full select-none" />
           {!mediaElement ? (
             <p className="pointer-events-none absolute inset-0 flex items-center justify-center text-xs text-muted-foreground">
               Waiting for video…

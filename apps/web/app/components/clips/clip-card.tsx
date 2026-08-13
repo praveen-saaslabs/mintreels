@@ -23,17 +23,17 @@ function statusClasses(status: ClipSummary['status']) {
 
 export function ClipCard({ clip }: { clip: ClipSummary }) {
   return (
-    <div className="overflow-hidden rounded-[14px] border border-[var(--mr-bd)] bg-[var(--mr-card)]">
+    <div className="glass overflow-hidden rounded-2xl">
       <div className="flex aspect-[9/16] max-h-[268px] flex-col justify-between bg-[repeating-linear-gradient(135deg,var(--mr-stripe3)_0_10px,var(--mr-stripe4)_10px_20px)] p-2.5">
         <div className="flex items-start justify-between">
-          <span className="inline-flex h-[19px] items-center rounded-full bg-[var(--mr-pill)] px-1.5 font-mono text-[10px] text-[var(--mr-onstripe)]">
+          <span className="glass-chip inline-flex h-[19px] items-center rounded-full px-1.5 font-mono text-[10px] text-[var(--mr-onstripe)]">
             {clip.ratio ?? '—'}
           </span>
-          <span className="inline-flex h-[19px] items-center rounded-full bg-[var(--mr-pill)] px-1.5 font-mono text-[10px] text-[var(--mr-onstripe)]">
+          <span className="glass-chip inline-flex h-[19px] items-center rounded-full px-1.5 font-mono text-[10px] text-[var(--mr-onstripe)]">
             {formatClipDuration(clip)}
           </span>
         </div>
-        <span className="mb-3.5 self-center rounded-md bg-[var(--mr-pill)] px-2 py-0.5 text-center text-[13px] font-semibold text-[var(--mr-onstripe)]">
+        <span className="glass-chip mb-3.5 self-center rounded-md px-2 py-0.5 text-center text-[13px] font-semibold text-[var(--mr-onstripe)]">
           {formatClipCaption(clip)}
         </span>
       </div>

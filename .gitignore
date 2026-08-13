@@ -11,6 +11,9 @@ coverage
 .env.local
 .env.*.local
 
+# Local UI review captures / scratch
+.tmp/
+
 *.tsbuildinfo
 .vite
 .react-router

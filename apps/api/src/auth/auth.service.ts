@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { UserRepository, type User } from '@mintreels/db';
 import type { UserPublic } from '@mintreels/schema';
+import { shouldSkipEmailVerify } from '../common/auth.config';
 import { HttpError } from '../common/http-error';
 import type { LoginRequest, SignupRequest, VerifyEmailRequest } from './auth.dto';
 import { EmailVerificationService } from './email-verification.service';
@@ -48,7 +49,7 @@ export class AuthService {
     if (!user || !passwordOk) {
       throw new HttpError(401, 'INVALID_CREDENTIALS');
     }
-    if (!user.emailVerified) {
+    if (!user.emailVerified && !shouldSkipEmailVerify()) {
       throw new HttpError(403, 'EMAIL_NOT_VERIFIED');
     }
     return { user: toPublicUser(user), token: this.jwt.sign(user.id) };

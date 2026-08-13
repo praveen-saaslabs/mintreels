@@ -22,10 +22,10 @@ export function ClipFilters({
             type="button"
             onClick={() => onActiveFilterIdChange(filter.id)}
             className={cn(
-              'inline-flex h-7 items-center rounded-[9px] px-2.5 text-xs font-medium transition-colors',
+              'inline-flex h-7 items-center rounded-xl px-2.5 text-xs font-medium transition-colors',
               active
-                ? 'bg-[var(--mr-muted)] text-[var(--mr-fg)]'
-                : 'border border-[var(--mr-bd)] bg-transparent text-[var(--mr-mfg)] hover:text-[var(--mr-fg)]',
+                ? 'glass-strong text-[var(--mr-fg)]'
+                : 'glass-chip text-[var(--mr-mfg)] hover:text-[var(--mr-fg)]',
             )}
           >
             {formatClipFilterLabel(filter.label, filter.count)}

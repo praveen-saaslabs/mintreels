@@ -1,7 +1,16 @@
 import { Pause, Play } from 'lucide-react';
-import { useEffect, useRef, useState, type KeyboardEvent, type MouseEvent } from 'react';
+import {
+  useEffect,
+  useRef,
+  useState,
+  type KeyboardEvent,
+  type MouseEvent as ReactMouseEvent,
+  type PointerEvent as ReactPointerEvent,
+} from 'react';
 import { Button } from '@/components/ui/button';
 import { useAmbientGlow } from './use-ambient-glow';
+import { useHotkey } from '@/hooks/use-hotkey';
+import { beginDragSelectSuppression } from '@/lib/drag-select-guard';
 import { DEMO_MEDIA } from '@/lib/demo-media';
 import { formatTimestamp } from '@/lib/time';
 import { cn } from '@/lib/utils';
@@ -44,6 +53,8 @@ export function VideoPlayer({ src = DEMO_MEDIA.videoUrl }: Readonly<VideoPlayerP
   const ambientCanvasRef = useAmbientGlow(videoRef);
   const currentTimeRef = useRef(currentTime);
   currentTimeRef.current = currentTime;
+  /** Primary-button down position; used to ignore click after a drag on the surface. */
+  const surfacePointerDownRef = useRef<{ x: number; y: number } | null>(null);
 
   const [aspect, setAspect] = useState<AspectPreset>('16:9');
   const aspectParts = ASPECT_RATIO[aspect];
@@ -112,6 +123,48 @@ export function VideoPlayer({ src = DEMO_MEDIA.videoUrl }: Readonly<VideoPlayerP
     }
   }
 
+  // Editor-scoped: VideoPlayer only mounts on the editor route.
+  // ignoreWhenEditable + preventDefault are useHotkey defaults for non-mod keys.
+  useHotkey({
+    key: ' ',
+    onKeyDown: () => {
+      void togglePlayback();
+    },
+  });
+  useHotkey({
+    key: 'k',
+    onKeyDown: () => {
+      void togglePlayback();
+    },
+  });
+
+  function handleSurfacePointerDown(event: ReactPointerEvent<HTMLVideoElement>) {
+    if (event.button !== 0) {
+      surfacePointerDownRef.current = null;
+      return;
+    }
+    surfacePointerDownRef.current = { x: event.clientX, y: event.clientY };
+  }
+
+  function handleSurfaceClick(event: ReactMouseEvent<HTMLVideoElement>) {
+    const down = surfacePointerDownRef.current;
+    surfacePointerDownRef.current = null;
+    if (!down) {
+      return;
+    }
+
+    // Ignore clicks that were part of a drag (e.g. accidental scrub-like gesture).
+    const dragThresholdPx = 6;
+    if (
+      Math.abs(event.clientX - down.x) > dragThresholdPx ||
+      Math.abs(event.clientY - down.y) > dragThresholdPx
+    ) {
+      return;
+    }
+
+    void togglePlayback();
+  }
+
   function seekFromClientX(clientX: number, target: HTMLElement) {
     if (duration <= 0) {
       return;
@@ -122,8 +175,30 @@ export function VideoPlayer({ src = DEMO_MEDIA.videoUrl }: Readonly<VideoPlayerP
     seek(ratio * duration);
   }
 
-  function handleProgressClick(event: MouseEvent<HTMLDivElement>) {
-    seekFromClientX(event.clientX, event.currentTarget);
+  function handleProgressPointerDown(event: ReactPointerEvent<HTMLDivElement>) {
+    if (duration <= 0 || event.button !== 0) {
+      return;
+    }
+
+    event.preventDefault();
+    const endSuppress = beginDragSelectSuppression();
+    const track = event.currentTarget;
+    track.setPointerCapture(event.pointerId);
+    seekFromClientX(event.clientX, track);
+
+    const onMove = (moveEvent: PointerEvent) => {
+      seekFromClientX(moveEvent.clientX, track);
+    };
+    const onUp = () => {
+      track.removeEventListener('pointermove', onMove);
+      track.removeEventListener('pointerup', onUp);
+      track.removeEventListener('pointercancel', onUp);
+      endSuppress();
+    };
+
+    track.addEventListener('pointermove', onMove);
+    track.addEventListener('pointerup', onUp);
+    track.addEventListener('pointercancel', onUp);
   }
 
   function handleProgressKeyDown(event: KeyboardEvent<HTMLDivElement>) {
@@ -148,7 +223,7 @@ export function VideoPlayer({ src = DEMO_MEDIA.videoUrl }: Readonly<VideoPlayerP
   }
 
   return (
-    <section className="flex h-full min-h-0 w-full flex-col bg-background">
+    <section className="flex h-full min-h-0 w-full select-none flex-col bg-transparent">
       <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden p-[18px]">
         <div className="mx-auto flex h-full min-h-0 w-full max-w-full flex-1 flex-col gap-3">
           <div
@@ -173,21 +248,24 @@ export function VideoPlayer({ src = DEMO_MEDIA.videoUrl }: Readonly<VideoPlayerP
                 />
               </div>
 
-              {/* Clean video surface: soft elevation; page-matching matte for letterbox only */}
+              {/* Opaque media surface so glass chrome never washes the picture */}
               <div
                 className={cn(
-                  'relative z-2 h-full w-full overflow-hidden rounded-xl bg-background',
-                  'shadow-[0_4px_24px_rgba(0,0,0,0.12)]',
-                  'dark:shadow-[0_4px_28px_rgba(0,0,0,0.45)]',
+                  'relative z-2 h-full w-full overflow-hidden rounded-2xl bg-background',
+                  'ring-1 ring-[var(--glass-border-subtle)]',
+                  'shadow-[var(--glass-shadow-elevated)]',
                 )}
               >
                 <video
                   ref={videoRef}
-                  className="absolute inset-0 h-full w-full object-contain"
+                  className="mr-no-drag absolute inset-0 h-full w-full cursor-pointer object-contain select-none"
                   style={{ background: 'transparent' }}
+                  draggable={false}
                   preload="auto"
                   playsInline
                   src={src}
+                  onPointerDown={handleSurfacePointerDown}
+                  onClick={handleSurfaceClick}
                   onTimeUpdate={(event) => {
                     const time = finiteSeconds(event.currentTarget.currentTime);
                     if (time !== undefined) {
@@ -216,13 +294,13 @@ export function VideoPlayer({ src = DEMO_MEDIA.videoUrl }: Readonly<VideoPlayerP
                 </video>
 
                 <div className="pointer-events-none absolute left-3.5 top-3.5 z-10 flex gap-1.5">
-                  <span className="inline-flex h-[22px] items-center rounded-full bg-background/85 px-2.5 font-mono text-[11px] text-foreground shadow-sm backdrop-blur-sm">
+                  <span className="glass-chip inline-flex h-[22px] items-center rounded-full px-2.5 font-mono text-[11px] text-foreground">
                     {formatTimestamp(currentTime)}
                     {duration > 0 ? ` / ${formatTimestamp(duration)}` : ''}
                   </span>
                 </div>
                 <div className="pointer-events-none absolute right-3.5 top-3.5 z-10 flex gap-1.5">
-                  <span className="inline-flex h-[22px] items-center rounded-full bg-background/85 px-2.5 text-[11px] text-[oklch(0.62_0.13_165)] shadow-sm backdrop-blur-sm">
+                  <span className="glass-chip inline-flex h-[22px] items-center rounded-full px-2.5 text-[11px] text-[var(--mr-acc)]">
                     auto-reframe on
                   </span>
                 </div>
@@ -230,15 +308,8 @@ export function VideoPlayer({ src = DEMO_MEDIA.videoUrl }: Readonly<VideoPlayerP
             </div>
           </div>
 
-          {/* Glossy frosted transport tray — readable over ambient bleed */}
-          <div
-            className={cn(
-              'flex flex-none flex-wrap items-center gap-2.5 rounded-2xl px-3 py-2.5',
-              'border border-white/50 bg-white/70 shadow-[0_4px_20px_rgba(0,0,0,0.06)]',
-              'backdrop-blur-xl backdrop-saturate-150',
-              'dark:border-white/10 dark:bg-black/45 dark:shadow-[0_4px_24px_rgba(0,0,0,0.35)]',
-            )}
-          >
+          {/* Frosted transport tray — glass chrome over ambient, not over media */}
+          <div className="glass-tray flex flex-none flex-wrap items-center gap-2.5 px-3 py-2.5">
             <Button
               type="button"
               size="icon"
@@ -267,15 +338,15 @@ export function VideoPlayer({ src = DEMO_MEDIA.videoUrl }: Readonly<VideoPlayerP
               aria-valuemax={duration}
               aria-valuenow={Math.min(currentTime, duration)}
               tabIndex={duration > 0 ? 0 : undefined}
-              onClick={handleProgressClick}
+              onPointerDown={handleProgressPointerDown}
               onKeyDown={handleProgressKeyDown}
               className={cn(
-                'relative h-1.5 min-w-[80px] flex-1 rounded-full bg-foreground/10',
+                'relative h-1.5 min-w-[80px] flex-1 touch-none rounded-full bg-foreground/10',
                 duration > 0 && 'cursor-pointer',
               )}
             >
               <div
-                className="absolute inset-y-0 left-0 rounded-full bg-[oklch(0.62_0.13_165)]"
+                className="absolute inset-y-0 left-0 rounded-full bg-[var(--mr-acc)]"
                 style={{ width: `${String(progressRatio * 100)}%` }}
               />
             </div>
@@ -294,13 +365,13 @@ export function VideoPlayer({ src = DEMO_MEDIA.videoUrl }: Readonly<VideoPlayerP
                     'inline-flex h-[26px] items-center rounded-lg px-2.5 text-[11px] font-medium transition-colors',
                     aspect === preset
                       ? 'bg-foreground text-background'
-                      : 'border border-foreground/15 bg-background/40 text-foreground/70 hover:bg-background/70',
+                      : 'glass-chip text-foreground/70 hover:bg-[var(--glass-bg-strong)]',
                   )}
                 >
                   {preset}
                 </button>
               ))}
-              <span className="inline-flex h-[26px] items-center rounded-lg border border-foreground/15 bg-background/40 px-2.5 text-[11px] text-foreground/70">
+              <span className="glass-chip inline-flex h-[26px] items-center rounded-lg px-2.5 text-[11px] text-foreground/70">
                 Subtitles: Bold Mint
               </span>
             </div>

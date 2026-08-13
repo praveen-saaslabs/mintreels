@@ -24,12 +24,12 @@ export function ProjectCard({ project }: { project: ProjectSummary }) {
   return (
     <Link
       to="/recordings"
-      className="block overflow-hidden rounded-[15px] border border-[var(--mr-bd)] bg-[var(--mr-card)] text-inherit transition-colors hover:border-[var(--mr-acc)]"
+      className="glass block overflow-hidden rounded-2xl text-inherit transition-[border-color,box-shadow] hover:border-[var(--mr-acc)] hover:shadow-[var(--glass-shadow-elevated)]"
     >
       <div className="relative flex h-[118px] items-end bg-[repeating-linear-gradient(135deg,var(--mr-stripe3)_0_10px,var(--mr-stripe4)_10px_20px)] p-3">
         <span
           className={cn(
-            'inline-flex h-[21px] items-center gap-1.5 rounded-full bg-[var(--mr-pill)] px-2.5 text-[10.5px] font-medium',
+            'glass-chip inline-flex h-[21px] items-center gap-1.5 rounded-full px-2.5 text-[10.5px] font-medium',
             jobTone(project.jobStatus),
           )}
         >

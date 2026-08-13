@@ -9,7 +9,7 @@ export function StorageJobs() {
       <div className="text-[11px] font-semibold tracking-[0.06em] text-[var(--mr-mfg)] uppercase">
         Storage & jobs
       </div>
-      <div className="grid grid-cols-3 gap-4 rounded-[14px] border border-[var(--mr-bd)] bg-[var(--mr-card)] p-3.5">
+      <div className="glass grid grid-cols-3 gap-4 rounded-2xl p-3.5">
         {isLoading || !stats ? (
           Array.from({ length: 3 }).map((_, index) => (
             <div key={index} className="h-12 animate-pulse rounded-md bg-[var(--mr-muted)]" />

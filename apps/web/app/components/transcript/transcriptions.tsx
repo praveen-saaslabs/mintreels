@@ -1,10 +1,11 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { SearchIcon } from 'lucide-react';
 import { SpeakerBadge } from '@/components/transcript/speaker-badge';
 import { TranscriptSegmentItem } from '@/components/transcript/transcript-segment-item';
 import { useTranscriptFollowScroll } from '@/components/transcript/use-transcript-follow-scroll';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { modKeyLabel, useHotkey } from '@/hooks/use-hotkey';
 import { useRecordingId } from '@/lib/recording-id';
 import {
   ALL_SPEAKERS,
@@ -38,6 +39,31 @@ export function Transcriptions() {
   const seek = useEditorStore((state) => state.seek);
   const [speakerFilter, setSpeakerFilter] = useState(ALL_SPEAKERS);
   const [search, setSearch] = useState('');
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const hasTranscript = segments.length > 0;
+
+  const focusSearch = () => {
+    const input = searchInputRef.current;
+    if (!input) {
+      return;
+    }
+    input.focus();
+    input.select();
+  };
+
+  useHotkey({
+    key: 'k',
+    mod: true,
+    enabled: hasTranscript,
+    onKeyDown: focusSearch,
+  });
+
+  useHotkey({
+    key: '/',
+    enabled: hasTranscript,
+    ignoreWhenEditable: true,
+    onKeyDown: focusSearch,
+  });
 
   const speakers = useMemo(() => uniqueSpeakers(segments), [segments]);
   const wordsBySegment = useMemo(() => groupWordsBySegment(segments, words), [segments, words]);
@@ -74,8 +100,8 @@ export function Transcriptions() {
   );
 
   return (
-    <section className="flex h-full min-h-0 w-full flex-col border border-border bg-background">
-      <header className="shrink-0 space-y-2 border-b border-border px-3 py-2">
+    <section className="glass-panel m-1.5 flex h-[calc(100%-0.75rem)] min-h-0 w-[calc(100%-0.75rem)] flex-col overflow-hidden">
+      <header className="shrink-0 space-y-2 select-none border-b border-[var(--glass-border-subtle)] px-3 py-2.5">
         <h2 className="text-sm font-medium text-foreground">Transcriptions</h2>
         {segments.length > 0 ? (
           <>
@@ -118,22 +144,26 @@ export function Transcriptions() {
                 className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground"
               />
               <Input
+                ref={searchInputRef}
                 type="search"
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
                 placeholder="Search transcript"
                 aria-label="Search transcript"
-                className="pl-8"
+                className="select-text pl-8 pr-14"
                 autoComplete="off"
                 spellCheck={false}
               />
+              <span className="pointer-events-none absolute top-1/2 right-2.5 -translate-y-1/2 font-mono text-[10px] text-muted-foreground">
+                {modKeyLabel()}K /
+              </span>
             </div>
           </>
         ) : null}
       </header>
       <div
         ref={listRef}
-        className="min-h-0 flex-1 overflow-auto p-3"
+        className="min-h-0 flex-1 select-text overflow-auto p-3"
         onWheel={pauseFollow}
         onTouchMove={pauseFollow}
       >

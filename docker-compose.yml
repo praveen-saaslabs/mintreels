@@ -8,11 +8,20 @@ services:
       MYSQL_PASSWORD: ${MYSQL_PASSWORD:-mintreels}
       MYSQL_DATABASE: ${MYSQL_DATABASE:-mintreels}
     ports:
-      - "127.0.0.1:3306:3306"
+      - '127.0.0.1:3306:3306'
     volumes:
       - mysql_data:/var/lib/mysql
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-p${MYSQL_ROOT_PASSWORD:-mintreels}"]
+      test:
+        [
+          'CMD',
+          'mysqladmin',
+          'ping',
+          '-h',
+          '127.0.0.1',
+          '-uroot',
+          '-p${MYSQL_ROOT_PASSWORD:-mintreels}',
+        ]
       interval: 5s
       timeout: 5s
       retries: 20
@@ -26,7 +35,7 @@ services:
       PMA_USER: ${MYSQL_USER:-mintreels}
       PMA_PASSWORD: ${MYSQL_PASSWORD:-mintreels}
     ports:
-      - "127.0.0.1:8080:80"
+      - '127.0.0.1:8080:80'
     depends_on:
       mysql:
         condition: service_healthy
@@ -35,11 +44,11 @@ services:
     image: redis:7-alpine
     restart: unless-stopped
     ports:
-      - "127.0.0.1:6379:6379"
+      - '127.0.0.1:6379:6379'
     volumes:
       - redis_data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ['CMD', 'redis-cli', 'ping']
       interval: 5s
       timeout: 5s
       retries: 10
@@ -55,10 +64,10 @@ services:
       - api_node_modules:/app/node_modules
       - api_app_node_modules:/app/apps/api/node_modules
     environment:
-      CI: "true"
+      CI: 'true'
       DATABASE_URL: mysql://${MYSQL_USER:-mintreels}:${MYSQL_PASSWORD:-mintreels}@mysql:3306/${MYSQL_DATABASE:-mintreels}
       REDIS_URL: redis://redis:6379
-      PORT: "3000"
+      PORT: '3000'
       AI_PROVIDER: ${AI_PROVIDER:-pyai}
       KNOWLEDGE_BASE_PROVIDER: ${KNOWLEDGE_BASE_PROVIDER:-pyai}
       STORAGE_PROVIDER: ${STORAGE_PROVIDER:-filestack}
@@ -72,6 +81,7 @@ services:
       JOB_MAX_ATTEMPTS: ${JOB_MAX_ATTEMPTS:-4}
       JOB_RETRY_BASE_DELAY_MS: ${JOB_RETRY_BASE_DELAY_MS:-5000}
       JOB_STEP_STALE_TIMEOUT_MS: ${JOB_STEP_STALE_TIMEOUT_MS:-1800000}
+      AUTH_SKIP_EMAIL_VERIFY: ${AUTH_SKIP_EMAIL_VERIFY:-false}
       SMTP_HOST: ${SMTP_HOST:-smtp.sendgrid.net}
       SMTP_PORT: ${SMTP_PORT:-2525}
       SMTP_USER: ${SMTP_USER:-apikey}
@@ -79,7 +89,7 @@ services:
       SMTP_FROM_EMAIL: ${SMTP_FROM_EMAIL:-}
       WEB_ORIGIN: ${WEB_ORIGIN:-http://127.0.0.1:5173}
     ports:
-      - "3000:3000"
+      - '3000:3000'
     depends_on:
       mysql:
         condition: service_healthy
@@ -96,7 +106,7 @@ services:
       - ./:/app
       - worker_node_modules:/app/node_modules
     environment:
-      CI: "true"
+      CI: 'true'
       DATABASE_URL: mysql://${MYSQL_USER:-mintreels}:${MYSQL_PASSWORD:-mintreels}@mysql:3306/${MYSQL_DATABASE:-mintreels}
       REDIS_URL: redis://redis:6379
       AI_PROVIDER: ${AI_PROVIDER:-pyai}
@@ -125,10 +135,10 @@ services:
       - ./:/app
       - web_node_modules:/app/node_modules
     environment:
-      CI: "true"
+      CI: 'true'
       VITE_API_TARGET: http://api:3000
     ports:
-      - "5173:5173"
+      - '5173:5173'
     depends_on:
       - api
 
