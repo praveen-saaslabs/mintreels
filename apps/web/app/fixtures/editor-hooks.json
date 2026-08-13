@@ -1,0 +1,52 @@
+[
+  {
+    "id": "hook-1",
+    "label": "H1",
+    "title": "Prophesied time of unrest",
+    "start": 57.09,
+    "end": 107.04,
+    "ratio": "9:16",
+    "status": "ready",
+    "score": 0.94
+  },
+  {
+    "id": "hook-2",
+    "label": "H2",
+    "title": "Dismantling for a remantling",
+    "start": 185.53,
+    "end": 242.61,
+    "ratio": "9:16",
+    "status": "rendering",
+    "score": 0.88
+  },
+  {
+    "id": "hook-3",
+    "label": "H3",
+    "title": "Kindness over spiritual learning",
+    "start": 285.43,
+    "end": 335.38,
+    "ratio": "1:1",
+    "status": "ready",
+    "score": 0.81
+  },
+  {
+    "id": "hook-4",
+    "label": "H4",
+    "title": "Worship the effect, not the construct",
+    "start": 371.06,
+    "end": 428.14,
+    "ratio": "9:16",
+    "status": "queued",
+    "score": 0.76
+  },
+  {
+    "id": "hook-5",
+    "label": "H5",
+    "title": "Exhausting times, rising consciousness",
+    "start": 528.04,
+    "end": 592.26,
+    "ratio": "16:9",
+    "status": "failed",
+    "score": 0.71
+  }
+]

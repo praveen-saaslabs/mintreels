@@ -16,7 +16,8 @@ export function EditorLayout({ area1, area2, area3, area4 }: EditorLayoutProps) 
       </Space.LeftResizable>
       <Space.Fill>
         <Space.Fill>{area2}</Space.Fill>
-        <Space.BottomResizable size="30%" minimumSize={120} maximumSize={480}>
+        {/* Wave (~72) + strip + hook thumbs need ~300px; cap so video keeps room */}
+        <Space.BottomResizable size="30%" minimumSize={300} maximumSize={380}>
           {area3}
         </Space.BottomResizable>
       </Space.Fill>

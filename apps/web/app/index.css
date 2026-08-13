@@ -210,6 +210,15 @@
   }
 }
 
+/* WaveSurfer playhead — mint accent, soft glow, rounded capsule */
+.mint-waveform::part(cursor) {
+  border-radius: 999px;
+  background-color: oklch(0.55 0.14 165) !important;
+  box-shadow:
+    0 0 0 1px oklch(0.55 0.14 165 / 0.35),
+    0 0 10px oklch(0.62 0.13 165 / 0.55);
+}
+
 @keyframes mrpulse {
   0%,
   100% {

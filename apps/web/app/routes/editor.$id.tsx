@@ -5,6 +5,7 @@ import { Transcriptions } from '@/components/transcript/transcriptions';
 import { EditorLayout } from '@/components/video/editor-layout';
 import { Timeline } from '@/components/video/timeline';
 import { VideoPlayer } from '@/components/video/video-player';
+import { DEMO_MEDIA } from '@/lib/demo-media';
 import { useRecordingId } from '@/lib/recording-id';
 import { useEditorStore } from '@/stores/editor-store';
 
@@ -30,8 +31,8 @@ export function EditorPage() {
   return (
     <EditorLayout
       area1={<Transcriptions />}
-      area2={<VideoPlayer />}
-      area3={<Timeline />}
+      area2={<VideoPlayer src={DEMO_MEDIA.videoUrl} />}
+      area3={<Timeline audioUrl={DEMO_MEDIA.audioUrl} />}
       area4={<Summary />}
     />
   );
