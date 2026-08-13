@@ -62,6 +62,14 @@ services:
       KNOWLEDGE_BASE_PROVIDER: ${KNOWLEDGE_BASE_PROVIDER:-pyai}
       STORAGE_PROVIDER: ${STORAGE_PROVIDER:-s3}
       QUEUE_PROVIDER: ${QUEUE_PROVIDER:-bullmq}
+      JWT_SECRET: ${JWT_SECRET:-}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-24h}
+      SMTP_HOST: ${SMTP_HOST:-smtp.sendgrid.net}
+      SMTP_PORT: ${SMTP_PORT:-2525}
+      SMTP_USER: ${SMTP_USER:-apikey}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM_EMAIL: ${SMTP_FROM_EMAIL:-}
+      WEB_ORIGIN: ${WEB_ORIGIN:-http://127.0.0.1:5173}
     ports:
       - "3000:3000"
     depends_on:

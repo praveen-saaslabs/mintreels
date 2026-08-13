@@ -1,0 +1,34 @@
+---
+description: Application auth is email+password+OTP+JWT cookie — never PyAI, never frontend JWT
+globs: apps/api/src/auth/**,apps/api/src/email/**,packages/schema/src/users.ts,packages/schema/src/auth.ts,packages/db/src/entities/user.entity.ts
+alwaysApply: false
+---
+
+# Application authentication
+
+App auth is **not** PyAI. Do not put PyAI keys in JWTs, cookies, or the frontend.
+
+Flow: email + password → 4-digit email OTP (2 min, hashed, single-use) → JWT in HTTP-only `auth_token` cookie → `AuthGuard` → APIs scoped to `request.user.id`.
+
+## Module boundaries
+
+```text
+AuthController → AuthService → PasswordService | EmailVerificationService | JwtService
+EmailVerificationService → EmailService → Nodemailer → SendGrid SMTP
+```
+
+- `EmailService` sends mail only (no OTP/auth logic).
+- `EmailVerificationService` owns OTP lifecycle (no SMTP).
+- `AuthService` must not import Nodemailer.
+- Controllers and `AuthGuard` stay thin.
+
+## Conventions
+
+- Routes live under `/api/auth/*` (project `/api` prefix).
+- JSON is camelCase. User ids are integers (`sub` in JWT is the stringified id).
+- Zod in `@mintreels/schema`; `ZodValidationPipe`; `HttpError` for auth failures.
+- Nest `Logger` only. Never log passwords, hashes, OTP, JWT, or SMTP secrets.
+- No refresh tokens, password reset, OAuth, MFA, or JWT blacklist.
+- Do **not** add unit tests, `*.test.ts`, or `*.spec.ts` for auth/email until explicitly requested.
+
+Frontend contract: `docs/auth-frontend.md`.

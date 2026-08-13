@@ -8,6 +8,7 @@ import { idSchema, timestampsSchema } from './common';
 export const projectRowSchema = z
   .object({
     id: idSchema,
+    userId: idSchema,
     name: z.string().min(1),
   })
   .merge(timestampsSchema);
