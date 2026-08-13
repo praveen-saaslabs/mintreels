@@ -621,8 +621,11 @@ export function Timeline({
   }
 
   return (
-    <section className="border-t border-[var(--glass-border-subtle)] flex h-full min-h-0 w-full select-none flex-col overflow-hidden border-x-0!">
-      <div className="flex min-h-0 flex-1 flex-col gap-2 px-4 py-3">
+    <section
+      className="glass-panel glass-materialize m-1.5 flex h-[calc(100%-0.75rem)] min-h-0 w-[calc(100%-0.75rem)] select-none flex-col overflow-hidden"
+      style={{ animationDelay: '80ms' }}
+    >
+      <div className="glass-pane-body flex min-h-0 flex-1 flex-col gap-2 px-4 py-3">
         {speakerRow}
 
         {/*

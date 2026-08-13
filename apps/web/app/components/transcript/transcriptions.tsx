@@ -163,9 +163,12 @@ export function Transcriptions({ pending = false }: Readonly<{ pending?: boolean
   );
 
   return (
-    <section className="flex h-full min-h-0 w-full flex-col overflow-hidden border-r border-[var(--glass-border-subtle)]">
-      <header className="shrink-0 space-y-2 select-none border-b border-[var(--glass-border-subtle)] px-3 py-2.5">
-        <h2 className="text-sm font-medium text-foreground">Transcriptions</h2>
+    <section
+      className="glass-panel glass-materialize m-1.5 flex h-[calc(100%-0.75rem)] min-h-0 w-[calc(100%-0.75rem)] flex-col overflow-hidden"
+      style={{ animationDelay: '40ms' }}
+    >
+      <header className="glass-pane-header shrink-0 space-y-2 select-none px-3 py-2.5">
+        <h2 className="text-sm font-medium tracking-[-0.01em] text-foreground">Transcriptions</h2>
         {hasTranscript ? (
           <>
             <div className="flex flex-wrap gap-1.5" role="group" aria-label="Filter by speaker">
@@ -226,7 +229,7 @@ export function Transcriptions({ pending = false }: Readonly<{ pending?: boolean
       </header>
       <div
         ref={listRef}
-        className="min-h-0 flex-1 select-text overflow-auto p-3"
+        className="glass-pane-body min-h-0 flex-1 select-text overflow-auto p-3"
         onWheel={pauseFollow}
         onTouchMove={pauseFollow}
       >

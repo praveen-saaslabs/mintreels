@@ -98,13 +98,13 @@ export function ProcessingStatusChip({
     <div className="pointer-events-auto absolute top-3 right-3 z-20 max-w-[min(100%-1.5rem,20rem)]">
       <div
         className={cn(
-          'glass overflow-hidden rounded shadow-(--glass-shadow-elevated)',
+          'glass-elevated glass-materialize overflow-hidden rounded-xl',
           failed && 'border-(--mr-bad)/40',
         )}
       >
         <button
           type="button"
-          className="flex w-full items-center gap-2 px-3 py-2 text-left"
+          className="flex w-full items-center gap-2 px-3 py-2 text-left transition-transform duration-100 ease-out active:scale-[0.98]"
           aria-expanded={expanded}
           onClick={() => setExpanded((value) => !value)}
         >

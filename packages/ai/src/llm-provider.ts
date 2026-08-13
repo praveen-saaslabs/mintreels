@@ -15,10 +15,7 @@ export interface HookGenerationOptions {
 
 export interface LLMProvider {
   summarize(transcript: Transcript): Promise<Summary>;
-  generateHooks(
-    transcript: Transcript,
-    options: HookGenerationOptions,
-  ): Promise<HookCandidate[]>;
+  generateHooks(transcript: Transcript, options: HookGenerationOptions): Promise<HookCandidate[]>;
   generateActionItems(transcript: Transcript): Promise<ActionItem[]>;
   askTranscript(transcript: Transcript, question: string): Promise<TranscriptAskResult>;
 }

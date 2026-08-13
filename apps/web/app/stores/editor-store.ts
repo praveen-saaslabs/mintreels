@@ -81,6 +81,7 @@ type EditorStore = {
   resetProject: () => void;
   setHooks: (hooks: EditorHook[]) => void;
   patchHook: (id: string, patch: Partial<EditorHook>) => void;
+  clearHookClip: (id: string) => void;
   selectHook: (id: string | null) => void;
   selectHookAndSeek: (id: string) => void;
   resetEditor: () => void;
@@ -182,9 +183,7 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
       ? hooks.find((item) => item.id === selectedHookId)
       : undefined;
     const keepSelectedHook =
-      selectedHook !== undefined &&
-      nextTime >= selectedHook.start &&
-      nextTime <= selectedHook.end;
+      selectedHook !== undefined && nextTime >= selectedHook.start && nextTime <= selectedHook.end;
 
     set((state) => ({
       selectedHookId: keepSelectedHook ? state.selectedHookId : null,
@@ -247,6 +246,18 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
   patchHook: (id, patch) => {
     set((state) => ({
       hooks: state.hooks.map((hook) => (hook.id === id ? { ...hook, ...patch } : hook)),
+    }));
+  },
+
+  clearHookClip: (id) => {
+    set((state) => ({
+      hooks: state.hooks.map((hook) => {
+        if (hook.id !== id) {
+          return hook;
+        }
+        const { clipId: _clipId, clipVideoUrl: _clipVideoUrl, ...rest } = hook;
+        return { ...rest, status: 'ready' };
+      }),
     }));
   },
 
