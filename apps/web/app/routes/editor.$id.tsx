@@ -15,11 +15,12 @@ import { parsePositiveIntId, RecordingIdProvider } from '@/lib/recording-id';
 
 function EditorChrome({
   title,
+  projectId,
   children,
-}: Readonly<{ title: string; children: ReactNode }>) {
+}: Readonly<{ title: string; projectId?: number | undefined; children: ReactNode }>) {
   return (
     <div className="mr-ambient flex h-svh flex-col">
-      <EditorHeader title={title} />
+      <EditorHeader title={title} projectId={projectId} />
       <div className="relative min-h-0 flex-1">{children}</div>
     </div>
   );
@@ -36,7 +37,7 @@ function EditorStatusPanel({
 }>) {
   return (
     <section className="flex h-full items-center justify-center p-6">
-      <div className="glass w-full max-w-md space-y-4 rounded-2xl p-6">
+      <div className="glass w-full max-w-md space-y-4 rounded p-6">
         <div className="space-y-1.5">
           <h1 className="text-xl font-semibold tracking-[-0.02em]">{title}</h1>
           <p className="text-sm text-muted-foreground">{description}</p>
@@ -89,7 +90,7 @@ function ProjectEditor({ projectId }: Readonly<{ projectId: number }>) {
 
   if (phase === 'resolving') {
     return (
-      <EditorChrome title={projectName}>
+      <EditorChrome title={projectName} projectId={projectId}>
         <EditorStatusPanel
           title="Loading project"
           description="Resolving the recording and checking ingest status…"
@@ -100,7 +101,7 @@ function ProjectEditor({ projectId }: Readonly<{ projectId: number }>) {
 
   if (phase === 'missing') {
     return (
-      <EditorChrome title={projectName}>
+      <EditorChrome title={projectName} projectId={projectId}>
         <EditorStatusPanel
           title="Recording not found"
           description={errorMessage ?? 'This project has no recording yet.'}
@@ -112,7 +113,7 @@ function ProjectEditor({ projectId }: Readonly<{ projectId: number }>) {
 
   if (phase === 'error') {
     return (
-      <EditorChrome title={projectName}>
+      <EditorChrome title={projectName} projectId={projectId}>
         <EditorStatusPanel
           title="Could not load editor"
           description={errorMessage ?? 'Something went wrong while loading this project.'}
@@ -124,7 +125,7 @@ function ProjectEditor({ projectId }: Readonly<{ projectId: number }>) {
 
   if (recordingId === undefined) {
     return (
-      <EditorChrome title={projectName}>
+      <EditorChrome title={projectName} projectId={projectId}>
         <EditorStatusPanel
           title="Opening editor"
           description="Loading transcript, summary, and hooks…"
@@ -135,7 +136,7 @@ function ProjectEditor({ projectId }: Readonly<{ projectId: number }>) {
 
   return (
     <RecordingIdProvider value={recordingId}>
-      <EditorChrome title={projectName}>
+      <EditorChrome title={projectName} projectId={projectId}>
         <EditorLayout
           area1={<Transcriptions pending={pending.transcript} />}
           area2={

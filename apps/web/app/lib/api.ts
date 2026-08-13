@@ -233,6 +233,8 @@ export type CreateClipRequest = {
 export const api = {
   getRecordings: () => request<RecordingSummary[]>('/recordings'),
   getRecording: (id: number) => request<RecordingSummary>(`/recordings/${encodeURIComponent(id)}`),
+  deleteRecording: (id: number) =>
+    request<void>(`/recordings/${encodeURIComponent(id)}`, { method: 'DELETE' }),
   createRecording: (body: CreateRecordingRequest) =>
     request<CreateRecordingResponse>('/recordings', {
       method: 'POST',
@@ -272,10 +274,14 @@ export const api = {
     }),
   getKnowledgeBases: () => request<unknown>('/knowledge-bases'),
   getClip: (id: number) => request<ClipSummary>(`/clips/${encodeURIComponent(id)}`),
+  deleteClip: (id: number) =>
+    request<void>(`/clips/${encodeURIComponent(id)}`, { method: 'DELETE' }),
 
   getWorkspaceUser: () => request<WorkspaceUser>('/workspace/user'),
   getWorkspaceStats: () => request<WorkspaceStats>('/workspace/stats'),
   getProjects: () => request<ProjectSummary[]>('/projects'),
+  deleteProject: (id: number) =>
+    request<void>(`/projects/${encodeURIComponent(id)}`, { method: 'DELETE' }),
   getSidebarProjects: () => request<SidebarProject[]>('/projects/sidebar'),
   getClipFilters: () => request<ClipFilter[]>('/clips/filters'),
   getClips: () => request<ClipSummary[]>('/clips'),

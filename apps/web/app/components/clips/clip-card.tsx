@@ -1,7 +1,9 @@
-import { Download, Loader2 } from 'lucide-react';
-import type { MouseEvent } from 'react';
+import { Download, Loader2, Trash2 } from 'lucide-react';
+import { useState, type MouseEvent } from 'react';
+import { ConfirmDeleteDialog } from '@/components/ui/confirm-delete-dialog';
 import { buttonVariants } from '@/components/ui/button';
 import { useClipDownload } from '@/hooks/use-clip-download';
+import { useDeleteClip } from '@/hooks/use-delete-clip';
 import {
   formatClipDuration,
   formatClipProjectLabel,
@@ -28,6 +30,8 @@ function statusClasses(status: ClipSummary['status']) {
 export function ClipCard({ clip }: { clip: ClipSummary }) {
   const canDownload = clip.status === 'ready' && Boolean(clip.videoUrl);
   const { isDownloading, download } = useClipDownload();
+  const { deleteClip, isDeleting, errorMessage, reset } = useDeleteClip();
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const projectLabel = formatClipProjectLabel(clip);
   const thumbnailUrl =
     typeof clip.thumbnailUrl === 'string' && isHttpsFilestackPlaybackUrl(clip.thumbnailUrl)
@@ -43,8 +47,15 @@ export function ClipCard({ clip }: { clip: ClipSummary }) {
     void download(clip.videoUrl, clipDownloadFilename(clip.title, clip.id));
   }
 
+  function onDeleteClick(event: MouseEvent<HTMLButtonElement>) {
+    event.preventDefault();
+    event.stopPropagation();
+    reset();
+    setConfirmOpen(true);
+  }
+
   return (
-    <article className="glass flex h-full min-w-0 flex-col overflow-hidden rounded-lg">
+    <article className="glass flex h-full min-w-0 flex-col overflow-hidden rounded">
       <div className="relative flex aspect-[4/3] w-full shrink-0 flex-col justify-between overflow-hidden bg-[repeating-linear-gradient(135deg,var(--mr-stripe3)_0_10px,var(--mr-stripe4)_10px_20px)] p-2.5">
         {thumbnailUrl ? (
           <img
@@ -61,9 +72,22 @@ export function ClipCard({ clip }: { clip: ClipSummary }) {
           ) : (
             <span />
           )}
-          <span className="glass-chip inline-flex h-[19px] shrink-0 items-center rounded-full px-1.5 font-mono text-[10px] text-[var(--mr-onstripe)]">
-            {formatClipDuration(clip)}
-          </span>
+          <div className="flex shrink-0 items-center gap-1">
+            <span className="glass-chip inline-flex h-[19px] shrink-0 items-center rounded-full px-1.5 font-mono text-[10px] text-[var(--mr-onstripe)]">
+              {formatClipDuration(clip)}
+            </span>
+            <button
+              type="button"
+              aria-label={`Delete clip ${clip.title}`}
+              onClick={onDeleteClick}
+              className={cn(
+                buttonVariants({ variant: 'ghost', size: 'icon-xs' }),
+                'text-[var(--mr-onstripe)] hover:text-[var(--mr-bad)]',
+              )}
+            >
+              <Trash2 />
+            </button>
+          </div>
         </div>
       </div>
       <div className="flex min-h-0 min-w-0 flex-1 flex-col p-2.5">
@@ -106,6 +130,18 @@ export function ClipCard({ clip }: { clip: ClipSummary }) {
           ) : null}
         </div>
       </div>
+      <ConfirmDeleteDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        title={`Delete ${clip.title}?`}
+        description="This removes the clip. The source recording and hook are kept."
+        pending={isDeleting}
+        errorMessage={errorMessage}
+        onConfirm={async () => {
+          await deleteClip(clip.id);
+          setConfirmOpen(false);
+        }}
+      />
     </article>
   );
 }
