@@ -82,10 +82,9 @@ export class SettingsService {
     const aiProvider = envValue(EnvKey.AiProvider);
     const kbProvider = envValue(EnvKey.KnowledgeBaseProvider);
     const storageProvider = envValue(EnvKey.StorageProvider);
-    const s3Configured = envSet(EnvKey.S3Bucket) && envSet(EnvKey.S3AccessKeyId);
+    const storageConfigured = envSet(EnvKey.FilestackApiKey);
     const speechConfigured = Boolean(aiProvider) && pyaiKey;
     const kbConfigured = Boolean(kbProvider) && pyaiKey;
-    const storageConfigured = Boolean(storageProvider) && s3Configured;
 
     const failedJobs = await this.jobs.find({
       where: {

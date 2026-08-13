@@ -14,4 +14,4 @@ Read `docs/api-frontend.md` before wiring home/recordings/clips/settings to the 
 - Empty lists → `200 []`. Missing/not owned → `404 { "error": "Not found" }`. No cookie → `401`.
 - Never render `storageKey`, real API keys, or `maskedKey` other than `"configured"` / `"not configured"`.
 - Live data: `VITE_USE_MOCK_DATA=false`. Swagger: `/docs`.
-- Do not call POST create/generate yet (still 501).
+- Upload ingest: follow `.cursor/rules/upload-ingest-frontend.mdc`. `POST /api/recordings` + poll `GET /api/recordings/:id/processing`. Do not call generate summary/hooks or clip create yet (still 501).

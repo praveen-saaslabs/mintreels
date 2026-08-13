@@ -6,7 +6,7 @@ import { JobStatus, JobType } from './enums';
  * jobs — docs/architecture.md §29
  *
  * type: VIDEO_INGEST | TRANSCRIBE | GENERATE_SUMMARY | SYNC_KNOWLEDGE_BASE | GENERATE_HOOKS | RENDER_CLIP
- * status: queued | running | success | failed
+ * status: queued | running | success | failed | partial
  */
 export const jobTypeSchema = z.enum([
   JobType.VideoIngest,
@@ -22,6 +22,7 @@ export const jobStatusSchema = z.enum([
   JobStatus.Running,
   JobStatus.Success,
   JobStatus.Failed,
+  JobStatus.Partial,
 ]);
 
 export const jobRowSchema = z.object({
@@ -32,10 +33,14 @@ export const jobRowSchema = z.object({
   attempt: z.number().int().nonnegative(),
   maxAttempts: z.number().int().positive(),
   error: z.string().nullable(),
+  errorCode: z.string().nullable(),
+  errorMetadata: z.record(z.string(), z.unknown()).nullable(),
+  currentStep: z.string().nullable(),
   startedAt: z.coerce.date().nullable(),
   finishedAt: z.coerce.date().nullable(),
   metadata: z.record(z.string(), z.unknown()).nullable(),
   createdAt: z.coerce.date(),
+  updatedAt: z.coerce.date().nullable(),
 });
 
 export const jobInsertSchema = jobRowSchema.partial({
@@ -44,10 +49,14 @@ export const jobInsertSchema = jobRowSchema.partial({
   attempt: true,
   maxAttempts: true,
   error: true,
+  errorCode: true,
+  errorMetadata: true,
+  currentStep: true,
   startedAt: true,
   finishedAt: true,
   metadata: true,
   createdAt: true,
+  updatedAt: true,
 });
 
 export { JobStatus, JobType } from './enums';

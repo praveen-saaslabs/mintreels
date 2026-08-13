@@ -1,6 +1,9 @@
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { LogOut, Moon, Settings, Sun } from 'lucide-react';
+import { useState } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { LogOut, Moon, Settings, Sun } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useWorkspaceUserQuery } from '@/hooks/use-home-queries';
 import { playThemeSwitchSound } from '@/lib/theme-switch-sound';
@@ -17,6 +20,8 @@ export function UserFooter() {
   const { user: authUser, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const location = useLocation();
+  const navigate = useNavigate();
+  const [isSigningOut, setIsSigningOut] = useState(false);
   const navigate = useNavigate();
   const [isSigningOut, setIsSigningOut] = useState(false);
   const settingsActive = location.pathname.startsWith('/settings');
@@ -46,6 +51,7 @@ export function UserFooter() {
     <div className="flex w-full items-center gap-1 px-1 py-1">
       <div className="flex min-w-0 flex-1 items-center gap-2">
         <div className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-muted text-[11px] font-semibold">
+          {initials}
           {initials}
         </div>
         <div className="min-w-0 flex-1 group-data-[collapsible=icon]:hidden">

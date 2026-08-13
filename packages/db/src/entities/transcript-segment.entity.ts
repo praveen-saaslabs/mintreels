@@ -1,7 +1,8 @@
-import { Column, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, Entity, Index, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
 import type { TranscriptSegmentRow } from '@mintreels/schema';
 import { Recording } from './recording.entity';
 
+@Index('transcript_segments_recording_start_idx', ['recordingId', 'startMs'])
 @Entity({ name: 'transcript_segments' })
 export class TranscriptSegment implements TranscriptSegmentRow {
   @PrimaryGeneratedColumn('increment')

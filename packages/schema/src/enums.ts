@@ -19,6 +19,7 @@ export enum JobStatus {
   Running = 'running',
   Success = 'success',
   Failed = 'failed',
+  Partial = 'partial',
 }
 
 export enum JobType {
@@ -88,12 +89,47 @@ export enum SettingsProviderId {
   Storage = 'storage',
 }
 
+export enum JobStepName {
+  AudioExtraction = 'AUDIO_EXTRACTION',
+  AudioUpload = 'AUDIO_UPLOAD',
+  Transcription = 'TRANSCRIPTION',
+  TranscriptionPersist = 'TRANSCRIPTION_PERSIST',
+  Summary = 'SUMMARY',
+  ActionItems = 'ACTION_ITEMS',
+  Hooks = 'HOOKS',
+  ClipRecommendations = 'CLIP_RECOMMENDATIONS',
+}
+
+export const JOB_STEP_NAMES = [
+  JobStepName.AudioExtraction,
+  JobStepName.AudioUpload,
+  JobStepName.Transcription,
+  JobStepName.TranscriptionPersist,
+  JobStepName.Summary,
+  JobStepName.ActionItems,
+  JobStepName.Hooks,
+  JobStepName.ClipRecommendations,
+] as const;
+
+export enum JobStepStatus {
+  Pending = 'pending',
+  Processing = 'processing',
+  Completed = 'completed',
+  Retrying = 'retrying',
+  Failed = 'failed',
+  Skipped = 'skipped',
+}
+
 export enum EnvKey {
   AiProvider = 'AI_PROVIDER',
   PyaiApiKey = 'PYAI_API_KEY',
+  PyaiBaseUrl = 'PYAI_BASE_URL',
   KnowledgeBaseProvider = 'KNOWLEDGE_BASE_PROVIDER',
   StorageProvider = 'STORAGE_PROVIDER',
-  S3Bucket = 'S3_BUCKET',
-  S3AccessKeyId = 'S3_ACCESS_KEY_ID',
+  FilestackApiKey = 'FILESTACK_API_KEY',
+  FilestackAppSecret = 'FILESTACK_APP_SECRET',
   WorkerConcurrency = 'WORKER_CONCURRENCY',
+  JobMaxAttempts = 'JOB_MAX_ATTEMPTS',
+  JobRetryBaseDelayMs = 'JOB_RETRY_BASE_DELAY_MS',
+  JobStepStaleTimeoutMs = 'JOB_STEP_STALE_TIMEOUT_MS',
 }

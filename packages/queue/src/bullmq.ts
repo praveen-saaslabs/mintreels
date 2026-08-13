@@ -1,4 +1,4 @@
-import { Queue } from 'bullmq';
+import { Queue, Worker } from 'bullmq';
 import type { Job } from '@mintreels/domain';
 import { DEFAULT_MAX_ATTEMPTS } from '@mintreels/domain';
 import type { QueueProvider } from './provider';
@@ -37,4 +37,26 @@ export class BullMQQueueProvider implements QueueProvider {
       },
     });
   }
+}
+
+export function startWorker(options: {
+  queueName: string;
+  redisUrl: string;
+  handlers: Record<string, (payload: unknown) => Promise<void>>;
+  concurrency?: number;
+}): Worker {
+  return new Worker(
+    options.queueName,
+    async (job) => {
+      const handler = options.handlers[job.name];
+      if (!handler) {
+        throw new Error(`Unknown job name: ${job.name}`);
+      }
+      await handler(job.data);
+    },
+    {
+      connection: { url: options.redisUrl },
+      concurrency: options.concurrency ?? 1,
+    },
+  );
 }

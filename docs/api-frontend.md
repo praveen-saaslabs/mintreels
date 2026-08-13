@@ -41,7 +41,7 @@ Canonical enum strings live in `@mintreels/schema` (`packages/schema/src/enums.t
 | `401` | Missing / invalid `auth_token` cookie |
 | `400` | Non-integer `:id` |
 | `404` | Not found or not owned |
-| `501` | POST/enqueue not built yet (`create` recording/clip/KB, generate summary/hooks) |
+| `501` | POST/enqueue not built yet (generate summary/hooks, add-to-global-kb, clip create) |
 | `500` | `{ "error": "Internal server error" }` |
 
 Switch on `error`. Do not show stack traces.
@@ -56,6 +56,8 @@ All paths are under `/api`. All GETs below are implemented and cookie-scoped to 
 | --- | --- | --- |
 | `getRecordings()` | GET | `/recordings` |
 | `getRecording(id)` | GET | `/recordings/:id` |
+| `getRecordingProcessing(id)` | GET | `/recordings/:id/processing` |
+| `createRecording(body)` | POST | `/recordings` |
 | `getTranscript(id)` | GET | `/recordings/:id/transcript` |
 | — | GET | `/recordings/:id/transcript.vtt` (`text/vtt`) |
 | `getSummary(id)` | GET | `/recordings/:id/summary` |
@@ -96,6 +98,47 @@ All paths are under `/api`. All GETs below are implemented and cookie-scoped to 
 ```
 
 List is an array of the same object.
+
+### Create recording — `POST /api/recordings`
+
+Client uploads video/audio to Filestack, then creates a project + recording:
+
+```json
+{ "title": "Ep. 14", "originalFilename": "ep14.mp4", "url": "https://cdn.filestackcontent.com/HANDLE" }
+```
+
+`201`: `{ "id": 10, "projectId": 4, "jobId": 1 }`. `url` must be HTTPS on `cdn.filestackcontent.com` (or `/api/file/{handle}`). No `storageKey` in any GET response.
+
+### Processing poll — `GET /api/recordings/:id/processing`
+
+Poll while `status` is `processing`. No `storageKey`, no `raw_response`, no secrets.
+
+```json
+{
+  "recordingId": 10,
+  "status": "processing",
+  "job": {
+    "id": 1,
+    "status": "running",
+    "currentStep": "TRANSCRIPTION",
+    "attempt": 1,
+    "maxAttempts": 4,
+    "errorCode": null,
+    "errorMessage": null
+  },
+  "steps": [
+    { "step": "AUDIO_EXTRACTION", "status": "completed", "attempt": 1 },
+    { "step": "TRANSCRIPTION", "status": "processing", "attempt": 1, "provider": "pyai" }
+  ],
+  "transcript": { "id": 1, "language": "en", "segmentCount": 12 },
+  "summary": { "id": 1, "text": "..." },
+  "actionItems": [],
+  "hooks": [],
+  "audit": [{ "event": "step_started", "step": "TRANSCRIPTION", "message": "started attempt 1", "createdAt": "2026-08-13T08:00:00.000Z" }]
+}
+```
+
+Job status: `queued` \| `running` \| `success` \| `failed` \| `partial`. Step status: `pending` \| `processing` \| `completed` \| `retrying` \| `failed` \| `skipped`.
 
 ### Transcript — `GET /api/recordings/:id/transcript`
 
@@ -288,4 +331,4 @@ Provider `id`: `speech` \| `llm` \| `kb` \| `storage`. Status: `connected` \| `n
 
 ## Out of scope
 
-Reading the JWT, `Authorization` headers, Redis, signed clip download URLs, PyAI/S3 from the browser.
+Reading the JWT, `Authorization` headers, Redis, signed clip download URLs, or PyAI from the browser. Filestack upload stays on the client; only the CDN URL is POSTed to the API.
