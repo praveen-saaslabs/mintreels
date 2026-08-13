@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { useParams } from 'react-router-dom';
 import { Summary } from '@/components/summary/summary';
 import { Transcriptions } from '@/components/transcript/transcriptions';
 import { EditorLayout } from '@/components/video/editor-layout';
@@ -8,14 +9,16 @@ import { useRecordingId } from '@/lib/recording-id';
 import { useEditorStore } from '@/stores/editor-store';
 
 export function EditorPage() {
+  const { id } = useParams();
   const recordingId = useRecordingId();
+  const isNewProject = id === 'new';
   const resetVideo = useEditorStore((state) => state.resetVideo);
 
   useEffect(() => {
     resetVideo();
-  }, [recordingId, resetVideo]);
+  }, [recordingId, isNewProject, resetVideo]);
 
-  if (recordingId === undefined) {
+  if (!isNewProject && recordingId === undefined) {
     return (
       <section className="p-6">
         <h1 className="text-2xl font-semibold">Editor</h1>

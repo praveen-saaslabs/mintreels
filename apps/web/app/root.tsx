@@ -1,6 +1,7 @@
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import { AppShell } from '@/components/shell/app-shell';
 import { ClipsPage } from './routes/clips';
+import { EditorPage } from './routes/editor.$id';
 import { KnowledgePage } from './routes/knowledge';
 import { RecordingsPage } from './routes/recordings';
 import { RecordingDetailPage } from './routes/recordings.$id';
@@ -19,6 +20,10 @@ const router = createBrowserRouter([
       { path: 'recordings/:id', element: <RecordingDetailPage /> },
       { path: 'knowledge', element: <KnowledgePage /> },
     ],
+  },
+  {
+    path: '/editor/:id',
+    element: <EditorPage />,
   },
 ]);
 
