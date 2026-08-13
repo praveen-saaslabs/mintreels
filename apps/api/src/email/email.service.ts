@@ -26,6 +26,7 @@ export class EmailService {
         ...mail,
       });
     } catch (error) {
+      console.error(error);
       this.logger.error('Failed to send verification email');
       throw error;
     }
