@@ -59,11 +59,13 @@ export class RecordingsController {
   @ApiOperation({ summary: 'Poll ingest/processing status for a recording' })
   @ApiParam({ name: 'id', type: Number })
   @ApiOkResponse({
-    description: 'Processing snapshot (no storage keys or raw provider payloads)',
+    description: 'Processing snapshot with full transcript and playback URLs',
     schema: {
       example: {
         recordingId: 10,
         status: 'processing',
+        videoUrl: 'https://cdn.filestackcontent.com/HANDLE',
+        audioUrl: 'https://cdn.filestackcontent.com/AUDIO',
         job: {
           id: 1,
           status: 'running',
@@ -77,7 +79,21 @@ export class RecordingsController {
           { step: 'AUDIO_EXTRACTION', status: 'completed', attempt: 1 },
           { step: 'TRANSCRIPTION', status: 'processing', attempt: 1, provider: 'pyai' },
         ],
-        transcript: { id: 1, language: 'en', segmentCount: 12 },
+        transcript: {
+          id: 1,
+          language: 'en',
+          text: '[speaker_1] Hello world',
+          words: [{ word: 'Hello', start: 0, end: 0.4, speaker: 'speaker_1' }],
+          formats: {
+            srt: 'https://example.com/job.srt',
+            vtt: 'https://example.com/job.vtt',
+          },
+          segments: [
+            { id: 0, start: 0, end: 1.5, text: 'Hello world', speaker: 'speaker_1' },
+          ],
+          speakers: 1,
+          audio_seconds: 1.5,
+        },
         summary: { id: 1, text: '...' },
         actionItems: [],
         hooks: [],
@@ -100,7 +116,25 @@ export class RecordingsController {
 
   @ApiOperation({ summary: 'Get a single recording by ID' })
   @ApiParam({ name: 'id', type: Number })
-  @ApiOkResponse({ description: 'Recording object' })
+  @ApiOkResponse({
+    description: 'Recording object',
+    schema: {
+      example: {
+        id: 10,
+        projectId: 2,
+        title: 'Ep. 14',
+        originalFilename: 'ep14.mp4',
+        durationMs: 3600000,
+        width: 1920,
+        height: 1080,
+        status: 'ready',
+        videoUrl: 'https://cdn.filestackcontent.com/HANDLE',
+        audioUrl: 'https://cdn.filestackcontent.com/AUDIO',
+        createdAt: '2026-08-13T08:00:00.000Z',
+        updatedAt: '2026-08-13T08:00:00.000Z',
+      },
+    },
+  })
   @ApiNotFoundResponse({ description: 'Recording not found' })
   @Get(':id')
   getById(@CurrentUser() user: RequestUser, @Param('id', ParseIntPipe) id: number) {

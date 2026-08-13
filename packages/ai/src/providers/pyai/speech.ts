@@ -88,7 +88,7 @@ export class PyAISpeechProvider implements SpeechProvider {
           audio_url: input.audioUrl,
           model: HEAR_MODEL,
           diarize: true,
-          output_formats: ['json'],
+          output_formats: ['json', 'srt', 'vtt'],
         },
         input.idempotencyKey !== undefined ? { idempotencyKey: input.idempotencyKey } : {},
       );

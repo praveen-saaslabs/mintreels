@@ -49,9 +49,9 @@ Job status: `queued` | `running` | `success` | `failed` | `partial`.
 
 Step status: `pending` | `processing` | `completed` | `retrying` | `failed` | `skipped`.
 
-Use `job.currentStep` and `steps[]` for a progress UI. When present, render `transcript`, `summary`, `actionItems`, `hooks` incrementally. `audit` is optional debug.
+Use `job.currentStep` and `steps[]` for a progress UI. When present, render `transcript`, `summary`, `actionItems`, `hooks` incrementally. `audit` is optional debug. Use `videoUrl` / `audioUrl` for playback (not `storageKey`).
 
-Never display `storageKey`, Filestack handles, `raw_response`, API keys, or `maskedKey` other than `"configured"` / `"not configured"`.
+Never display `storageKey`, `raw_response`, API keys, or `maskedKey` other than `"configured"` / `"not configured"`.
 
 ## Do not
 
