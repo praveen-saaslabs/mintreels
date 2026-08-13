@@ -72,6 +72,7 @@ export class RecordingsController {
         status: 'processing',
         videoUrl: 'https://cdn.filestackcontent.com/HANDLE',
         audioUrl: 'https://cdn.filestackcontent.com/AUDIO',
+        thumbnailUrl: 'https://cdn.filestackcontent.com/THUMB',
         job: {
           id: 1,
           status: 'running',
@@ -148,6 +149,7 @@ export class RecordingsController {
         status: 'ready',
         videoUrl: 'https://cdn.filestackcontent.com/HANDLE',
         audioUrl: 'https://cdn.filestackcontent.com/AUDIO',
+        thumbnailUrl: 'https://cdn.filestackcontent.com/THUMB',
         createdAt: '2026-08-13T08:00:00.000Z',
         updatedAt: '2026-08-13T08:00:00.000Z',
       },

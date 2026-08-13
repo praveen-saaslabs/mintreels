@@ -12,7 +12,7 @@ Read `docs/api-frontend.md` before wiring home/recordings/clips/settings to the 
 - IDs are integers. JSON is camelCase. Times are ISO + `startMs`/`endMs` — format labels in the UI.
 - Mock types (`proj_q3`, `updatedLabel`, `"41s"`) are view-models, not the API.
 - Empty lists → `200 []`. Missing/not owned → `404 { "error": "Not found" }`. No cookie → `401`.
-- Never render `storageKey`, real API keys, or `maskedKey` other than `"configured"` / `"not configured"`.
+- Never render `storageKey`, real API keys, or `maskedKey` other than `"configured"` / `"not configured"`. Recording/project posters use `thumbnailUrl` (HTTPS Filestack only), same as clip cards.
 - Live data: `VITE_USE_MOCK_DATA=false`. Swagger: `/docs`.
 - Upload ingest: follow `.cursor/rules/upload-ingest-frontend.mdc`. `POST /api/recordings` + poll `GET /api/recordings/:id/processing`.
 - Clip export: `POST /api/recordings/:id/hooks/:hookId/export`, then poll `GET /api/clips/:id`. Download `videoUrl` (HTTPS Filestack only). Do not call generate summary/hooks, add-to-global-kb, or generic `POST /api/clips` yet (still 501).

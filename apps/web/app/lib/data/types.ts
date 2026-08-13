@@ -30,6 +30,7 @@ export type ProjectSummary = {
   jobStatus: JobActivityStatus;
   runningJobCount: number;
   failedJobCount: number;
+  thumbnailUrl: string | null;
 };
 
 export type ClipFilterId = 'all' | 'queued' | 'rendering' | 'ready' | 'failed';

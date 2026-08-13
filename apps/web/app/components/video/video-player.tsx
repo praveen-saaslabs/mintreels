@@ -13,6 +13,7 @@ import { useAmbientGlow } from './use-ambient-glow';
 import { useHotkey } from '@/hooks/use-hotkey';
 import { beginDragSelectSuppression } from '@/lib/drag-select-guard';
 import { DEMO_MEDIA } from '@/lib/demo-media';
+import { isHttpsFilestackPlaybackUrl } from '@/lib/filestack-playback';
 import { finiteDuration, finiteSeconds, formatTimestamp, maxClockDuration } from '@/lib/time';
 import { cn } from '@/lib/utils';
 import { useEditorStore } from '@/stores/editor-store';
@@ -20,6 +21,7 @@ import { useEditorStore } from '@/stores/editor-store';
 type VideoPlayerProps = {
   src?: string;
   pending?: boolean;
+  poster?: string;
 };
 
 type AspectPreset = '9:16' | '1:1' | '16:9';
@@ -84,8 +86,10 @@ function useElementClockDuration(
   return { clockDuration: maxClockDuration(storeDuration, elementDuration), capture };
 }
 
-export function VideoPlayer({ src, pending = false }: Readonly<VideoPlayerProps>) {
+export function VideoPlayer({ src, pending = false, poster }: Readonly<VideoPlayerProps>) {
   const storeSrc = useEditorStore((state) => state.video.src);
+  const resolvedPoster =
+    typeof poster === 'string' && isHttpsFilestackPlaybackUrl(poster) ? poster : undefined;
   // Explicit `src` (including '') opts out of demo fallback; omitted prop keeps demo default.
   const resolvedSrc = src ?? (storeSrc || DEMO_MEDIA.videoUrl);
   const currentTime = useEditorStore((state) => state.video.currentTime);
@@ -324,6 +328,7 @@ export function VideoPlayer({ src, pending = false }: Readonly<VideoPlayerProps>
                   draggable={false}
                   preload="auto"
                   playsInline
+                  poster={resolvedPoster}
                   src={resolvedSrc || undefined}
                   onPointerDown={handleSurfacePointerDown}
                   onClick={handleSurfaceClick}

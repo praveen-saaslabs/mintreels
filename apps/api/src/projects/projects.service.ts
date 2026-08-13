@@ -11,6 +11,7 @@ import {
 import { JobActivityStatus, JobStatus, SidebarAccent } from '@mintreels/schema';
 import type { KnowledgeBaseScope } from '@mintreels/schema';
 import { HttpError } from '../common/http-error';
+import { publicPlaybackUrl } from '../common/playback-url';
 import { RecordingsService } from '../recordings/recordings.service';
 
 type ProjectSummaryRow = {
@@ -23,6 +24,7 @@ type ProjectSummaryRow = {
   kbScope: KnowledgeBaseScope | null;
   runningJobCount: number;
   failedJobCount: number;
+  thumbnailStorageKey: string | null;
 };
 
 function increment(map: Map<number, number>, key: number): void {
@@ -61,7 +63,30 @@ function toProjectSummary(row: ProjectSummaryRow) {
     jobStatus: jobActivity(row.runningJobCount, row.failedJobCount),
     runningJobCount: row.runningJobCount,
     failedJobCount: row.failedJobCount,
+    thumbnailUrl: publicPlaybackUrl(row.thumbnailStorageKey),
   };
+}
+
+function latestThumbnailKeyByProject(
+  recordings: Array<{
+    projectId: number;
+    createdAt: Date;
+    thumbnailStorageKey: string | null;
+  }>,
+): Map<number, string> {
+  const best = new Map<number, { createdAt: number; key: string }>();
+  for (const recording of recordings) {
+    const key = recording.thumbnailStorageKey?.trim() ?? '';
+    if (key === '') {
+      continue;
+    }
+    const createdAt = recording.createdAt.getTime();
+    const current = best.get(recording.projectId);
+    if (!current || createdAt > current.createdAt) {
+      best.set(recording.projectId, { createdAt, key });
+    }
+  }
+  return new Map([...best].map(([projectId, row]) => [projectId, row.key]));
 }
 
 @Injectable()
@@ -135,6 +160,7 @@ export class ProjectsService {
     for (const recording of recordings) {
       increment(recordingCountByProject, recording.projectId);
     }
+    const thumbnailKeyByProject = latestThumbnailKeyByProject(recordings);
 
     const clipCountByProject = new Map<number, number>();
     for (const clip of clips) {
@@ -184,6 +210,7 @@ export class ProjectsService {
       kbScope: kbScopeByProject.get(project.id) ?? null,
       runningJobCount: runningJobCountByProject.get(project.id) ?? 0,
       failedJobCount: failedJobCountByProject.get(project.id) ?? 0,
+      thumbnailStorageKey: thumbnailKeyByProject.get(project.id) ?? null,
     }));
   }
 }

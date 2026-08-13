@@ -96,4 +96,4 @@ Video Upload → Object Storage → Recording
   → VTT + Summary → Recording KB → Hooks → Ready
 ```
 
-Clip pipeline (MVP): selected hook → `POST .../hooks/:hookId/export` → `render-clip` → FFmpeg trim + encode → Filestack video + thumbnail → `clips.storageKey` / `clips.thumbnail_storage_key` (public `videoUrl` / `thumbnailUrl`). Crop, subtitles, and signed download are not implemented yet.
+Ingest also generates a recording poster (`recordings.thumbnail_storage_key` → public `thumbnailUrl` on recording/processing/project GETs). Clip pipeline (MVP): selected hook → `POST .../hooks/:hookId/export` → `render-clip` → FFmpeg trim + encode → Filestack video + thumbnail → `clips.storageKey` / `clips.thumbnail_storage_key` (public `videoUrl` / `thumbnailUrl`). Crop, subtitles, and signed download are not implemented yet.

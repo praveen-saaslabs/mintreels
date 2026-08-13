@@ -8,7 +8,7 @@ alwaysApply: false
 
 Jobs live in `apps/worker/src/jobs`:
 
-- `ingest-video` (no-op success if the recording row is missing or soft-deleted)
+- `ingest-video` (no-op success if the recording row is missing or soft-deleted; best-effort Filestack/FFmpeg recording thumbnail → `thumbnail_storage_key`, never fails ingest)
 - `transcribe`
 - `summarize`
 - `generate-hooks`

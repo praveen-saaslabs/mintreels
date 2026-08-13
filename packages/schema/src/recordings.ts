@@ -22,6 +22,7 @@ export const recordingRowSchema = z
     originalFilename: z.string().min(1),
     storageKey: z.string().min(1),
     audioStorageKey: z.string().min(1).nullable(),
+    thumbnailStorageKey: z.string().nullable(),
     durationMs: z.number().int().nonnegative().nullable(),
     width: z.number().int().positive().nullable(),
     height: z.number().int().positive().nullable(),
@@ -33,6 +34,7 @@ export const recordingRowSchema = z
 export const recordingInsertSchema = recordingRowSchema.partial({
   id: true,
   audioStorageKey: true,
+  thumbnailStorageKey: true,
   durationMs: true,
   width: true,
   height: true,
