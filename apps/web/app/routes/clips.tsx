@@ -1,9 +1,13 @@
+import { ClipFilters } from '@/components/clips/clip-filters';
+import { ClipsGrid } from '@/components/clips/clips-grid';
+import { ClipsHeader } from '@/components/clips/clips-header';
+
 export function ClipsPage() {
   return (
-    <section>
-      <h1 className="text-2xl font-semibold">Clips</h1>
-      {/* TODO: clip list, render status, subtitle-burned exports */}
-      <p className="mt-2 text-sm text-neutral-600">Clips UI is not implemented yet.</p>
-    </section>
+    <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto px-8 pt-7 pb-10">
+      <ClipsHeader />
+      <ClipFilters />
+      <ClipsGrid />
+    </div>
   );
 }
