@@ -3,6 +3,7 @@ import { APP_FILTER } from '@nestjs/core';
 import { DbModule } from '@mintreels/db';
 import { AllExceptionsFilter } from './common/all-exceptions.filter';
 import { HealthController } from './health.controller';
+import { migrations } from './migrations';
 import { ProvidersModule } from './providers/providers.module';
 import { RecordingsModule } from './recordings/recordings.module';
 import { TranscriptsModule } from './transcripts/transcripts.module';
@@ -14,7 +15,7 @@ import { JobsModule } from './jobs/jobs.module';
 
 @Module({
   imports: [
-    DbModule,
+    DbModule.forRoot({ migrations, migrationsRun: true }),
     ProvidersModule,
     RecordingsModule,
     TranscriptsModule,

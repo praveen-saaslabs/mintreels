@@ -9,7 +9,11 @@
     "start": "node --import @swc-node/register/esm-register src/main.ts",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
-    "test": "node --input-type=module -e \"console.log('no tests yet')\""
+    "test": "node --input-type=module -e \"console.log('no tests yet')\"",
+    "migration:run": "tsx src/migrate.ts run",
+    "migration:revert": "tsx src/migrate.ts revert",
+    "migration:show": "tsx src/migrate.ts show",
+    "migration:create": "tsx src/migrate.ts create"
   },
   "dependencies": {
     "@mintreels/ai": "workspace:*",
@@ -22,10 +26,12 @@
     "@nestjs/common": "^11.0.0",
     "@nestjs/core": "^11.0.0",
     "@nestjs/platform-express": "^11.0.0",
+    "@nestjs/swagger": "^11.4.6",
     "@nestjs/typeorm": "^11.0.0",
     "mysql2": "^3.23.3",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
+    "swagger-ui-express": "^5.0.1",
     "typeorm": "^0.3.20",
     "zod": "^4.0.0"
   },

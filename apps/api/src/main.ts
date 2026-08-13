@@ -1,5 +1,6 @@
 import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 
 function parsePort(value: string | undefined): number {
@@ -15,9 +16,23 @@ function parsePort(value: string | undefined): number {
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+
+  const config = new DocumentBuilder()
+    .setTitle('MintReels API')
+    .setDescription(
+      'Transcript-first video intelligence API. Recordings are the root resource; ' +
+        'transcripts, summaries, hooks, and clips hang off them.',
+    )
+    .setVersion('1.0')
+    .addBearerAuth()
+    .build();
+  const document = SwaggerModule.createDocument(app, config);
+  SwaggerModule.setup('docs', app, document);
+
   const port = parsePort(process.env.PORT);
   await app.listen(port);
   console.log(`MintReels API listening on port ${String(port)}`);
+  console.log(`Swagger UI available at http://localhost:${String(port)}/docs`);
 }
 
 void bootstrap();
