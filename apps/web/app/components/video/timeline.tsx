@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import WaveSurfer from 'wavesurfer.js';
 import RegionsPlugin, { type Region } from 'wavesurfer.js/plugins/regions';
 import { SpeakerBadge } from '@/components/transcript/speaker-badge';
-import { HooksStrip } from '@/components/video/hooks-strip';
 import { DEMO_MEDIA } from '@/lib/demo-media';
 import { suppressSelectionOnPointerDown } from '@/lib/drag-select-guard';
 import { speakerCssColor, speakerSwatchClass } from '@/lib/speaker-style';
@@ -22,11 +21,6 @@ const TARGET_MS_PER_BIN = 120;
 const TARGET_PEAKS_MIN = 600;
 const TARGET_PEAKS_MAX = 2400;
 
-/** Accent fill matching MintReels Workspace.html hook markers. */
-const HOOK_REGION_FILL = 'oklch(0.62 0.13 165 / 0.10)';
-const HOOK_REGION_FILL_SELECTED = 'oklch(0.62 0.13 165 / 0.22)';
-const HOOK_REGION_BORDER = 'oklch(0.62 0.13 165)';
-
 /**
  * WaveSurfer progress (played) bars — the dual-tone “2nd track” over the unplayed wave.
  * Not a speaker lane; mapped to speaker_2 (green slot) so it stays on the shared palette
@@ -34,7 +28,12 @@ const HOOK_REGION_BORDER = 'oklch(0.62 0.13 165)';
  */
 const WAVEFORM_PROGRESS_SPEAKER = 'speaker_2';
 
-/** Fixed wave host height — must stay shrink-0 so cards never crush the canvas. */
+/** Accent fill matching MintReels Workspace.html hook markers. */
+const HOOK_REGION_FILL = 'oklch(0.62 0.13 165 / 0.10)';
+const HOOK_REGION_FILL_SELECTED = 'oklch(0.62 0.13 165 / 0.22)';
+const HOOK_REGION_BORDER = 'oklch(0.62 0.13 165)';
+
+/** Fixed wave host height — shrink-0 so layout never crushes the canvas. */
 const WAVEFORM_HEIGHT = 72;
 
 function waitForContainerWidth(el: HTMLElement, signal: AbortSignal): Promise<number> {
@@ -207,8 +206,10 @@ function styleHookRegion(region: Region, selected: boolean) {
   el.style.overflow = 'visible';
 }
 
+const REGION_LAYOUT_EPS = 0.02;
+
 function paintHookRegions(
-  regions: RegionsPlugin,
+  plugin: RegionsPlugin,
   hooks: readonly EditorHook[],
   duration: number,
   selectedHookId: string | null,
@@ -217,15 +218,42 @@ function paintHookRegions(
     return;
   }
 
-  regions.clearRegions();
+  const validHooks = hooks.filter((hook) => hook.end > hook.start);
+  const existing = plugin.getRegions();
+  const byId = new Map(existing.map((region) => [region.id, region]));
+  const sameLayout =
+    existing.length === validHooks.length &&
+    validHooks.every((hook) => {
+      const region = byId.get(hook.id);
+      if (!region) {
+        return false;
+      }
+      return (
+        Math.abs(region.start - Math.max(0, hook.start)) < REGION_LAYOUT_EPS &&
+        Math.abs(region.end - Math.min(duration, hook.end)) < REGION_LAYOUT_EPS
+      );
+    });
 
-  for (const hook of hooks) {
-    if (hook.end <= hook.start) {
-      continue;
+  if (sameLayout) {
+    for (const hook of validHooks) {
+      const region = byId.get(hook.id);
+      if (!region) {
+        continue;
+      }
+      const selected = hook.id === selectedHookId;
+      region.setOptions({
+        color: selected ? HOOK_REGION_FILL_SELECTED : HOOK_REGION_FILL,
+      });
+      styleHookRegion(region, selected);
     }
+    return;
+  }
 
+  plugin.clearRegions();
+
+  for (const hook of validHooks) {
     const selected = hook.id === selectedHookId;
-    const region = regions.addRegion({
+    const region = plugin.addRegion({
       id: hook.id,
       start: Math.max(0, hook.start),
       end: Math.min(duration, hook.end),
@@ -284,17 +312,23 @@ export function Timeline({ audioUrl = DEMO_MEDIA.audioUrl }: Readonly<TimelinePr
         }
 
         const host = containerRef.current;
+        if (!decoded) {
+          setLoadError(true);
+          return;
+        }
+
         const mediaDuration =
           Number.isFinite(media.duration) && media.duration > 0
             ? media.duration
-            : (decoded?.duration ?? 0);
+            : decoded.duration;
 
         const regions = RegionsPlugin.create();
         regionsRef.current = regions;
 
+        // Peaks-only: VideoPlayer owns the <video>. Sharing `media` made WS write
+        // currentTime and fight transcript/hook seeks (especially while paused).
         wavesurfer = WaveSurfer.create({
           container: host,
-          media,
           height: WAVEFORM_HEIGHT,
           waveColor: '#c4c4c4',
           progressColor: speakerCssColor(WAVEFORM_PROGRESS_SPEAKER),
@@ -309,9 +343,8 @@ export function Timeline({ audioUrl = DEMO_MEDIA.audioUrl }: Readonly<TimelinePr
           interact: true,
           dragToSeek: true,
           plugins: [regions],
-          ...(decoded
-            ? { peaks: decoded.peaks, duration: mediaDuration || decoded.duration }
-            : {}),
+          peaks: decoded.peaks,
+          duration: mediaDuration || decoded.duration,
         });
 
         // Async gap: effect may have cleaned up between width wait and create.
@@ -371,6 +404,35 @@ export function Timeline({ audioUrl = DEMO_MEDIA.audioUrl }: Readonly<TimelinePr
       instance?.destroy();
     };
   }, [audioUrl, mediaElement, seek, selectHookAndSeek]);
+
+  // Read-only playhead: video is the clock; WS cursor follows.
+  useEffect(() => {
+    const media = mediaElement;
+    if (!media || !waveformReady) {
+      return;
+    }
+
+    const syncCursor = () => {
+      const wavesurfer = wavesurferRef.current;
+      if (!wavesurfer) {
+        return;
+      }
+      const mediaTime = media.currentTime;
+      if (Math.abs(wavesurfer.getCurrentTime() - mediaTime) < 0.05) {
+        return;
+      }
+      wavesurfer.setTime(mediaTime);
+    };
+
+    media.addEventListener('timeupdate', syncCursor);
+    media.addEventListener('seeked', syncCursor);
+    syncCursor();
+
+    return () => {
+      media.removeEventListener('timeupdate', syncCursor);
+      media.removeEventListener('seeked', syncCursor);
+    };
+  }, [mediaElement, waveformReady]);
 
   useEffect(() => {
     const regions = regionsRef.current;
@@ -459,11 +521,6 @@ export function Timeline({ audioUrl = DEMO_MEDIA.audioUrl }: Readonly<TimelinePr
             })}
           </div>
         ) : null}
-
-        {/* Cards may scroll; wave + strip stay shrink-0 and visible */}
-        <div className="min-h-0 flex-1 overflow-x-auto overflow-y-hidden">
-          <HooksStrip videoUrl={DEMO_MEDIA.videoUrl} />
-        </div>
       </div>
     </section>
   );

@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import editorHooksSeed from '@/fixtures/editor-hooks.json';
 import editorProjectSeed from '@/fixtures/editor-project.json';
+import { DEMO_MEDIA } from '@/lib/demo-media';
 
 export type EditorWord = {
   word: string;
@@ -98,9 +99,7 @@ function clampTime(time: number, duration: number): number {
 const seededProject = editorProjectSeed as EditorProject;
 const seededHooks = editorHooksSeed as EditorHook[];
 
-export const SEEDED_VIDEO_SRC = encodeURI(
-  '/Lee Harris on Global Unrest Spiritual Awakening and Reclaiming Faith in Turbulent Times - Video.mp4',
-);
+export const SEEDED_VIDEO_SRC = DEMO_MEDIA.videoUrl;
 
 const emptyVideo = (duration = 0, src = SEEDED_VIDEO_SRC): EditorVideoState => ({
   currentTime: 0,
@@ -152,10 +151,21 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
 
   seek: (time) => {
     const { duration } = get().video;
+    const nextTime = clampTime(time, duration);
+    const { selectedHookId, hooks } = get();
+    const selectedHook = selectedHookId
+      ? hooks.find((item) => item.id === selectedHookId)
+      : undefined;
+    const keepSelectedHook =
+      selectedHook !== undefined &&
+      nextTime >= selectedHook.start &&
+      nextTime <= selectedHook.end;
+
     set((state) => ({
+      selectedHookId: keepSelectedHook ? state.selectedHookId : null,
       video: {
         ...state.video,
-        currentTime: clampTime(time, duration),
+        currentTime: nextTime,
         seekEpoch: state.video.seekEpoch + 1,
       },
     }));

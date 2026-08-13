@@ -37,8 +37,8 @@ export function EditorLayout({ area1, area2, area3, area4 }: EditorLayoutProps) 
       </Space.LeftResizable>
       <Space.Fill>
         <Space.Fill>{area2}</Space.Fill>
-        {/* Wave (~72) + strip + hook thumbs need ~300px; cap so video keeps room */}
-        <Space.BottomResizable size="30%" minimumSize={300} maximumSize={380}>
+        {/* Wave (~72) + speaker lane + padding */}
+        <Space.BottomResizable size="18%" minimumSize={140} maximumSize={240}>
           {area3}
         </Space.BottomResizable>
       </Space.Fill>
@@ -60,7 +60,7 @@ export function EditorPane({
 }) {
   return (
     <section className="glass-panel m-1.5 flex h-[calc(100%-0.75rem)] min-h-0 w-[calc(100%-0.75rem)] flex-col overflow-hidden">
-      <header className="shrink-0 border-b border-[var(--glass-border-subtle)] px-3 py-2">
+      <header className="shrink-0 border-b border-[var(--glass-border-subtle)] pt-2 pl-3">
         {header ?? <h2 className="text-sm font-medium text-foreground">{title}</h2>}
       </header>
       <div className="min-h-0 flex-1 overflow-auto p-3">{children}</div>

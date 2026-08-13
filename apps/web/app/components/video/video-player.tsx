@@ -68,6 +68,7 @@ export function VideoPlayer({ src = DEMO_MEDIA.videoUrl }: Readonly<VideoPlayerP
     };
   }, [setMediaElement, src]);
 
+  // Sole seek driver. WaveSurfer is peaks-only and follows via timeupdate/seeked.
   useEffect(() => {
     const video = videoRef.current;
     if (!video || seekEpoch === 0) {

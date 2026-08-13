@@ -1,11 +1,11 @@
-import { useState } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { LogOut, Moon, Settings, Sun } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useWorkspaceUserQuery } from '@/hooks/use-home-queries';
 import { playThemeSwitchSound } from '@/lib/theme-switch-sound';
 import { useAuth } from '@/providers/auth-provider';
 import { useTheme } from '@/providers/theme-provider';
+import { LogOut, Moon, Settings, Sun } from 'lucide-react';
+import { useState } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 
 function initialsFromEmail(email: string) {
   const local = email.split('@')[0] ?? email;
