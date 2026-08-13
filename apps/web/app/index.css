@@ -335,13 +335,43 @@
   backdrop-filter: blur(var(--glass-blur-sm)) saturate(var(--glass-saturate));
 }
 
-/* WaveSurfer playhead — mint accent, soft glow, rounded capsule */
-.mint-waveform::part(cursor) {
+/* Waveform playhead is an overlay (rAF). Hide WaveSurfer's cursor. */
+.mint-waveform-shell {
+  --mr-playhead: 0;
+}
+
+.mint-waveform-playhead {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 10;
+  height: 100%;
+  width: 3px;
+  pointer-events: none;
   border-radius: 999px;
-  background-color: oklch(0.55 0.14 165) !important;
+  background-color: oklch(0.55 0.14 165);
   box-shadow:
     0 0 0 1px oklch(0.55 0.14 165 / 0.35),
     0 0 10px oklch(0.62 0.13 165 / 0.55);
+  will-change: transform;
+  transform: translate3d(0, 0, 0);
+}
+
+.mint-waveform-shell > .mint-waveform > *::part(cursor) {
+  display: none;
+}
+
+.mint-waveform-shell > .mint-waveform > *::part(progress) {
+  width: calc(var(--mr-playhead) * 100%) !important;
+}
+
+.mint-waveform-shell > .mint-waveform > *::part(canvases) {
+  clip-path: polygon(
+    calc(var(--mr-playhead) * 100%) 0,
+    100% 0,
+    100% 100%,
+    calc(var(--mr-playhead) * 100%) 100%
+  ) !important;
 }
 
 /* Editor drag surfaces — avoid global text selection while scrubbing / resizing */

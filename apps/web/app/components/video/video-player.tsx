@@ -7,17 +7,19 @@ import {
   type MouseEvent as ReactMouseEvent,
   type PointerEvent as ReactPointerEvent,
 } from 'react';
+import { VideoSurfaceEmptyState } from '@/components/editor/editor-empty-states';
 import { Button } from '@/components/ui/button';
 import { useAmbientGlow } from './use-ambient-glow';
 import { useHotkey } from '@/hooks/use-hotkey';
 import { beginDragSelectSuppression } from '@/lib/drag-select-guard';
 import { DEMO_MEDIA } from '@/lib/demo-media';
-import { formatTimestamp } from '@/lib/time';
+import { finiteDuration, finiteSeconds, formatTimestamp, maxClockDuration } from '@/lib/time';
 import { cn } from '@/lib/utils';
 import { useEditorStore } from '@/stores/editor-store';
 
 type VideoPlayerProps = {
   src?: string;
+  pending?: boolean;
 };
 
 type AspectPreset = '9:16' | '1:1' | '16:9';
@@ -30,19 +32,62 @@ const ASPECT_RATIO: Record<AspectPreset, { w: number; h: number }> = {
   '16:9': { w: 16, h: 9 },
 };
 
-function finiteSeconds(value: number): number | undefined {
-  if (!Number.isFinite(value) || value < 0) {
-    return undefined;
+function captureMediaDuration(
+  video: HTMLVideoElement,
+  setElementDuration: (updater: (prev: number) => number) => void,
+  setDuration: (duration: number) => void,
+): void {
+  const next = finiteDuration(video.duration);
+  if (next === undefined) {
+    return;
   }
 
-  return value;
+  setElementDuration((prev) => Math.max(prev, next));
+  setDuration(next);
 }
 
-export function VideoPlayer({ src }: Readonly<VideoPlayerProps>) {
+function useElementClockDuration(
+  videoRef: { current: HTMLVideoElement | null },
+  srcKey: string,
+  storeDuration: number,
+  setDuration: (duration: number) => void,
+): { clockDuration: number; capture: (video: HTMLVideoElement) => void } {
+  const [elementDuration, setElementDuration] = useState(0);
+
+  const capture = (video: HTMLVideoElement) => {
+    captureMediaDuration(video, setElementDuration, setDuration);
+  };
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) {
+      return;
+    }
+
+    setElementDuration(0);
+    const onClock = () => {
+      captureMediaDuration(video, setElementDuration, setDuration);
+    };
+
+    onClock();
+    video.addEventListener('loadedmetadata', onClock);
+    video.addEventListener('durationchange', onClock);
+    video.addEventListener('timeupdate', onClock);
+
+    return () => {
+      video.removeEventListener('loadedmetadata', onClock);
+      video.removeEventListener('durationchange', onClock);
+      video.removeEventListener('timeupdate', onClock);
+    };
+  }, [srcKey, setDuration, videoRef]);
+
+  return { clockDuration: maxClockDuration(storeDuration, elementDuration), capture };
+}
+
+export function VideoPlayer({ src, pending = false }: Readonly<VideoPlayerProps>) {
   const storeSrc = useEditorStore((state) => state.video.src);
   // Explicit `src` (including '') opts out of demo fallback; omitted prop keeps demo default.
-  const resolvedSrc =
-    src !== undefined ? src || storeSrc || '' : storeSrc || DEMO_MEDIA.videoUrl;
+  const resolvedSrc = src ?? (storeSrc || DEMO_MEDIA.videoUrl);
   const currentTime = useEditorStore((state) => state.video.currentTime);
   const duration = useEditorStore((state) => state.video.duration);
   const playing = useEditorStore((state) => state.video.playing);
@@ -61,8 +106,17 @@ export function VideoPlayer({ src }: Readonly<VideoPlayerProps>) {
   const surfacePointerDownRef = useRef<{ x: number; y: number } | null>(null);
 
   const [aspect, setAspect] = useState<AspectPreset>('16:9');
+  const { clockDuration, capture: captureDuration } = useElementClockDuration(
+    videoRef,
+    resolvedSrc,
+    duration,
+    setDuration,
+  );
   const aspectParts = ASPECT_RATIO[aspect];
-  const progressRatio = duration > 0 ? Math.min(1, Math.max(0, currentTime / duration)) : 0;
+  const progressRatio =
+    clockDuration > 0 ? Math.min(1, Math.max(0, currentTime / clockDuration)) : 0;
+  const showVideoEmpty = pending && !resolvedSrc;
+  const showVideoUnavailable = !pending && !resolvedSrc;
 
   useEffect(() => {
     const video = videoRef.current;
@@ -72,7 +126,7 @@ export function VideoPlayer({ src }: Readonly<VideoPlayerProps>) {
     };
   }, [setMediaElement, resolvedSrc]);
 
-  // Sole seek driver. WaveSurfer is peaks-only and follows via timeupdate/seeked.
+  // Sole seek driver. Timeline overlay playhead follows this element's currentTime on rAF.
   useEffect(() => {
     const video = videoRef.current;
     if (!video || seekEpoch === 0) {
@@ -132,12 +186,14 @@ export function VideoPlayer({ src }: Readonly<VideoPlayerProps>) {
   // ignoreWhenEditable + preventDefault are useHotkey defaults for non-mod keys.
   useHotkey({
     key: ' ',
+    enabled: !showVideoEmpty && !showVideoUnavailable,
     onKeyDown: () => {
       void togglePlayback();
     },
   });
   useHotkey({
     key: 'k',
+    enabled: !showVideoEmpty && !showVideoUnavailable,
     onKeyDown: () => {
       void togglePlayback();
     },
@@ -171,17 +227,17 @@ export function VideoPlayer({ src }: Readonly<VideoPlayerProps>) {
   }
 
   function seekFromClientX(clientX: number, target: HTMLElement) {
-    if (duration <= 0) {
+    if (clockDuration <= 0) {
       return;
     }
 
     const rect = target.getBoundingClientRect();
     const ratio = Math.min(1, Math.max(0, (clientX - rect.left) / rect.width));
-    seek(ratio * duration);
+    seek(ratio * clockDuration);
   }
 
   function handleProgressPointerDown(event: ReactPointerEvent<HTMLDivElement>) {
-    if (duration <= 0 || event.button !== 0) {
+    if (clockDuration <= 0 || event.button !== 0) {
       return;
     }
 
@@ -207,7 +263,7 @@ export function VideoPlayer({ src }: Readonly<VideoPlayerProps>) {
   }
 
   function handleProgressKeyDown(event: KeyboardEvent<HTMLDivElement>) {
-    if (duration <= 0) {
+    if (clockDuration <= 0) {
       return;
     }
 
@@ -223,7 +279,7 @@ export function VideoPlayer({ src }: Readonly<VideoPlayerProps>) {
       seek(0);
     } else if (event.key === 'End') {
       event.preventDefault();
-      seek(duration);
+      seek(clockDuration);
     }
   }
 
@@ -272,24 +328,20 @@ export function VideoPlayer({ src }: Readonly<VideoPlayerProps>) {
                   onPointerDown={handleSurfacePointerDown}
                   onClick={handleSurfaceClick}
                   onTimeUpdate={(event) => {
-                    const time = finiteSeconds(event.currentTarget.currentTime);
+                    const media = event.currentTarget;
+                    const time = finiteSeconds(media.currentTime);
                     if (time !== undefined) {
                       setCurrentTime(time);
                     }
+                    captureDuration(media);
                   }}
                   onPlay={() => setPlaying(true)}
                   onPause={() => setPlaying(false)}
                   onLoadedMetadata={(event) => {
-                    const nextDuration = finiteSeconds(event.currentTarget.duration);
-                    if (nextDuration !== undefined) {
-                      setDuration(nextDuration);
-                    }
+                    captureDuration(event.currentTarget);
                   }}
                   onDurationChange={(event) => {
-                    const nextDuration = finiteSeconds(event.currentTarget.duration);
-                    if (nextDuration !== undefined) {
-                      setDuration(nextDuration);
-                    }
+                    captureDuration(event.currentTarget);
                   }}
                   onError={() => {
                     setPlaying(false);
@@ -297,18 +349,21 @@ export function VideoPlayer({ src }: Readonly<VideoPlayerProps>) {
                 >
                   <track kind="captions" srcLang="en" label="English" />
                 </video>
+                {showVideoEmpty ? <VideoSurfaceEmptyState className="z-3" /> : null}
+                {showVideoUnavailable ? (
+                  <p className="pointer-events-none absolute inset-0 z-3 flex items-center justify-center text-sm text-muted-foreground">
+                    Video unavailable
+                  </p>
+                ) : null}
 
-                <div className="pointer-events-none absolute left-3.5 top-3.5 z-10 flex gap-1.5">
-                  <span className="glass-chip inline-flex h-[22px] items-center rounded-full px-2.5 font-mono text-[11px] text-foreground">
-                    {formatTimestamp(currentTime)}
-                    {duration > 0 ? ` / ${formatTimestamp(duration)}` : ''}
-                  </span>
-                </div>
-                <div className="pointer-events-none absolute right-3.5 top-3.5 z-10 flex gap-1.5">
-                  <span className="glass-chip inline-flex h-[22px] items-center rounded-full px-2.5 text-[11px] text-[var(--mr-acc)]">
-                    auto-reframe on
-                  </span>
-                </div>
+                {!showVideoEmpty && !showVideoUnavailable ? (
+                  <div className="pointer-events-none absolute left-3.5 top-3.5 z-10">
+                    <span className="glass-chip inline-flex h-[22px] items-center rounded-full px-2.5 font-mono text-[11px] text-foreground">
+                      {formatTimestamp(currentTime)}
+                      {clockDuration > 0 ? ` / ${formatTimestamp(clockDuration)}` : ''}
+                    </span>
+                  </div>
+                ) : null}
               </div>
             </div>
           </div>
@@ -321,6 +376,7 @@ export function VideoPlayer({ src }: Readonly<VideoPlayerProps>) {
               variant="default"
               aria-label={playing ? 'Pause' : 'Play'}
               className="size-[34px] shrink-0 rounded-[10px]"
+              disabled={showVideoEmpty || showVideoUnavailable}
               onClick={() => {
                 void togglePlayback();
               }}
@@ -337,17 +393,17 @@ export function VideoPlayer({ src }: Readonly<VideoPlayerProps>) {
             </span>
 
             <div
-              role={duration > 0 ? 'slider' : undefined}
+              role={clockDuration > 0 ? 'slider' : undefined}
               aria-label="Playback progress"
               aria-valuemin={0}
-              aria-valuemax={duration}
-              aria-valuenow={Math.min(currentTime, duration)}
-              tabIndex={duration > 0 ? 0 : undefined}
+              aria-valuemax={clockDuration}
+              aria-valuenow={Math.min(currentTime, clockDuration)}
+              tabIndex={clockDuration > 0 ? 0 : undefined}
               onPointerDown={handleProgressPointerDown}
               onKeyDown={handleProgressKeyDown}
               className={cn(
-                'relative h-1.5 min-w-[80px] flex-1 touch-none rounded-full bg-foreground/10',
-                duration > 0 && 'cursor-pointer',
+                'relative h-1.5 min-w-[80px] flex-1 touch-none overflow-hidden rounded-full bg-foreground/10',
+                clockDuration > 0 && 'cursor-pointer',
               )}
             >
               <div
@@ -357,7 +413,7 @@ export function VideoPlayer({ src }: Readonly<VideoPlayerProps>) {
             </div>
 
             <span className="shrink-0 font-mono text-xs text-foreground/80">
-              {duration > 0 ? formatTimestamp(duration) : '--:--'}
+              {clockDuration > 0 ? formatTimestamp(clockDuration) : '--:--'}
             </span>
 
             <div className="ml-0.5 flex shrink-0 gap-1">
@@ -376,9 +432,6 @@ export function VideoPlayer({ src }: Readonly<VideoPlayerProps>) {
                   {preset}
                 </button>
               ))}
-              <span className="glass-chip inline-flex h-[26px] items-center rounded-lg px-2.5 text-[11px] text-foreground/70">
-                Subtitles: Bold Mint
-              </span>
             </div>
           </div>
         </div>

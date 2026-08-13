@@ -41,7 +41,7 @@ Canonical enum strings live in `@mintreels/schema` (`packages/schema/src/enums.t
 | `401` | Missing / invalid `auth_token` cookie |
 | `400` | Non-integer `:id`, or hook export `INVALID_HOOK_RANGE` |
 | `404` | Not found or not owned |
-| `409` | Hook export when recording has no video (`VIDEO_NOT_AVAILABLE`) |
+| `409` | Hook export `VIDEO_NOT_AVAILABLE`; ingest retry `INGEST_IN_PROGRESS` or `NOT_RETRYABLE` |
 | `501` | POST/enqueue not built yet (generate summary/hooks, add-to-global-kb, generic `POST /clips`) |
 | `500` | `{ "error": "Internal server error" }` |
 
@@ -59,6 +59,7 @@ All paths are under `/api`. All GETs below are implemented and cookie-scoped to 
 | `getRecording(id)` | GET | `/recordings/:id` |
 | `getRecordingProcessing(id)` | GET | `/recordings/:id/processing` |
 | `createRecording(body)` | POST | `/recordings` |
+| `retryRecording(id)` | POST | `/recordings/:id/retry` |
 | `getTranscript(id)` | GET | `/recordings/:id/transcript` |
 | — | GET | `/recordings/:id/transcript.vtt` (`text/vtt`) |
 | `getSummary(id)` | GET | `/recordings/:id/summary` |
@@ -112,6 +113,17 @@ Client uploads video/audio to Filestack, then creates a project + recording:
 ```
 
 `201`: `{ "id": 10, "projectId": 4, "jobId": 1 }`. `url` must be HTTPS on `cdn.filestackcontent.com` (or `/api/file/{handle}`). No `storageKey` in any GET response.
+
+### Retry ingest — `POST /api/recordings/:id/retry`
+
+Re-enqueues the latest `VIDEO_INGEST` job after a **failed** or **partial** run. Completed steps are kept; failed/stuck steps are reset and run again. Cookie session required.
+
+`202`: `{ "id": 10, "projectId": 4, "jobId": 1 }`. Then poll `GET /api/recordings/:id/processing`.
+
+| Status | `error` |
+| --- | --- |
+| `404` | Recording not found / not owned |
+| `409` | `INGEST_IN_PROGRESS` or `NOT_RETRYABLE` |
 
 ### Processing poll — `GET /api/recordings/:id/processing`
 

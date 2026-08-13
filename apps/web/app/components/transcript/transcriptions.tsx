@@ -1,5 +1,6 @@
-import { useMemo, useRef, useState } from 'react';
+import { useMemo, useRef, useState, type Ref } from 'react';
 import { SearchIcon } from 'lucide-react';
+import { TranscriptPanelEmptyState } from '@/components/editor/editor-empty-states';
 import { SpeakerBadge } from '@/components/transcript/speaker-badge';
 import { TranscriptSegmentItem } from '@/components/transcript/transcript-segment-item';
 import { useTranscriptFollowScroll } from '@/components/transcript/use-transcript-follow-scroll';
@@ -18,7 +19,7 @@ import {
   resolveSpeakerFilter,
   uniqueSpeakers,
 } from '@/lib/transcript';
-import { useEditorStore, type EditorWord } from '@/stores/editor-store';
+import { useEditorStore, type EditorSegment, type EditorWord } from '@/stores/editor-store';
 
 function activeWordKey(word: EditorWord | undefined, segmentId: number | undefined): string | null {
   if (word) {
@@ -30,7 +31,68 @@ function activeWordKey(word: EditorWord | undefined, segmentId: number | undefin
   return null;
 }
 
-export function Transcriptions() {
+function TranscriptListContent({
+  pending,
+  recordingId,
+  segments,
+  visibleSegments,
+  visibleActiveSegmentId,
+  activeSegmentWords,
+  activeWord,
+  seek,
+  activeWordRef,
+  activeItemRef,
+}: Readonly<{
+  pending: boolean;
+  recordingId: number | undefined;
+  segments: readonly EditorSegment[];
+  visibleSegments: readonly EditorSegment[];
+  visibleActiveSegmentId: number | undefined;
+  activeSegmentWords: readonly EditorWord[];
+  activeWord: EditorWord | undefined;
+  seek: (time: number) => void;
+  activeWordRef: Ref<HTMLSpanElement>;
+  activeItemRef: Ref<HTMLLIElement>;
+}>) {
+  if (segments.length === 0) {
+    if (pending) {
+      return <TranscriptPanelEmptyState />;
+    }
+    return (
+      <p className="text-sm text-muted-foreground">
+        No transcript yet{recordingId ? ` for recording ${String(recordingId)}` : ''}.
+      </p>
+    );
+  }
+
+  if (visibleSegments.length === 0) {
+    return <p className="text-sm text-muted-foreground">No matching transcript lines.</p>;
+  }
+
+  return (
+    <ol className="space-y-2">
+      {visibleSegments.map((segment) => {
+        const isActive = segment.id === visibleActiveSegmentId;
+
+        return (
+          <TranscriptSegmentItem
+            key={segment.id}
+            segment={segment}
+            isActive={isActive}
+            words={isActive ? activeSegmentWords : undefined}
+            activeWordStart={isActive ? activeWord?.start : undefined}
+            activeWordEnd={isActive ? activeWord?.end : undefined}
+            seek={seek}
+            activeWordRef={activeWordRef}
+            itemRef={activeItemRef}
+          />
+        );
+      })}
+    </ol>
+  );
+}
+
+export function Transcriptions({ pending = false }: Readonly<{ pending?: boolean }>) {
   const recordingId = useRecordingId();
   const segments = useEditorStore((state) => state.project?.result?.segments ?? EMPTY_SEGMENTS);
   const words = useEditorStore((state) => state.project?.result?.words ?? EMPTY_WORDS);
@@ -103,7 +165,7 @@ export function Transcriptions() {
     <section className="glass-panel m-1.5 flex h-[calc(100%-0.75rem)] min-h-0 w-[calc(100%-0.75rem)] flex-col overflow-hidden">
       <header className="shrink-0 space-y-2 select-none border-b border-[var(--glass-border-subtle)] px-3 py-2.5">
         <h2 className="text-sm font-medium text-foreground">Transcriptions</h2>
-        {segments.length > 0 ? (
+        {hasTranscript ? (
           <>
             <div className="flex flex-wrap gap-1.5" role="group" aria-label="Filter by speaker">
               <Badge
@@ -167,33 +229,18 @@ export function Transcriptions() {
         onWheel={pauseFollow}
         onTouchMove={pauseFollow}
       >
-        {segments.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            No transcript yet{recordingId ? ` for recording ${String(recordingId)}` : ''}.
-          </p>
-        ) : visibleSegments.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No matching transcript lines.</p>
-        ) : (
-          <ol className="space-y-2">
-            {visibleSegments.map((segment) => {
-              const isActive = segment.id === visibleActiveSegment?.id;
-
-              return (
-                <TranscriptSegmentItem
-                  key={segment.id}
-                  segment={segment}
-                  isActive={isActive}
-                  words={isActive ? activeSegmentWords : undefined}
-                  activeWordStart={isActive ? activeWord?.start : undefined}
-                  activeWordEnd={isActive ? activeWord?.end : undefined}
-                  seek={seek}
-                  activeWordRef={activeWordRef}
-                  itemRef={activeItemRef}
-                />
-              );
-            })}
-          </ol>
-        )}
+        <TranscriptListContent
+          pending={pending}
+          recordingId={recordingId}
+          segments={segments}
+          visibleSegments={visibleSegments}
+          visibleActiveSegmentId={visibleActiveSegment?.id}
+          activeSegmentWords={activeSegmentWords}
+          activeWord={activeWord}
+          seek={seek}
+          activeWordRef={activeWordRef}
+          activeItemRef={activeItemRef}
+        />
       </div>
     </section>
   );

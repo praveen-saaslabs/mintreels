@@ -3,13 +3,17 @@ import {
   Controller,
   Delete,
   Get,
+  HttpCode,
+  HttpStatus,
   Param,
   ParseIntPipe,
   Post,
   UseGuards,
 } from '@nestjs/common';
 import {
+  ApiAcceptedResponse,
   ApiBadRequestResponse,
+  ApiConflictResponse,
   ApiCookieAuth,
   ApiCreatedResponse,
   ApiNoContentResponse,
@@ -112,6 +116,20 @@ export class RecordingsController {
   @Get(':id/processing')
   getProcessing(@CurrentUser() user: RequestUser, @Param('id', ParseIntPipe) id: number) {
     return this.recordingsService.getProcessing(id, user.id);
+  }
+
+  @ApiOperation({ summary: 'Retry a failed or partial ingest job' })
+  @ApiParam({ name: 'id', type: Number })
+  @ApiAcceptedResponse({
+    description: 'Ingest job re-enqueued; completed steps are kept',
+    schema: { example: { id: 10, projectId: 4, jobId: 1 } },
+  })
+  @ApiNotFoundResponse({ description: 'Recording not found' })
+  @ApiConflictResponse({ description: 'INGEST_IN_PROGRESS or NOT_RETRYABLE' })
+  @HttpCode(HttpStatus.ACCEPTED)
+  @Post(':id/retry')
+  retry(@CurrentUser() user: RequestUser, @Param('id', ParseIntPipe) id: number) {
+    return this.recordingsService.retry(id, user.id);
   }
 
   @ApiOperation({ summary: 'Get a single recording by ID' })

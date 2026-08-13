@@ -1005,6 +1005,7 @@ POST   /api/recordings
 GET    /api/recordings
 GET    /api/recordings/:id
 GET    /api/recordings/:id/processing
+POST   /api/recordings/:id/retry
 DELETE /api/recordings/:id
 ```
 

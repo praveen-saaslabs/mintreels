@@ -113,12 +113,7 @@ export type RecordingSummary = {
 export type ProcessingJobStatus = 'queued' | 'running' | 'success' | 'failed' | 'partial';
 
 export type ProcessingStepStatus =
-  | 'pending'
-  | 'processing'
-  | 'completed'
-  | 'retrying'
-  | 'failed'
-  | 'skipped';
+  'pending' | 'processing' | 'completed' | 'retrying' | 'failed' | 'skipped';
 
 export type TranscriptResponse = {
   id: number;
@@ -209,17 +204,18 @@ export type HookResponse = {
 
 export const api = {
   getRecordings: () => request<RecordingSummary[]>('/recordings'),
-  getRecording: (id: number) =>
-    request<RecordingSummary>(`/recordings/${encodeURIComponent(id)}`),
+  getRecording: (id: number) => request<RecordingSummary>(`/recordings/${encodeURIComponent(id)}`),
   createRecording: (body: CreateRecordingRequest) =>
     request<CreateRecordingResponse>('/recordings', {
       method: 'POST',
       body: JSON.stringify(body),
     }),
   getRecordingProcessing: (id: number) =>
-    request<RecordingProcessingSnapshot>(
-      `/recordings/${encodeURIComponent(id)}/processing`,
-    ),
+    request<RecordingProcessingSnapshot>(`/recordings/${encodeURIComponent(id)}/processing`),
+  retryRecording: (id: number) =>
+    request<CreateRecordingResponse>(`/recordings/${encodeURIComponent(id)}/retry`, {
+      method: 'POST',
+    }),
   getTranscript: (id: number) =>
     request<TranscriptResponse>(`/recordings/${encodeURIComponent(id)}/transcript`),
   getSummary: (id: number) =>

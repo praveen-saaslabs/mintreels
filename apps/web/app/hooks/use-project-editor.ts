@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import {
   ApiError,
@@ -12,6 +12,7 @@ import { isHttpsFilestackPlaybackUrl } from '@/lib/filestack-playback';
 import { queryKeys } from '@/lib/query-keys';
 import {
   useEditorStore,
+  SEEDED_VIDEO_SRC,
   type EditorHook,
   type EditorHookStatus,
   type EditorSegment,
@@ -147,7 +148,10 @@ function emptyEditorResult(): {
 }
 
 function normalizeStepKey(step: string): string {
-  return step.trim().toUpperCase().replace(/[\s-]+/g, '_');
+  return step
+    .trim()
+    .toUpperCase()
+    .replace(/[\s-]+/g, '_');
 }
 
 function stepMatches(step: string, ...needles: string[]): boolean {
@@ -156,6 +160,29 @@ function stepMatches(step: string, ...needles: string[]): boolean {
     const candidate = normalizeStepKey(needle);
     return key === candidate || key.includes(candidate) || candidate.includes(key);
   });
+}
+
+function isStepFailedOrSkipped(
+  steps: Array<{ step: string; status: string }>,
+  ...needles: string[]
+): boolean {
+  return steps.some(
+    (step) =>
+      stepMatches(step.step, ...needles) &&
+      (step.status === 'failed' || step.status === 'skipped'),
+  );
+}
+
+function isStepCompleted(
+  steps: Array<{ step: string; status: string }>,
+  ...needles: string[]
+): boolean {
+  return steps.some((step) => stepMatches(step.step, ...needles) && step.status === 'completed');
+}
+
+/** Empty-state copy only while waiting; data or a terminal miss unmounts it. */
+function panelPending(hasData: boolean, awaiting: boolean, blocked: boolean): boolean {
+  return awaiting && !hasData && !blocked;
 }
 
 function ensureEditorProject(recordingId: number, status: string) {
@@ -295,12 +322,15 @@ async function applyCompletedStepInjections(
 }
 
 export type ProjectEditorPhase =
-  | 'resolving'
-  | 'processing'
-  | 'ready'
-  | 'failed'
-  | 'missing'
-  | 'error';
+  'resolving' | 'processing' | 'ready' | 'failed' | 'missing' | 'error';
+
+export type EditorPanelPending = {
+  video: boolean;
+  transcript: boolean;
+  summary: boolean;
+  hooks: boolean;
+  waveform: boolean;
+};
 
 export function useProjectEditor(projectId: number | undefined) {
   const location = useLocation();
@@ -311,7 +341,12 @@ export function useProjectEditor(projectId: number | undefined) {
   const setProject = useEditorStore((state) => state.setProject);
   const setHooks = useEditorStore((state) => state.setHooks);
   const setSrc = useEditorStore((state) => state.setSrc);
-  const videoSrc = useEditorStore((state) => state.video.src);
+  const storeVideoSrc = useEditorStore((state) => state.video.src);
+  const videoSrc = storeVideoSrc === SEEDED_VIDEO_SRC ? '' : storeVideoSrc;
+  const storeJobId = useEditorStore((state) => state.project?.job_id);
+  const segmentCount = useEditorStore((state) => state.project?.result?.segments.length ?? 0);
+  const hookCount = useEditorStore((state) => state.hooks.length);
+  const storeSummary = useEditorStore((state) => state.project?.result?.text ?? '');
   const prevStepStatusRef = useRef<Map<string, string>>(new Map());
   const hydratedRecordingRef = useRef<number | undefined>(undefined);
 
@@ -425,8 +460,7 @@ export function useProjectEditor(projectId: number | undefined) {
         api.getHooks(id),
       ]);
 
-      const transcript =
-        transcriptResult.status === 'fulfilled' ? transcriptResult.value : null;
+      const transcript = transcriptResult.status === 'fulfilled' ? transcriptResult.value : null;
 
       let summary: { text: string } | null = null;
       if (summaryResult.status === 'fulfilled') {
@@ -556,8 +590,72 @@ export function useProjectEditor(projectId: number | undefined) {
     return null;
   }, [recordingsQuery.error, processingQuery.error, processingQuery.data, phase]);
 
+  const summaryText =
+    editorDataQuery.data?.summary?.text ?? processingQuery.data?.summary?.text ?? '';
+  const isHydratingEditor = phase === 'ready' && editorDataQuery.isLoading;
+  const recordingsSettled = recordingsQuery.isFetched || recordingsQuery.isError;
+  const bundleSettled = phase !== 'ready' || !editorDataQuery.isLoading;
+  const steps = processingQuery.data?.steps ?? [];
   const audioUrl =
-    pickPlaybackUrl(recordingsQuery.data?.audioUrl, processingQuery.data?.audioUrl) ?? '';
+    pickPlaybackUrl(processingQuery.data?.audioUrl, recordingsQuery.data?.audioUrl) ?? '';
+  const panelAwaiting = phase === 'resolving' || phase === 'processing' || isHydratingEditor;
+  const ingestSettled = phase === 'ready' || phase === 'failed';
+  const liveEditor = recordingId !== undefined && storeJobId === String(recordingId);
+  const hasSummary = summaryText.trim().length > 0 || (liveEditor && storeSummary.trim().length > 0);
+
+  const pending: EditorPanelPending = {
+    video: panelPending(
+      Boolean(videoSrc),
+      !recordingsSettled || phase === 'resolving' || (Boolean(locationMediaUrl) && !videoSrc),
+      recordingsSettled && !videoSrc && !locationMediaUrl,
+    ),
+    transcript: panelPending(
+      liveEditor && segmentCount > 0,
+      panelAwaiting,
+      isStepFailedOrSkipped(steps, 'TRANSCRIPTION', 'TRANSCRIPTION_PERSIST') ||
+        (ingestSettled && bundleSettled),
+    ),
+    summary: panelPending(
+      hasSummary,
+      panelAwaiting,
+      isStepFailedOrSkipped(steps, 'SUMMARY') || (ingestSettled && bundleSettled),
+    ),
+    hooks: panelPending(
+      liveEditor && hookCount > 0,
+      panelAwaiting,
+      isStepFailedOrSkipped(steps, 'HOOKS', 'CLIP_RECOMMENDATIONS') ||
+        (ingestSettled && bundleSettled),
+    ),
+    waveform: panelPending(
+      Boolean(audioUrl),
+      panelAwaiting,
+      isStepFailedOrSkipped(steps, 'AUDIO_EXTRACTION', 'AUDIO_UPLOAD', 'AUDIO') ||
+        (isStepCompleted(steps, 'AUDIO_EXTRACTION', 'AUDIO_UPLOAD', 'AUDIO') && !audioUrl) ||
+        (ingestSettled && bundleSettled && !audioUrl),
+    ),
+  };
+
+  const [isRetrying, setIsRetrying] = useState(false);
+
+  const refetch = useCallback(() => {
+    void recordingsQuery.refetch();
+    void processingQuery.refetch();
+  }, [recordingsQuery, processingQuery]);
+
+  const retryIngest = useCallback(async () => {
+    if (recordingId === undefined || isRetrying) {
+      return;
+    }
+    setIsRetrying(true);
+    try {
+      await api.retryRecording(recordingId);
+    } catch {
+      // Still refetch so the chip matches server state if enqueue was rejected.
+    } finally {
+      await Promise.all([recordingsQuery.refetch(), processingQuery.refetch()]);
+      setIsRetrying(false);
+    }
+  }, [recordingId, isRetrying, recordingsQuery, processingQuery]);
 
   return {
     phase,
@@ -566,13 +664,12 @@ export function useProjectEditor(projectId: number | undefined) {
     processing: processingQuery.data,
     videoSrc,
     audioUrl,
-    summaryText:
-      editorDataQuery.data?.summary?.text ?? processingQuery.data?.summary?.text ?? '',
-    isHydratingEditor: phase === 'ready' && editorDataQuery.isLoading,
+    summaryText,
+    isHydratingEditor,
+    pending,
     errorMessage,
-    refetch: () => {
-      void recordingsQuery.refetch();
-      void processingQuery.refetch();
-    },
+    isRetrying,
+    retryIngest,
+    refetch,
   };
 }

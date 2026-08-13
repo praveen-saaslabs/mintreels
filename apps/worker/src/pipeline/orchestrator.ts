@@ -54,12 +54,20 @@ function stepStore(deps: WorkerDeps): StepStore {
   };
 }
 
+async function setRecordingStatus(
+  recordings: WorkerDeps['recordings'],
+  recordingId: number,
+  status: RecordingStatus,
+): Promise<void> {
+  await recordings.update({ id: recordingId }, { status });
+}
+
 export async function executePipeline(
   input: { recordingId: number; jobId?: number },
   deps: WorkerDeps,
 ): Promise<DomainJobStatus> {
   const config = loadJobConfig();
-  const recording = await deps.recordings.findOneByOrFail({ id: input.recordingId });
+  await deps.recordings.findOneByOrFail({ id: input.recordingId });
   let job: Job | null =
     input.jobId !== undefined
       ? await deps.jobs.findOneBy({ id: input.jobId })
@@ -90,8 +98,7 @@ export async function executePipeline(
   job.error = null;
   await deps.jobs.save(job);
 
-  recording.status = RecordingStatus.Processing;
-  await deps.recordings.save(recording);
+  await setRecordingStatus(deps.recordings, input.recordingId, RecordingStatus.Processing);
 
   const store = stepStore(deps);
   const stepHandlers = handlers(deps);
@@ -147,8 +154,7 @@ export async function executePipeline(
         job.errorCode = 'step_failed';
         job.finishedAt = new Date();
         await deps.jobs.save(job);
-        recording.status = RecordingStatus.Failed;
-        await deps.recordings.save(recording);
+        await setRecordingStatus(deps.recordings, input.recordingId, RecordingStatus.Failed);
         return JobStatus.Failed;
       }
     }
@@ -171,8 +177,11 @@ export async function executePipeline(
       job.errorCode = 'analysis_partial';
       job.finishedAt = new Date();
       await deps.jobs.save(job);
-      recording.status = transcript ? RecordingStatus.Ready : RecordingStatus.Failed;
-      await deps.recordings.save(recording);
+      await setRecordingStatus(
+        deps.recordings,
+        input.recordingId,
+        transcript ? RecordingStatus.Ready : RecordingStatus.Failed,
+      );
       return JobStatus.Partial;
     }
 
@@ -181,8 +190,11 @@ export async function executePipeline(
     job.error = null;
     job.errorCode = null;
     await deps.jobs.save(job);
-    recording.status = transcript ? RecordingStatus.Ready : RecordingStatus.Failed;
-    await deps.recordings.save(recording);
+    await setRecordingStatus(
+      deps.recordings,
+      input.recordingId,
+      transcript ? RecordingStatus.Ready : RecordingStatus.Failed,
+    );
     return transcript ? JobStatus.Success : JobStatus.Failed;
   } catch (error) {
     if (error instanceof StepRetryLaterError) {
@@ -193,8 +205,7 @@ export async function executePipeline(
     job.errorCode = 'pipeline_error';
     job.finishedAt = new Date();
     await deps.jobs.save(job);
-    recording.status = RecordingStatus.Failed;
-    await deps.recordings.save(recording);
+    await setRecordingStatus(deps.recordings, input.recordingId, RecordingStatus.Failed);
     throw error;
   }
 }

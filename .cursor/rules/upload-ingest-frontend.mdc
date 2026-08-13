@@ -43,6 +43,10 @@ This is the only status API for ingest. Poll `id` (recording id), not `projectId
 
 Suggested interval: **2–5 seconds**. Stop when recording `status` is `ready` or `failed`, or job `status` is `success` | `failed` | `partial`.
 
+## Retry — `POST /api/recordings/:id/retry`
+
+When ingest **failed** (or job is **partial**), call `api.retryRecording(id)` (recording id). `202`: `{ id, projectId, jobId }`. Completed pipeline steps are kept; failed/stuck steps are reset. Then resume polling `GET /api/recordings/:id/processing`. `409` `INGEST_IN_PROGRESS` if a job is already queued/running; `409` `NOT_RETRYABLE` if the recording is not failed/partial.
+
 Recording status: `uploaded` | `processing` | `ready` | `failed`.
 
 Job status: `queued` | `running` | `success` | `failed` | `partial`.

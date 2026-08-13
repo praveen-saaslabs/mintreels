@@ -39,6 +39,7 @@ A repository is **one table**. If a feature needs recordings + clips + jobs, the
 ## Route surface
 
 - `POST/GET /api/recordings`, `GET/DELETE /api/recordings/:id`
+- `GET /api/recordings/:id/processing`, `POST /api/recordings/:id/retry`
 - `GET /api/recordings/:id/transcript`, `GET /api/recordings/:id/transcript.vtt`
 - `GET/POST /api/recordings/:id/summary`
 - `POST /api/recordings/:id/add-to-global-kb`

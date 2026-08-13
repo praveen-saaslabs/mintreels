@@ -9,6 +9,8 @@ import {
   SummaryRepository,
   TranscriptRepository,
   TranscriptSegmentRepository,
+  type Job,
+  type JobStep,
   type Recording,
 } from '@mintreels/db';
 import { DEFAULT_MAX_ATTEMPTS } from '@mintreels/domain';
@@ -17,6 +19,7 @@ import { parseFilestackRef } from '@mintreels/storage';
 import {
   JOB_STEP_NAMES,
   JobStatus,
+  JobStepName,
   JobStepStatus,
   JobType,
   RecordingStatus,
@@ -26,6 +29,78 @@ import { publicPlaybackUrl } from '../common/playback-url';
 import { QUEUE_PROVIDER } from '../providers/provider-tokens';
 import { toPublicTranscript } from '../transcripts/public-transcript';
 import type { CreateRecordingRequest } from './recordings.dto';
+
+function retryGenerationFromMetadata(metadata: Record<string, unknown> | null): number {
+  const raw = metadata?.retryGeneration;
+  if (typeof raw === 'number' && Number.isInteger(raw) && raw >= 0) {
+    return raw + 1;
+  }
+  return 1;
+}
+
+function isInFlightJob(status: JobStatus): boolean {
+  return status === JobStatus.Queued || status === JobStatus.Running;
+}
+
+function isRetryableFailure(recording: Recording, job: Job): boolean {
+  return (
+    recording.status === RecordingStatus.Failed ||
+    job.status === JobStatus.Failed ||
+    job.status === JobStatus.Partial
+  );
+}
+
+function shouldResetStep(status: JobStepStatus): boolean {
+  return (
+    status === JobStepStatus.Failed ||
+    status === JobStepStatus.Processing ||
+    status === JobStepStatus.Retrying
+  );
+}
+
+function stepResultKey(result: Record<string, unknown> | null): string | null {
+  if (result === null) {
+    return null;
+  }
+  const key = result.key;
+  return typeof key === 'string' && key.trim() !== '' ? key : null;
+}
+
+function audioKeyFromSteps(steps: readonly JobStep[]): string | null {
+  const upload = steps.find((step) => step.step === JobStepName.AudioUpload);
+  const extraction = steps.find((step) => step.step === JobStepName.AudioExtraction);
+  return stepResultKey(upload?.result ?? null) ?? stepResultKey(extraction?.result ?? null);
+}
+
+function resetFailedSteps(
+  steps: JobStep[],
+  recordingId: number,
+  jobId: number,
+  retryGeneration: number,
+  forceReset: ReadonlySet<JobStepName>,
+): JobStep[] {
+  const reset: JobStep[] = [];
+  for (const step of steps) {
+    if (!shouldResetStep(step.status) && !forceReset.has(step.step)) {
+      continue;
+    }
+    step.status = JobStepStatus.Pending;
+    step.attempt = 0;
+    step.error = null;
+    step.result = null;
+    step.providerJobId = null;
+    step.startedAt = null;
+    step.completedAt = null;
+    step.idempotencyKey = [
+      String(recordingId),
+      String(jobId),
+      step.step,
+      String(retryGeneration),
+    ].join(':');
+    reset.push(step);
+  }
+  return reset;
+}
 
 function toPublicRecording(recording: Recording) {
   return {
@@ -124,24 +199,83 @@ export class RecordingsService {
       ),
     );
 
-    await this.jobAuditLogs.save(
-      this.jobAuditLogs.create({
-        jobId: job.id,
-        step: null,
-        event: 'job_queued',
-        message: 'VIDEO_INGEST enqueued',
-        metadata: null,
-      }),
+    await this.enqueueIngestJob(
+      recording.id,
+      job.id,
+      `ingest-${String(job.id)}`,
+      'VIDEO_INGEST enqueued',
     );
 
-    await this.queue.enqueue({
-      id: `ingest-${String(job.id)}`,
-      name: 'ingest-video',
-      payload: { recordingId: recording.id, jobId: job.id },
-      maxAttempts: 3,
-    });
-
     return { id: recording.id, projectId: project.id, jobId: job.id };
+  }
+
+  async retry(id: number, userId: number) {
+    const recording = await this.recordings.findByIdForUser(id, userId);
+    if (!recording) {
+      throw new HttpError(404, 'Not found');
+    }
+
+    const job = await this.jobs.findLatestByRecordingAndType(id, JobType.VideoIngest);
+    if (!job) {
+      throw new HttpError(404, 'Not found');
+    }
+
+    if (isInFlightJob(job.status)) {
+      throw new HttpError(409, 'INGEST_IN_PROGRESS');
+    }
+    if (!isRetryableFailure(recording, job)) {
+      throw new HttpError(409, 'NOT_RETRYABLE');
+    }
+
+    const retryGeneration = retryGenerationFromMetadata(job.metadata);
+    const steps = await this.jobSteps.listByJobId(job.id);
+    if (!recording.audioStorageKey) {
+      const recovered = audioKeyFromSteps(steps);
+      if (recovered) {
+        recording.audioStorageKey = recovered;
+      }
+    }
+    const forceResetAudio =
+      recording.audioStorageKey === null || recording.audioStorageKey.trim() === ''
+        ? new Set([JobStepName.AudioExtraction, JobStepName.AudioUpload])
+        : new Set<JobStepName>();
+    const resetSteps = resetFailedSteps(
+      steps,
+      recording.id,
+      job.id,
+      retryGeneration,
+      forceResetAudio,
+    );
+    if (resetSteps.length > 0) {
+      await this.jobSteps.save(resetSteps);
+    }
+
+    job.status = JobStatus.Queued;
+    job.attempt = 0;
+    job.error = null;
+    job.errorCode = null;
+    job.errorMetadata = null;
+    job.currentStep = null;
+    job.startedAt = null;
+    job.finishedAt = null;
+    if (job.metadata) {
+      job.metadata.retryGeneration = retryGeneration;
+    } else {
+      job.metadata = { retryGeneration };
+    }
+    await this.jobs.save(job);
+
+    recording.status = RecordingStatus.Processing;
+    await this.recordings.save(recording);
+
+    await this.enqueueIngestJob(
+      recording.id,
+      job.id,
+      `ingest-${String(job.id)}-r${String(retryGeneration)}`,
+      'VIDEO_INGEST retry enqueued',
+    );
+
+    return { id: recording.id, projectId: recording.projectId, jobId: job.id };
   }
 
   async list(userId: number) {
@@ -224,5 +358,28 @@ export class RecordingsService {
 
   async addToGlobalKnowledgeBase(_id: number, _userId: number): Promise<never> {
     throw new HttpError(501, 'recordingsService.addToGlobalKnowledgeBase is not implemented');
+  }
+
+  private async enqueueIngestJob(
+    recordingId: number,
+    jobId: number,
+    queueJobId: string,
+    message: string,
+  ): Promise<void> {
+    await this.jobAuditLogs.save(
+      this.jobAuditLogs.create({
+        jobId,
+        step: null,
+        event: 'job_queued',
+        message,
+        metadata: null,
+      }),
+    );
+    await this.queue.enqueue({
+      id: queueJobId,
+      name: 'ingest-video',
+      payload: { recordingId, jobId },
+      maxAttempts: 3,
+    });
   }
 }

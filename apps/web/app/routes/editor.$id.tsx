@@ -79,7 +79,10 @@ function ProjectEditor({ projectId }: Readonly<{ projectId: number }>) {
     videoSrc,
     audioUrl,
     summaryText,
+    pending,
     errorMessage,
+    isRetrying,
+    retryIngest,
     refetch,
   } = useProjectEditor(projectId);
   const projectName = resolveProjectName(projectId, projects, recordingTitle);
@@ -134,20 +137,29 @@ function ProjectEditor({ projectId }: Readonly<{ projectId: number }>) {
     <RecordingIdProvider value={recordingId}>
       <EditorChrome title={projectName}>
         <EditorLayout
-          area1={<Transcriptions />}
+          area1={<Transcriptions pending={pending.transcript} />}
           area2={
             <div className="relative h-full min-h-0 w-full">
               <ProcessingStatusChip
                 phase={phase}
                 processing={processing}
                 errorMessage={errorMessage}
-                onRetry={refetch}
+                retrying={isRetrying}
+                onRetry={() => {
+                  void retryIngest();
+                }}
               />
-              <VideoPlayer src={videoSrc} />
+              <VideoPlayer src={videoSrc} pending={pending.video} />
             </div>
           }
-          area3={<Timeline audioUrl={audioUrl || videoSrc} />}
-          area4={<Summary text={summaryText} />}
+          area3={<Timeline audioUrl={audioUrl} pending={pending.waveform} />}
+          area4={
+            <Summary
+              text={summaryText}
+              pendingHooks={pending.hooks}
+              pendingSummary={pending.summary}
+            />
+          }
         />
       </EditorChrome>
     </RecordingIdProvider>

@@ -120,33 +120,55 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
   selectedHookId: null,
 
   setCurrentTime: (time) => {
-    const { duration } = get().video;
-    set((state) => ({
-      video: { ...state.video, currentTime: clampTime(time, duration) },
-    }));
-  },
-
-  setDuration: (duration) => {
-    if (!Number.isFinite(duration) || duration < 0) {
+    const { duration, currentTime } = get().video;
+    const nextTime = clampTime(time, duration);
+    if (nextTime === currentTime) {
       return;
     }
 
     set((state) => ({
-      video: { ...state.video, duration: Math.max(state.video.duration, duration) },
+      video: { ...state.video, currentTime: nextTime },
+    }));
+  },
+
+  setDuration: (duration) => {
+    if (!Number.isFinite(duration) || duration <= 0) {
+      return;
+    }
+
+    const nextDuration = Math.max(get().video.duration, duration);
+    if (nextDuration === get().video.duration) {
+      return;
+    }
+
+    set((state) => ({
+      video: { ...state.video, duration: nextDuration },
     }));
   },
 
   setPlaying: (playing) => {
+    if (get().video.playing === playing) {
+      return;
+    }
+
     set((state) => ({
       video: { ...state.video, playing },
     }));
   },
 
   setMediaElement: (element) => {
+    if (get().mediaElement === element) {
+      return;
+    }
+
     set({ mediaElement: element });
   },
 
   setSrc: (src) => {
+    if (get().video.src === src) {
+      return;
+    }
+
     set((state) => ({
       video: { ...state.video, src },
     }));

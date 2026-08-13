@@ -51,6 +51,7 @@ type ProcessingStatusChipProps = Readonly<{
   processing: RecordingProcessingSnapshot | undefined;
   errorMessage?: string | null;
   onRetry?: () => void;
+  retrying?: boolean;
 }>;
 
 function buildChipSummary(
@@ -75,6 +76,7 @@ export function ProcessingStatusChip({
   processing,
   errorMessage,
   onRetry,
+  retrying = false,
 }: ProcessingStatusChipProps) {
   const [expanded, setExpanded] = useState(false);
 
@@ -130,7 +132,7 @@ export function ProcessingStatusChip({
 
         {expanded ? (
           <div className="space-y-2 border-t border-(--glass-border-subtle) px-3 py-2.5">
-            {failed && errorMessage ? (
+            {failed && errorMessage && steps.length === 0 ? (
               <p className="text-xs text-(--mr-bad)">{errorMessage}</p>
             ) : null}
             {steps.length > 0 ? (
@@ -152,8 +154,14 @@ export function ProcessingStatusChip({
             )}
             {failed && onRetry ? (
               <div className="flex justify-end pt-1">
-                <Button type="button" size="sm" variant="outline" onClick={onRetry}>
-                  Retry
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={retrying}
+                  onClick={onRetry}
+                >
+                  {retrying ? 'Retrying…' : 'Retry'}
                 </Button>
               </div>
             ) : null}

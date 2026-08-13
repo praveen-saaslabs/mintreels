@@ -1,17 +1,20 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import WaveSurfer from 'wavesurfer.js';
 import RegionsPlugin, { type Region } from 'wavesurfer.js/plugins/regions';
+import { WaveformEmptyState } from '@/components/editor/editor-empty-states';
 import { SpeakerBadge } from '@/components/transcript/speaker-badge';
 import { DEMO_MEDIA } from '@/lib/demo-media';
 import { suppressSelectionOnPointerDown } from '@/lib/drag-select-guard';
 import { speakerCssColor, speakerSwatchClass } from '@/lib/speaker-style';
-import { uniqueSpeakers } from '@/lib/transcript';
+import { finiteDuration, maxClockDuration } from '@/lib/time';
+import { EMPTY_SEGMENTS, uniqueSpeakers } from '@/lib/transcript';
 import { cn } from '@/lib/utils';
 import { useEditorStore, type EditorHook } from '@/stores/editor-store';
 
 type TimelineProps = {
-  /** Optional peaks source; video MediaElement drives playback. */
+  /** Extracted audio only. Never pass the original video — decodePeaks() downloads the whole file. */
   audioUrl?: string;
+  pending?: boolean;
 };
 
 /** Peak bins for the full-timeline overview (WaveSurfer further max-aggregates to bar columns). */
@@ -35,6 +38,29 @@ const HOOK_REGION_BORDER = 'oklch(0.62 0.13 165)';
 
 /** Fixed wave host height — shrink-0 so layout never crushes the canvas. */
 const WAVEFORM_HEIGHT = 72;
+/** Overlay playhead width — matches former WaveSurfer cursorWidth. */
+const PLAYHEAD_WIDTH_PX = 3;
+
+function videoClockDuration(
+  media: HTMLMediaElement,
+  storeDuration: number,
+  waveDuration = 0,
+): number {
+  return maxClockDuration(media.duration, storeDuration, waveDuration);
+}
+
+function playheadRatio(time: number, duration: number): number {
+  if (duration <= 0 || !Number.isFinite(time)) {
+    return 0;
+  }
+  return Math.min(1, Math.max(0, time / duration));
+}
+
+function paintPlayhead(playhead: HTMLDivElement, host: HTMLElement, ratio: number): void {
+  const x = ratio * host.clientWidth - PLAYHEAD_WIDTH_PX / 2;
+  playhead.style.transform = `translate3d(${String(x)}px,0,0)`;
+  host.style.setProperty('--mr-playhead', String(ratio));
+}
 
 function waitForContainerWidth(el: HTMLElement, signal: AbortSignal): Promise<number> {
   if (el.clientWidth > 0) {
@@ -144,6 +170,12 @@ async function decodePeaks(
   try {
     const response = await fetch(url, signal ? { signal } : undefined);
     if (!response.ok) {
+      return null;
+    }
+
+    const contentType = (response.headers.get('content-type') ?? '').toLowerCase();
+    if (contentType.startsWith('video/')) {
+      await response.body?.cancel();
       return null;
     }
 
@@ -266,10 +298,14 @@ function paintHookRegions(
   }
 }
 
-export function Timeline({ audioUrl = DEMO_MEDIA.audioUrl }: Readonly<TimelineProps>) {
+export function Timeline({
+  audioUrl = DEMO_MEDIA.audioUrl,
+  pending = false,
+}: Readonly<TimelineProps>) {
   const mediaElement = useEditorStore((state) => state.mediaElement);
   const duration = useEditorStore((state) => state.video.duration);
-  const segments = useEditorStore((state) => state.project?.result?.segments ?? []);
+  const setDuration = useEditorStore((state) => state.setDuration);
+  const segments = useEditorStore((state) => state.project?.result?.segments ?? EMPTY_SEGMENTS);
   const hooks = useEditorStore((state) => state.hooks);
   const selectedHookId = useEditorStore((state) => state.selectedHookId);
   const selectHookAndSeek = useEditorStore((state) => state.selectHookAndSeek);
@@ -278,19 +314,29 @@ export function Timeline({ audioUrl = DEMO_MEDIA.audioUrl }: Readonly<TimelinePr
   const speakers = useMemo(() => uniqueSpeakers(segments), [segments]);
 
   const containerRef = useRef<HTMLDivElement>(null);
+  const waveformShellRef = useRef<HTMLDivElement>(null);
+  const playheadRef = useRef<HTMLDivElement>(null);
   const wavesurferRef = useRef<WaveSurfer | null>(null);
   const regionsRef = useRef<RegionsPlugin | null>(null);
+  const durationRef = useRef(duration);
+  durationRef.current = duration;
+  const draggingRef = useRef(false);
   const [waveformReady, setWaveformReady] = useState(false);
   const [loadError, setLoadError] = useState(false);
 
   useEffect(() => {
     const container = containerRef.current;
-    if (!container || !mediaElement) {
+    if (!container) {
       setWaveformReady(false);
       return;
     }
 
-    const media = mediaElement;
+    if (!audioUrl) {
+      setWaveformReady(false);
+      setLoadError(false);
+      return;
+    }
+
     const abort = new AbortController();
     let disposed = false;
     let wavesurfer: WaveSurfer | null = null;
@@ -300,7 +346,7 @@ export function Timeline({ audioUrl = DEMO_MEDIA.audioUrl }: Readonly<TimelinePr
 
     async function setup() {
       try {
-        const decoded = audioUrl ? await decodePeaks(audioUrl, abort.signal) : null;
+        const decoded = await decodePeaks(audioUrl, abort.signal);
         if (disposed || abort.signal.aborted || !containerRef.current) {
           return;
         }
@@ -317,10 +363,11 @@ export function Timeline({ audioUrl = DEMO_MEDIA.audioUrl }: Readonly<TimelinePr
           return;
         }
 
-        const mediaDuration =
-          Number.isFinite(media.duration) && media.duration > 0
-            ? media.duration
-            : decoded.duration;
+        const decodedDuration = finiteDuration(decoded.duration);
+        if (decodedDuration !== undefined) {
+          setDuration(decodedDuration);
+        }
+        const mediaDuration = decodedDuration ?? decoded.duration;
 
         const regions = RegionsPlugin.create();
         regionsRef.current = regions;
@@ -332,9 +379,9 @@ export function Timeline({ audioUrl = DEMO_MEDIA.audioUrl }: Readonly<TimelinePr
           height: WAVEFORM_HEIGHT,
           waveColor: '#c4c4c4',
           progressColor: speakerCssColor(WAVEFORM_PROGRESS_SPEAKER),
-          // Mint accent playhead — glow/rounding via `.mint-waveform::part(cursor)` in index.css
-          cursorColor: 'oklch(0.55 0.14 165)',
-          cursorWidth: 3,
+          // Overlay playhead is rAF-driven; WS cursor/timeupdate would jump ~1s.
+          cursorWidth: 0,
+          hideScrollbar: true,
           barWidth: 2,
           barGap: 2,
           barRadius: 2,
@@ -354,20 +401,34 @@ export function Timeline({ audioUrl = DEMO_MEDIA.audioUrl }: Readonly<TimelinePr
           return;
         }
 
-        wavesurferRef.current = wavesurfer;
+        const instance = wavesurfer;
+        wavesurferRef.current = instance;
 
         const markReady = () => {
           if (disposed) {
             return;
           }
+          const wsDuration = finiteDuration(instance.getDuration());
+          if (wsDuration !== undefined) {
+            setDuration(wsDuration);
+          }
           setWaveformReady(true);
         };
 
-        wavesurfer.on('ready', markReady);
-        wavesurfer.on('interaction', (time) => {
-          seek(time);
+        instance.on('ready', markReady);
+        instance.on('interaction', (time) => {
+          const waveDuration = instance.getDuration();
+          const { mediaElement: media, video } = useEditorStore.getState();
+          const clock = media
+            ? videoClockDuration(media, video.duration, waveDuration)
+            : maxClockDuration(video.duration, waveDuration);
+          if (waveDuration > 0 && clock > 0) {
+            seek((time / waveDuration) * clock);
+          } else {
+            seek(time);
+          }
         });
-        wavesurfer.on('error', () => {
+        instance.on('error', () => {
           if (!disposed) {
             setLoadError(true);
           }
@@ -378,7 +439,7 @@ export function Timeline({ audioUrl = DEMO_MEDIA.audioUrl }: Readonly<TimelinePr
           selectHookAndSeek(region.id);
         });
 
-        if (wavesurfer.getDecodedData() || wavesurfer.getDuration() > 0) {
+        if (instance.getDecodedData() || instance.getDuration() > 0) {
           markReady();
         }
       } catch (error) {
@@ -403,34 +464,101 @@ export function Timeline({ audioUrl = DEMO_MEDIA.audioUrl }: Readonly<TimelinePr
       setWaveformReady(false);
       instance?.destroy();
     };
-  }, [audioUrl, mediaElement, seek, selectHookAndSeek]);
+  }, [audioUrl, seek, selectHookAndSeek, setDuration]);
 
-  // Read-only playhead: video is the clock; WS cursor follows.
+  // Overlay playhead: video is the clock. rAF from HTMLVideoElement.currentTime
+  // — never Zustand currentTime or wavesurfer.setTime (timeupdate is ~1–4Hz).
   useEffect(() => {
     const media = mediaElement;
-    if (!media || !waveformReady) {
+    const playhead = playheadRef.current;
+    const host = waveformShellRef.current;
+    const wavesurfer = wavesurferRef.current;
+    if (!media || !playhead || !host || !waveformReady) {
       return;
     }
 
-    const syncCursor = () => {
-      const wavesurfer = wavesurferRef.current;
-      if (!wavesurfer) {
-        return;
-      }
-      const mediaTime = media.currentTime;
-      if (Math.abs(wavesurfer.getCurrentTime() - mediaTime) < 0.05) {
-        return;
-      }
-      wavesurfer.setTime(mediaTime);
+    let raf = 0;
+    let running = false;
+
+    const paintFromMedia = () => {
+      const waveDuration = wavesurferRef.current?.getDuration() ?? 0;
+      const duration = videoClockDuration(media, durationRef.current, waveDuration);
+      paintPlayhead(playhead, host, playheadRatio(media.currentTime, duration));
     };
 
-    media.addEventListener('timeupdate', syncCursor);
-    media.addEventListener('seeked', syncCursor);
-    syncCursor();
+    const tick = () => {
+      if (!draggingRef.current) {
+        paintFromMedia();
+      }
+      if (!media.paused && !media.ended) {
+        raf = requestAnimationFrame(tick);
+      } else {
+        running = false;
+        raf = 0;
+      }
+    };
+
+    const start = () => {
+      if (running) {
+        return;
+      }
+      running = true;
+      raf = requestAnimationFrame(tick);
+    };
+
+    const snap = () => {
+      if (!draggingRef.current) {
+        paintFromMedia();
+      }
+    };
+
+    const onDrag = (relativeX: number) => {
+      draggingRef.current = true;
+      paintPlayhead(playhead, host, Math.min(1, Math.max(0, relativeX)));
+    };
+
+    const onDragEnd = () => {
+      draggingRef.current = false;
+      paintFromMedia();
+    };
+
+    media.addEventListener('play', start);
+    media.addEventListener('pause', snap);
+    media.addEventListener('ended', snap);
+    media.addEventListener('seeking', snap);
+    media.addEventListener('seeked', snap);
+    media.addEventListener('loadedmetadata', snap);
+    media.addEventListener('durationchange', snap);
+
+    const unDrag = wavesurfer?.on('drag', onDrag);
+    const unDragStart = wavesurfer?.on('dragstart', onDrag);
+    const unDragEnd = wavesurfer?.on('dragend', onDragEnd);
+
+    const resizeObserver = new ResizeObserver(() => {
+      paintFromMedia();
+    });
+    resizeObserver.observe(host);
+
+    if (!media.paused && !media.ended) {
+      start();
+    } else {
+      paintFromMedia();
+    }
 
     return () => {
-      media.removeEventListener('timeupdate', syncCursor);
-      media.removeEventListener('seeked', syncCursor);
+      running = false;
+      window.cancelAnimationFrame(raf);
+      media.removeEventListener('play', start);
+      media.removeEventListener('pause', snap);
+      media.removeEventListener('ended', snap);
+      media.removeEventListener('seeking', snap);
+      media.removeEventListener('seeked', snap);
+      media.removeEventListener('loadedmetadata', snap);
+      media.removeEventListener('durationchange', snap);
+      unDrag?.();
+      unDragStart?.();
+      unDragEnd?.();
+      resizeObserver.disconnect();
     };
   }, [mediaElement, waveformReady]);
 
@@ -445,19 +573,59 @@ export function Timeline({ audioUrl = DEMO_MEDIA.audioUrl }: Readonly<TimelinePr
     paintHookRegions(regions, hooks, waveDuration, selectedHookId);
   }, [duration, hooks, selectedHookId, waveformReady]);
 
+  const showWaveformEmpty =
+    !waveformReady && !loadError && (pending || Boolean(audioUrl));
+  const showWaveformUnavailable =
+    !waveformReady && !showWaveformEmpty && (loadError || !pending);
+
+  let speakerRow: ReactNode = null;
+  if (speakers.length > 0) {
+    speakerRow = (
+      <div className="flex shrink-0 flex-wrap items-center gap-1.5" aria-label="Speakers">
+        {speakers.map((speaker) => (
+          <SpeakerBadge key={speaker} speaker={speaker} />
+        ))}
+      </div>
+    );
+  }
+
+  let speakerActivity: ReactNode = null;
+  if (speakers.length > 0 && duration > 0) {
+    speakerActivity = (
+      <div
+        className="relative h-2.5 w-full shrink-0 overflow-hidden rounded-full bg-muted"
+        aria-label="Speaker activity"
+      >
+        {segments.map((segment) => {
+          if (!segment.speaker.trim() || segment.end <= segment.start) {
+            return null;
+          }
+
+          const left = (segment.start / duration) * 100;
+          const width = Math.max(0.35, ((segment.end - segment.start) / duration) * 100);
+
+          return (
+            <div
+              key={segment.id}
+              className={cn(
+                'absolute inset-y-0 rounded-sm opacity-85',
+                speakerSwatchClass(segment.speaker),
+              )}
+              style={{
+                left: `${String(left)}%`,
+                width: `${String(width)}%`,
+              }}
+            />
+          );
+        })}
+      </div>
+    );
+  }
+
   return (
     <section className="glass-panel m-1.5 flex h-[calc(100%-0.75rem)] min-h-0 w-[calc(100%-0.75rem)] select-none flex-col overflow-hidden">
       <div className="flex min-h-0 flex-1 flex-col gap-2 px-4 py-3">
-        {speakers.length > 0 ? (
-          <div
-            className="flex shrink-0 flex-wrap items-center gap-1.5"
-            aria-label="Speakers"
-          >
-            {speakers.map((speaker) => (
-              <SpeakerBadge key={speaker} speaker={speaker} />
-            ))}
-          </div>
-        ) : null}
+        {speakerRow}
 
         {/*
           Block-level host (not absolute). Absolute + react-spaces often measured
@@ -465,62 +633,27 @@ export function Timeline({ audioUrl = DEMO_MEDIA.audioUrl }: Readonly<TimelinePr
           Opaque enough for waveform bars; glass sits on the pane chrome only.
         */}
         <div
-          className="relative w-full shrink-0 touch-none overflow-hidden rounded-xl bg-muted/55 ring-1 ring-[var(--glass-border-subtle)]"
+          ref={waveformShellRef}
+          className="mint-waveform-shell relative w-full shrink-0 touch-none overflow-hidden rounded-xl bg-muted/55 ring-1 ring-[var(--glass-border-subtle)]"
           style={{ height: WAVEFORM_HEIGHT, minHeight: WAVEFORM_HEIGHT }}
           onPointerDown={suppressSelectionOnPointerDown}
         >
           <div ref={containerRef} className="mint-waveform h-full w-full select-none" />
-          {!mediaElement ? (
-            <p className="pointer-events-none absolute inset-0 flex items-center justify-center text-xs text-muted-foreground">
-              Waiting for video…
-            </p>
-          ) : null}
-          {mediaElement && !waveformReady && !loadError ? (
-            <p
-              className={cn(
-                'pointer-events-none absolute inset-0 flex items-center justify-center',
-                'text-xs text-muted-foreground',
-              )}
-            >
-              Loading waveform…
-            </p>
-          ) : null}
-          {loadError ? (
+          <div
+            ref={playheadRef}
+            className="mint-waveform-playhead"
+            hidden={!waveformReady}
+            aria-hidden
+          />
+          {showWaveformEmpty ? <WaveformEmptyState /> : null}
+          {showWaveformUnavailable ? (
             <p className="pointer-events-none absolute inset-0 flex items-center justify-center text-xs text-muted-foreground">
               Waveform unavailable
             </p>
           ) : null}
         </div>
 
-        {speakers.length > 0 && duration > 0 ? (
-          <div
-            className="relative h-2.5 w-full shrink-0 overflow-hidden rounded-full bg-muted"
-            aria-label="Speaker activity"
-          >
-            {segments.map((segment) => {
-              if (!segment.speaker.trim() || segment.end <= segment.start) {
-                return null;
-              }
-
-              const left = (segment.start / duration) * 100;
-              const width = Math.max(0.35, ((segment.end - segment.start) / duration) * 100);
-
-              return (
-                <div
-                  key={segment.id}
-                  className={cn(
-                    'absolute inset-y-0 rounded-sm opacity-85',
-                    speakerSwatchClass(segment.speaker),
-                  )}
-                  style={{
-                    left: `${String(left)}%`,
-                    width: `${String(width)}%`,
-                  }}
-                />
-              );
-            })}
-          </div>
-        ) : null}
+        {speakerActivity}
       </div>
     </section>
   );
