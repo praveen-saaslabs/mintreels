@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { Search } from 'lucide-react';
 import { useProjects } from '@/providers/projects-provider';
 
@@ -25,14 +26,12 @@ export function ProjectsHeader() {
           />
           <span className="font-mono text-[10px] text-[var(--mr-mfg)]">⌘K</span>
         </label>
-        <button
-          type="button"
-          disabled
-          title="Create project API not wired yet"
-          className="h-[34px] rounded-[10px] bg-[var(--mr-acc)] px-3.5 text-[13px] font-semibold text-[var(--mr-accfg)] opacity-80 disabled:cursor-not-allowed"
+        <Link
+          to="/editor/new"
+          className="inline-flex h-[34px] items-center rounded-[10px] bg-[var(--mr-acc)] px-3.5 text-[13px] font-semibold text-[var(--mr-accfg)]"
         >
           New project
-        </button>
+        </Link>
       </div>
     </div>
   );

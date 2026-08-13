@@ -1,25 +1,65 @@
+import type { CSSProperties } from 'react';
 import { Outlet } from 'react-router-dom';
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarHeader,
+  SidebarInset,
+  SidebarProvider,
+  SidebarRail,
+  SidebarSeparator,
+  SidebarTrigger,
+} from '@/components/ui/sidebar';
+import { TooltipProvider } from '@/components/ui/tooltip';
 import { ProjectListNav } from './project-list-nav';
 import { SidebarNav } from './sidebar-nav';
 import { UserFooter } from './user-footer';
 
 export function AppShell() {
   return (
-    <div className="flex h-svh overflow-hidden bg-[var(--mr-bg)] text-[var(--mr-fg)]">
-      <aside className="flex w-[236px] shrink-0 flex-col border-r border-[var(--mr-bd)] bg-[var(--mr-panel)]">
-        <div className="flex h-[52px] shrink-0 items-center gap-2 border-b border-[var(--mr-bd2)] px-3.5">
-          <div className="size-2.5 rounded-[3px] bg-[var(--mr-acc)]" />
-          <span className="font-semibold tracking-[-0.01em]">MintReels</span>
-        </div>
+    <TooltipProvider>
+      <SidebarProvider
+        className="bg-[var(--mr-bg)] text-[var(--mr-fg)]"
+        style={
+          {
+            '--sidebar-width': '14.75rem',
+          } as CSSProperties
+        }
+      >
+        <Sidebar collapsible="icon" className="border-[var(--mr-bd)]">
+          <SidebarHeader className="h-[52px] justify-center border-b border-sidebar-border px-3">
+            <div className="flex items-center gap-2 px-1">
+              <div className="size-2.5 shrink-0 rounded-[3px] bg-[var(--mr-acc)]" />
+              <span className="font-semibold tracking-[-0.01em] group-data-[collapsible=icon]:hidden">
+                MintReels
+              </span>
+              <SidebarTrigger className="ml-auto md:hidden" />
+            </div>
+          </SidebarHeader>
 
-        <SidebarNav />
-        <ProjectListNav />
-        <UserFooter />
-      </aside>
+          <SidebarContent>
+            <SidebarNav />
+            <SidebarSeparator />
+            <ProjectListNav />
+          </SidebarContent>
 
-      <main className="flex min-h-0 min-w-0 flex-1 flex-col">
-        <Outlet />
-      </main>
-    </div>
+          <SidebarFooter className="border-t border-sidebar-border">
+            <UserFooter />
+          </SidebarFooter>
+          <SidebarRail />
+        </Sidebar>
+
+        <SidebarInset className="min-h-svh overflow-hidden bg-[var(--mr-bg)]">
+          <div className="flex items-center gap-2 border-b border-[var(--mr-bd2)] px-3 py-2 md:hidden">
+            <SidebarTrigger />
+            <span className="text-sm font-medium">MintReels</span>
+          </div>
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+            <Outlet />
+          </div>
+        </SidebarInset>
+      </SidebarProvider>
+    </TooltipProvider>
   );
 }

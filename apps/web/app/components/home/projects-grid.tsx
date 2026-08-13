@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { Plus } from 'lucide-react';
 import { useProjects } from '@/providers/projects-provider';
 import { ProjectCard } from './project-card';
@@ -26,15 +27,13 @@ export function ProjectsGrid() {
             <ProjectCard key={project.id} project={project} />
           ))}
 
-      <button
-        type="button"
-        disabled
-        title="Create project API not wired yet"
-        className="flex min-h-[200px] items-center justify-center gap-2 rounded-[15px] border border-dashed border-[var(--mr-bd)] bg-transparent text-[13px] font-medium text-[var(--mr-mfg)] disabled:cursor-not-allowed"
+      <Link
+        to="/editor/new"
+        className="flex min-h-[200px] items-center justify-center gap-2 rounded-[15px] border border-dashed border-[var(--mr-bd)] bg-transparent text-[13px] font-medium text-[var(--mr-mfg)] hover:border-[var(--mr-acc)] hover:text-[var(--mr-fg)]"
       >
         <Plus className="size-4" />
         New project
-      </button>
+      </Link>
     </div>
   );
 }

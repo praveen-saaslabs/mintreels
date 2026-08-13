@@ -1,7 +1,17 @@
 import { Link } from 'react-router-dom';
+import {
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarMenu,
+  SidebarMenuBadge,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarMenuSkeleton,
+} from '@/components/ui/sidebar';
 import { cn } from '@/lib/utils';
-import { useProjects } from '@/providers/projects-provider';
 import type { SidebarProject } from '@/lib/data/types';
+import { useProjects } from '@/providers/projects-provider';
 
 function accentClass(accent: SidebarProject['accent']) {
   switch (accent) {
@@ -10,7 +20,7 @@ function accentClass(accent: SidebarProject['accent']) {
     case 'warn':
       return 'bg-[var(--mr-warn)]';
     default:
-      return 'bg-[var(--mr-mfg)]';
+      return 'bg-muted-foreground';
   }
 }
 
@@ -18,37 +28,38 @@ export function ProjectListNav() {
   const { sidebarProjects, isLoading } = useProjects();
 
   return (
-    <div className="flex flex-none flex-col gap-2 px-3.5 pb-2.5 pt-2">
-      <div className="text-[10.5px] font-semibold tracking-[0.07em] text-[var(--mr-mfg)] uppercase">
-        Projects
-      </div>
-      <div className="flex flex-col gap-0.5">
-        {isLoading
-          ? Array.from({ length: 4 }).map((_, index) => (
-              <div
-                key={index}
-                className="h-7 animate-pulse rounded-md bg-[var(--mr-muted)]"
-              />
-            ))
-          : sidebarProjects.map((project) => (
-              <Link
-                key={project.id}
-                to="/recordings"
-                className="flex h-7 items-center gap-2 px-1 text-[12.5px] text-[var(--mr-fg2)] hover:text-[var(--mr-fg)]"
-              >
-                <span
-                  className={cn(
-                    'size-1.5 shrink-0 rounded-[2px]',
-                    accentClass(project.accent),
-                  )}
-                />
-                <span className="min-w-0 flex-1 truncate">{project.name}</span>
-                <span className="font-mono text-[10.5px] text-[var(--mr-mfg)]">
-                  {project.recordingCount}
-                </span>
-              </Link>
-            ))}
-      </div>
-    </div>
+    <SidebarGroup>
+      <SidebarGroupLabel>Projects</SidebarGroupLabel>
+      <SidebarGroupContent>
+        <SidebarMenu>
+          {isLoading
+            ? Array.from({ length: 4 }).map((_, index) => (
+                <SidebarMenuItem key={index}>
+                  <SidebarMenuSkeleton showIcon />
+                </SidebarMenuItem>
+              ))
+            : sidebarProjects.map((project) => (
+                <SidebarMenuItem key={project.id}>
+                  <SidebarMenuButton
+                    size="sm"
+                    tooltip={project.name}
+                    render={<Link to="/recordings" />}
+                  >
+                    <span
+                      className={cn(
+                        'size-1.5 shrink-0 rounded-[2px]',
+                        accentClass(project.accent),
+                      )}
+                    />
+                    <span>{project.name}</span>
+                  </SidebarMenuButton>
+                  <SidebarMenuBadge className="font-mono text-[10.5px] text-muted-foreground">
+                    {project.recordingCount}
+                  </SidebarMenuBadge>
+                </SidebarMenuItem>
+              ))}
+        </SidebarMenu>
+      </SidebarGroupContent>
+    </SidebarGroup>
   );
 }
