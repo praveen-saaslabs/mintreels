@@ -1,5 +1,6 @@
 import { Download, Loader2, Share2, Trash2 } from 'lucide-react';
 import { useState, type KeyboardEvent, type MouseEvent } from 'react';
+import { ClipVoiceoverDialog } from '@/components/clips/clip-voiceover-dialog';
 import { HookThumb } from '@/components/summary/hook-thumb';
 import { ShareClipModal } from '@/components/summary/share-clip-modal';
 import { buttonVariants } from '@/components/ui/button';
@@ -9,6 +10,7 @@ import { useDeleteClip } from '@/hooks/use-delete-clip';
 import { useHookClipExport } from '@/hooks/use-hook-clip-export';
 import { DEMO_MEDIA } from '@/lib/demo-media';
 import { clipDownloadFilename } from '@/lib/filestack-playback';
+import type { ClipVoiceover } from '@/lib/data/types';
 import { formatTimestamp } from '@/lib/time';
 import { cn } from '@/lib/utils';
 import { useEditorStore, type EditorHook, type EditorHookStatus } from '@/stores/editor-store';
@@ -70,6 +72,7 @@ export function HookCard({ hook, selected, recordingId, onPreview }: HookCardPro
   const { deleteClip, isDeleting, errorMessage, reset } = useDeleteClip();
   const [shareOpen, setShareOpen] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [voiceoverOpen, setVoiceoverOpen] = useState(false);
   const showDownload = hook.status === 'ready' && Boolean(hook.clipVideoUrl);
   const canDeleteClip = hook.clipId != null;
   const inFlight = hook.status === 'queued' || hook.status === 'rendering' || isExporting;
@@ -88,7 +91,12 @@ export function HookCard({ hook, selected, recordingId, onPreview }: HookCardPro
     if (!canExport) {
       return;
     }
-    exportClip();
+    setVoiceoverOpen(true);
+  }
+
+  function onConfirmVoiceover(voiceover: ClipVoiceover | null) {
+    setVoiceoverOpen(false);
+    exportClip(voiceover);
   }
 
   function onDownload(event: MouseEvent<HTMLButtonElement>) {
@@ -233,6 +241,14 @@ export function HookCard({ hook, selected, recordingId, onPreview }: HookCardPro
           clearHookClip(hook.id);
           setConfirmOpen(false);
         }}
+      />
+
+      <ClipVoiceoverDialog
+        open={voiceoverOpen}
+        onOpenChange={setVoiceoverOpen}
+        defaultTitle={hook.title}
+        pending={isExporting}
+        onConfirm={onConfirmVoiceover}
       />
     </>
   );

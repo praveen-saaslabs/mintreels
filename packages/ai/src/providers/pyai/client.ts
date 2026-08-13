@@ -84,4 +84,57 @@ export class PyAIClient {
     }
     return payload;
   }
+
+  async listVoices(): Promise<unknown> {
+    const response = await fetch(`${this.baseUrl}/v1/voices`, {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${this.apiKey}`,
+      },
+    });
+    const payload: unknown = await response.json().catch(() => null);
+    if (!response.ok) {
+      throw new HttpStatusError(response.status, payload);
+    }
+    return payload;
+  }
+
+  async synthesizeSpeech(input: {
+    input: string;
+    model?: string;
+    voice?: string;
+    responseFormat?: string;
+    stream?: boolean;
+  }): Promise<{ audio: Buffer; contentType: string }> {
+    const body: Record<string, unknown> = {
+      model: input.model ?? 'pyai-voice',
+      input: input.input,
+      response_format: input.responseFormat ?? 'mp3',
+      stream: input.stream ?? false,
+    };
+    if (input.voice !== undefined && input.voice.trim() !== '') {
+      body.voice = input.voice.trim();
+    }
+
+    const response = await fetch(`${this.baseUrl}/v1/audio/speech`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${this.apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    });
+
+    if (!response.ok) {
+      const payload: unknown = await response.json().catch(() => null);
+      throw new HttpStatusError(response.status, payload);
+    }
+
+    const arrayBuffer = await response.arrayBuffer();
+    const contentType = response.headers.get('content-type') ?? 'audio/mpeg';
+    return {
+      audio: Buffer.from(arrayBuffer),
+      contentType,
+    };
+  }
 }

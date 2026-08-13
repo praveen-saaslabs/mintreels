@@ -78,6 +78,7 @@ type EditorStore = {
   setProject: (project: EditorProject | null) => void;
   setProjectStatus: (status: string) => void;
   setProjectResult: (result: EditorProjectResult | null) => void;
+  patchSegmentText: (segmentId: number, text: string) => void;
   resetProject: () => void;
   setHooks: (hooks: EditorHook[]) => void;
   patchHook: (id: string, patch: Partial<EditorHook>) => void;
@@ -231,6 +232,25 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
         ...project,
         result,
         updated_at: Date.now(),
+      },
+    });
+  },
+
+  patchSegmentText: (segmentId, text) => {
+    const { project } = get();
+    if (!project?.result) {
+      return;
+    }
+    set({
+      project: {
+        ...project,
+        updated_at: Date.now(),
+        result: {
+          ...project.result,
+          segments: project.result.segments.map((segment) =>
+            segment.id === segmentId ? { ...segment, text } : segment,
+          ),
+        },
       },
     });
   },

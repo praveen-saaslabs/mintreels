@@ -9,7 +9,10 @@ import { cn } from '@/lib/utils';
 export function EditorHeader({
   title,
   projectId,
-}: Readonly<{ title: string; projectId?: number | undefined }>) {
+}: Readonly<{
+  title: string;
+  projectId?: number | undefined;
+}>) {
   const navigate = useNavigate();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const { deleteProject, isDeleting, errorMessage, reset } = useDeleteProject({

@@ -1,10 +1,11 @@
+import { Sparkles } from 'lucide-react';
 import { useMemo } from 'react';
 import {
   HooksListEmptyState,
   SummaryTextEmptyState,
 } from '@/components/editor/editor-empty-states';
+import { AskMint } from '@/components/summary/moment-search';
 import { HookCard } from '@/components/summary/hook-card';
-import { MomentSearch } from '@/components/summary/moment-search';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { EditorPane } from '@/components/video/editor-layout';
 import { useRecordingId } from '@/lib/recording-id';
@@ -99,17 +100,27 @@ export function Summary({ text, pendingHooks = false, pendingSummary = false }: 
   const rankedHooks = useMemo(() => rankHooksByScore(hooks), [hooks]);
 
   return (
-    <Tabs defaultValue="hooks" className="flex h-full min-h-0 w-full flex-col gap-0">
+    <Tabs defaultValue="ask" className="flex h-full min-h-0 w-full flex-col gap-0">
       <EditorPane
         header={
           <TabsList variant="line">
+            <TabsTrigger value="ask" className="gap-1.5">
+              <Sparkles className="size-3.5 text-mr-acc" aria-hidden />
+              Ask Mint
+            </TabsTrigger>
             <TabsTrigger value="hooks">Hooks · {hooks.length}</TabsTrigger>
             <TabsTrigger value="summary">Summary</TabsTrigger>
           </TabsList>
         }
       >
-        <TabsContent value="hooks" className="mt-0 flex flex-col gap-3 outline-none">
-          <MomentSearch recordingId={recordingId} />
+        <TabsContent
+          value="ask"
+          keepMounted
+          className="mt-0 flex min-h-0 flex-1 flex-col outline-none"
+        >
+          <AskMint recordingId={recordingId} />
+        </TabsContent>
+        <TabsContent value="hooks" className="mt-0 flex min-h-0 flex-1 flex-col gap-3 overflow-auto outline-none">
           <p className="text-xs text-muted-foreground">Ranked by predicted retention</p>
           <HooksPane
             rankedHooks={rankedHooks}
@@ -119,7 +130,7 @@ export function Summary({ text, pendingHooks = false, pendingSummary = false }: 
             onPreview={selectHookAndSeek}
           />
         </TabsContent>
-        <TabsContent value="summary" className="mt-0 outline-none">
+        <TabsContent value="summary" className="mt-0 min-h-0 flex-1 overflow-auto outline-none">
           <p className="mb-3 font-mono text-xs text-muted-foreground">
             {formatTimestamp(currentTime)}
           </p>

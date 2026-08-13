@@ -535,6 +535,21 @@ export interface SpeechProvider {
 }
 ```
 
+## VoiceProvider
+
+```ts
+export interface VoiceProvider {
+  listVoices(): Promise<Voice[]>;
+  synthesize(input: {
+    text: string;
+    voiceId?: string;
+    format?: 'mp3' | 'wav' | …;
+  }): Promise<{ audio: Buffer; contentType: string }>;
+}
+```
+
+PyAI Speak (`GET /v1/voices`, `POST /v1/audio/speech`) powers clip title/CTA voiceover and transcript overdub. Hear (`SpeechProvider`) remains STT only — do not overload it. Cloning is out of MVP.
+
 ## LLMProvider
 
 ```ts
@@ -879,11 +894,13 @@ When the user selects a hook (Cut clip):
 POST /api/recordings/:id/hooks/:hookId/export
 ```
 
-The API looks up the recording video (`storageKey`) and the hook `startMs` / `endMs`, inserts a `clips` row (`queued`, `recordingId`, `hookId`), and enqueues `render-clip`. The worker trims with FFmpeg, uploads the MP4 to Filestack, then asks Filestack for a video thumbnail (`video_convert=preset:thumbnail`, FFmpeg frame upload as fallback). It stores `clip.storageKey` + `clip.thumbnailStorageKey` and sets `status: ready` (or `failed`). The UI polls `GET /api/clips/:id` and, when ready, downloads via public `videoUrl` and shows `thumbnailUrl` (HTTPS Filestack CDN).
+The API looks up the recording video (`storageKey`) and the hook `startMs` / `endMs`, inserts a `clips` row (`queued`, `recordingId`, `hookId`), and enqueues `render-clip`. Optional `voiceover` on the export/create body stores title/CTA + stock `voiceId`; the worker synthesizes via `VoiceProvider` (PyAI Speak) and FFmpeg-mixes onto the trimmed clip (`duck` or `pre`). It uploads the MP4 to Filestack, then asks Filestack for a video thumbnail (`video_convert=preset:thumbnail`, FFmpeg frame upload as fallback). It stores `clip.storageKey` + `clip.thumbnailStorageKey` and sets `status: ready` (or `failed`). The UI polls `GET /api/clips/:id` and, when ready, downloads via public `videoUrl` and shows `thumbnailUrl` (HTTPS Filestack CDN).
+
+Transcript overdub: `PATCH /api/recordings/:id/transcript/segments/:segmentId` updates text; `POST …/overdub` with `{ voiceId }` enqueues `apply-overdub`, which synthesizes the line and replaces that audio range on the **source recording** (video timing fixed). Serialize per recording (`OVERDUB_IN_PROGRESS` if one is already queued/running).
 
 Prompt ask (`POST /api/recordings/:id/moments/ask`) routes to transcript Q&A, clip candidates, or a funny off-topic reject. Direct search remains `POST /api/recordings/:id/moments/search`. **Cut clip** uses `POST /api/clips` with the padded `clipStartMs` / `clipEndMs` (`hookId` null). Signed `GET /api/clips/:id/download` remains unimplemented (501).
 
-MVP render is **trim + encode + upload + thumbnail**. Crop, resize, subtitle burn-in, and VTT sidecar are future FFmpeg work.
+MVP render is **trim + encode + optional Speak voiceover mix + upload + thumbnail**. Crop, resize, subtitle burn-in, and VTT sidecar are future FFmpeg work.
 
 Example conceptual input (legacy / generic create — not the product path yet):
 

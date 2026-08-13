@@ -63,12 +63,16 @@ All paths are under `/api`. All GETs below are implemented and cookie-scoped to 
 | `retryRecording(id)` | POST | `/recordings/:id/retry` |
 | `getTranscript(id)` | GET | `/recordings/:id/transcript` |
 | — | GET | `/recordings/:id/transcript.vtt` (`text/vtt`) |
+| `patchTranscriptSegment(id, segmentId, body)` | PATCH | `/recordings/:id/transcript/segments/:segmentId` |
+| `applyTranscriptOverdub(id, segmentId, body)` | POST | `/recordings/:id/transcript/segments/:segmentId/overdub` |
+| `getTranscriptOverdub(id)` | GET | `/recordings/:id/transcript/overdub` |
 | `getSummary(id)` | GET | `/recordings/:id/summary` |
 | `getHooks(id)` | GET | `/recordings/:id/hooks` |
 | `searchMoments(id, { query })` | POST | `/recordings/:id/moments/search` |
 | `askMoments(id, { query })` | POST | `/recordings/:id/moments/ask` |
-| `exportHookClip(recordingId, hookId)` | POST | `/recordings/:id/hooks/:hookId/export` |
+| `exportHookClip(recordingId, hookId, body?)` | POST | `/recordings/:id/hooks/:hookId/export` |
 | `createClip(body)` | POST | `/clips` |
+| `getVoices()` | GET | `/voices` |
 | `getKnowledgeBases()` | GET | `/knowledge-bases` |
 | `getClip(id)` | GET | `/clips/:id` |
 | `deleteClip(id)` | DELETE | `/clips/:id` (**204**) |
@@ -250,7 +254,7 @@ Recording `404`; no hooks → `[]`. `clip` is the latest export for that hook, o
 
 One recording-scoped prompt. The API classifies intent; the UI **switches on `kind`**. Do not classify on the client.
 
-Cursor rule for agents: [`.cursor/rules/ask-moments-frontend.mdc`](../.cursor/rules/ask-moments-frontend.mdc). Helpers: `api.askMoments`, `api.createClip`. Reference UI: `apps/web/app/components/summary/moment-search.tsx`.
+Cursor rule for agents: [`.cursor/rules/ask-moments-frontend.mdc`](../.cursor/rules/ask-moments-frontend.mdc). Helpers: `api.askMoments`, `api.createClip`. Reference UI: `AskMint` in `apps/web/app/components/summary/moment-search.tsx` (inline right-pane tab — not a modal, so player seek stays usable).
 
 ```json
 { "query": "What did they say about pricing?", "limit": 8 }
@@ -345,7 +349,7 @@ Errors: `404` recording/hook, `400 INVALID_HOOK_RANGE`, `409 VIDEO_NOT_AVAILABLE
 
 **No `storageKey`, no signed URL, no `caption`.** Playback URL is `videoUrl` (`null` until render finishes). Poster is `thumbnailUrl` (`null` until Filestack/FFmpeg thumb is stored). `hookId` is `null` when the clip was not created from a hook. `ratio` is derived (`9:16` \| `1:1` \| `16:9`) and **omitted** if recording width/height are null. Status: `queued` \| `rendering` \| `ready` \| `failed`.
 
-`POST /api/clips` creates a clip from an owned recording time range (prompt search uses padded `clipStartMs` / `clipEndMs`, `hookId` omitted). Hook export remains `POST /recordings/:id/hooks/:hookId/export`.
+`POST /api/clips` creates a clip from an owned recording time range (prompt search uses padded `clipStartMs` / `clipEndMs`, `hookId` omitted). Hook export remains `POST /recordings/:id/hooks/:hookId/export`. Optional `voiceover: { enabled, voiceId, titleText?, ctaText?, placement: "pre"|"duck" }` on create/export mixes AI Speak audio onto the render. Stock voices: `GET /api/voices`.
 
 ```json
 {
@@ -370,7 +374,8 @@ Map to mock `ClipSummary` in the UI: `projectLabel` ← `projectName` + `recordi
 
 ### Editor + clips UI
 
-- Editor hook card: **Cut clip** until the hook has no ready `videoUrl`; poll `GET /clips/:id` while `queued` / `rendering`. When `status === ready` and `videoUrl` is set, show the **download icon** only.
+- Editor hook card: **Cut clip** opens an optional AI voiceover dialog, then export; poll `GET /clips/:id` while `queued` / `rendering`. When `status === ready` and `videoUrl` is set, show the **download icon** only.
+- Transcript: **Edit** a segment → save text (`PATCH …/segments/:segmentId`) and/or **Apply voice** (`POST …/overdub` + poll `GET …/transcript/overdub`). On success, reload recording `videoUrl` (source audio was replaced).
 - Clips page: list/filter via `GET /clips` + `GET /clips/filters`. Cards use a **4:3** poster (`thumbnailUrl` when present); **Download** when `ready` + `videoUrl`. **Delete** (confirm dialog) calls `DELETE /clips/:id` for any status.
 - Download fetches `videoUrl` in the browser (HTTPS Filestack CDN only, `credentials: 'omit'`). Show a loading state while the file is saving. Signed `GET /clips/:id/download` is still unimplemented.
 

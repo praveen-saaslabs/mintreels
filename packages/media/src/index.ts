@@ -9,6 +9,17 @@ export type {
   ResizeVideoInput,
   TrimVideoInput,
 } from './video';
+export {
+  buildAtempoFilter,
+  mixVoiceoverOntoVideo,
+  probeDurationSeconds,
+  replaceAudioRange,
+} from './voiceover';
+export type {
+  MixVoiceoverOntoVideoInput,
+  ProbeDurationInput,
+  ReplaceAudioRangeInput,
+} from './voiceover';
 export { burnSubtitles, transcriptToVtt } from './subtitles';
 export type { BurnSubtitlesInput } from './subtitles';
 export { generateThumbnail } from './thumbnails';

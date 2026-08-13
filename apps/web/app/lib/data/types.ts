@@ -41,6 +41,16 @@ export type ClipFilter = {
   count: number;
 };
 
+export type ClipVoiceoverPlacement = 'pre' | 'duck';
+
+export type ClipVoiceover = {
+  enabled: boolean;
+  voiceId: string;
+  titleText?: string;
+  ctaText?: string;
+  placement: ClipVoiceoverPlacement;
+};
+
 export type ClipSummary = {
   id: number;
   title: string;
@@ -53,6 +63,7 @@ export type ClipSummary = {
   endMs: number;
   status: ClipRenderStatus;
   subtitleStyle: string | null;
+  voiceover?: ClipVoiceover | null;
   videoUrl: string | null;
   thumbnailUrl: string | null;
   ratio?: '9:16' | '1:1' | '16:9';

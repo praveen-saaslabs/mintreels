@@ -19,6 +19,7 @@ import {
   createStorageProvider,
   createTranscriptVectorStoreProvider,
   createVectorStoreProvider,
+  createVoiceProvider,
 } from './providers';
 
 async function main(): Promise<void> {
@@ -36,6 +37,7 @@ async function main(): Promise<void> {
     summaries: new SummaryRepository(dataSource),
     hooks: new HookRepository(dataSource),
     speech: createSpeechProvider(),
+    voice: createVoiceProvider(),
     llm: createLLMProvider(),
     embeddings: createEmbeddingProvider(),
     vectorStore: createVectorStoreProvider(),
@@ -45,7 +47,7 @@ async function main(): Promise<void> {
 
   const worker = createProcessors(deps);
   console.log(
-    'MintReels worker listening on queue mintreels for ingest-video, render-clip, generate-hooks',
+    'MintReels worker listening on queue mintreels for ingest-video, render-clip, generate-hooks, apply-overdub',
   );
 
   const shutdown = async () => {

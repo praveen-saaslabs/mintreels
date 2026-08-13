@@ -3,10 +3,17 @@ import {
   OpenAICompatibleLLMProvider,
   PyAIClient,
   PyAISpeechProvider,
+  PyAIVoiceProvider,
   openAICompatibleConfigFromEnv,
   openAICompatibleEmbeddingConfigFromEnv,
 } from '@mintreels/ai';
-import type { EmbeddingProvider, LLMProvider, SpeechProvider, VectorStoreProvider } from '@mintreels/ai';
+import type {
+  EmbeddingProvider,
+  LLMProvider,
+  SpeechProvider,
+  VectorStoreProvider,
+  VoiceProvider,
+} from '@mintreels/ai';
 import {
   QdrantVectorStore,
   qdrantConfigFromEnv,
@@ -30,6 +37,14 @@ export function createSpeechProvider(): SpeechProvider {
     throw new Error(`Unsupported AI_PROVIDER: ${provider}`);
   }
   return new PyAISpeechProvider(new PyAIClient());
+}
+
+export function createVoiceProvider(): VoiceProvider {
+  const provider = requireProvider(EnvKey.AiProvider, 'pyai');
+  if (provider !== 'pyai') {
+    throw new Error(`Unsupported AI_PROVIDER: ${provider}`);
+  }
+  return new PyAIVoiceProvider(new PyAIClient());
 }
 
 export function createLLMProvider(): LLMProvider {

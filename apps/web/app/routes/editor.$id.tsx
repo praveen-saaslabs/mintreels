@@ -17,7 +17,11 @@ function EditorChrome({
   title,
   projectId,
   children,
-}: Readonly<{ title: string; projectId?: number | undefined; children: ReactNode }>) {
+}: Readonly<{
+  title: string;
+  projectId?: number | undefined;
+  children: ReactNode;
+}>) {
   return (
     <div className="mr-ambient flex h-svh flex-col">
       <EditorHeader title={title} projectId={projectId} />

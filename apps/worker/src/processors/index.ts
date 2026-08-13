@@ -1,5 +1,6 @@
 import { EnvKey } from '@mintreels/schema';
 import { startWorker } from '@mintreels/queue';
+import { applyOverdub, type ApplyOverdubPayload } from '../jobs/apply-overdub';
 import { generateHooks, type GenerateHooksPayload } from '../jobs/generate-hooks';
 import { ingestVideo, type IngestVideoPayload } from '../jobs/ingest-video';
 import { renderClip, type RenderClipPayload } from '../jobs/render-clip';
@@ -61,6 +62,40 @@ function parseGenerateHooksPayload(data: unknown): GenerateHooksPayload {
   return { recordingId: rec.recordingId, jobId: rec.jobId };
 }
 
+function parseApplyOverdubPayload(data: unknown): ApplyOverdubPayload {
+  if (typeof data !== 'object' || data === null) {
+    throw new Error('apply-overdub payload is required');
+  }
+  const rec = data as Record<string, unknown>;
+  if (typeof rec.recordingId !== 'number') {
+    throw new Error('apply-overdub payload.recordingId is required');
+  }
+  if (typeof rec.segmentId !== 'number') {
+    throw new Error('apply-overdub payload.segmentId is required');
+  }
+  if (typeof rec.jobId !== 'number') {
+    throw new Error('apply-overdub payload.jobId is required');
+  }
+  if (typeof rec.voiceId !== 'string' || rec.voiceId.trim() === '') {
+    throw new Error('apply-overdub payload.voiceId is required');
+  }
+  if (typeof rec.text !== 'string') {
+    throw new Error('apply-overdub payload.text is required');
+  }
+  if (typeof rec.startMs !== 'number' || typeof rec.endMs !== 'number') {
+    throw new Error('apply-overdub payload.startMs and endMs are required');
+  }
+  return {
+    recordingId: rec.recordingId,
+    segmentId: rec.segmentId,
+    jobId: rec.jobId,
+    voiceId: rec.voiceId.trim(),
+    text: rec.text,
+    startMs: rec.startMs,
+    endMs: rec.endMs,
+  };
+}
+
 export function createProcessors(deps: WorkerDeps): { close: () => Promise<void> } {
   const redisUrl = requireRedisUrl();
   const concurrency = Number(process.env[EnvKey.WorkerConcurrency]) || 1;
@@ -77,6 +112,9 @@ export function createProcessors(deps: WorkerDeps): { close: () => Promise<void>
       },
       'generate-hooks': async (data) => {
         await generateHooks(parseGenerateHooksPayload(data), deps);
+      },
+      'apply-overdub': async (data) => {
+        await applyOverdub(parseApplyOverdubPayload(data), deps);
       },
     },
   });

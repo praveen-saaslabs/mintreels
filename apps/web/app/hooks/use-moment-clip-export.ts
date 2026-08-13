@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { api, type MomentCandidate } from '@/lib/api';
-import type { ClipSummary } from '@/lib/data/types';
+import type { ClipSummary, ClipVoiceover } from '@/lib/data/types';
 import { queryKeys } from '@/lib/query-keys';
 
 const POLL_MS = 5000;
@@ -37,7 +37,7 @@ export function useMomentClipExport(recordingId: number | undefined, moment: Mom
   }, [clipQuery.data, queryClient]);
 
   const exportMutation = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (voiceover: ClipVoiceover | null) => {
       if (recordingId == null) {
         throw new Error('Invalid recording');
       }
@@ -46,6 +46,7 @@ export function useMomentClipExport(recordingId: number | undefined, moment: Mom
         title: moment.title,
         startMs: moment.clipStartMs,
         endMs: moment.clipEndMs,
+        ...(voiceover ? { voiceover } : {}),
       });
     },
     onSuccess: (created) => {
@@ -60,8 +61,8 @@ export function useMomentClipExport(recordingId: number | undefined, moment: Mom
 
   return {
     clip,
-    exportClip: () => {
-      exportMutation.mutate();
+    exportClip: (voiceover: ClipVoiceover | null = null) => {
+      exportMutation.mutate(voiceover);
     },
     isExporting: exportMutation.isPending,
     canExport,

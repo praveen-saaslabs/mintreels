@@ -1,7 +1,17 @@
-import { Controller, Get, HttpCode, Param, ParseIntPipe, Post, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  Param,
+  ParseIntPipe,
+  Post,
+  UseGuards,
+} from '@nestjs/common';
 import {
   ApiAcceptedResponse,
   ApiBadRequestResponse,
+  ApiBody,
   ApiConflictResponse,
   ApiCookieAuth,
   ApiNotFoundResponse,
@@ -15,7 +25,12 @@ import { ClipStatus } from '@mintreels/schema';
 import { AuthGuard } from '../auth/auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
 import type { RequestUser } from '../auth/auth.types';
+import { ZodValidationPipe } from '../common/zod-validation.pipe';
 import { ClipsService } from '../clips/clips.service';
+import {
+  exportHookClipRequestSchema,
+  type ExportHookClipRequest,
+} from '../clips/clips.dto';
 import { HooksService } from './hooks.service';
 
 @ApiTags('Hooks')
@@ -96,13 +111,28 @@ export class HooksController {
   @ApiBadRequestResponse({ description: 'INVALID_HOOK_RANGE' })
   @ApiConflictResponse({ description: 'VIDEO_NOT_AVAILABLE' })
   @ApiNotFoundResponse({ description: 'Recording or hook not found' })
+  @ApiBody({
+    required: false,
+    schema: {
+      example: {
+        voiceover: {
+          enabled: true,
+          voiceId: 'stock_dorit_en_us',
+          titleText: 'The roadmap was never a plan',
+          ctaText: 'Follow for more product stories',
+          placement: 'duck',
+        },
+      },
+    },
+  })
   @HttpCode(202)
   @Post(':id/hooks/:hookId/export')
   exportFromHook(
     @CurrentUser() user: RequestUser,
     @Param('id', ParseIntPipe) id: number,
     @Param('hookId', ParseIntPipe) hookId: number,
+    @Body(new ZodValidationPipe(exportHookClipRequestSchema)) body: ExportHookClipRequest,
   ) {
-    return this.clipsService.exportFromHook(id, hookId, user.id);
+    return this.clipsService.exportFromHook(id, hookId, user.id, body);
   }
 }

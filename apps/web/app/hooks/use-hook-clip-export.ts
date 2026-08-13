@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import { api } from '@/lib/api';
+import type { ClipVoiceover } from '@/lib/data/types';
 import { queryKeys } from '@/lib/query-keys';
 import { useEditorStore, type EditorHook, type EditorHookStatus } from '@/stores/editor-store';
 
@@ -43,11 +44,15 @@ export function useHookClipExport(recordingId: number | undefined, hook: EditorH
   }, [clipQuery.data, hook.id, patchHook, queryClient]);
 
   const exportMutation = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (voiceover: ClipVoiceover | null) => {
       if (recordingId == null || !Number.isInteger(hookId) || hookId <= 0) {
         throw new Error('Invalid recording or hook');
       }
-      return api.exportHookClip(recordingId, hookId);
+      return api.exportHookClip(
+        recordingId,
+        hookId,
+        voiceover ? { voiceover } : undefined,
+      );
     },
     onSuccess: (clip) => {
       patchHook(hook.id, {
@@ -69,8 +74,8 @@ export function useHookClipExport(recordingId: number | undefined, hook: EditorH
     !exportMutation.isPending;
 
   return {
-    exportClip: () => {
-      exportMutation.mutate();
+    exportClip: (voiceover: ClipVoiceover | null = null) => {
+      exportMutation.mutate(voiceover);
     },
     isExporting: exportMutation.isPending,
     canExport,

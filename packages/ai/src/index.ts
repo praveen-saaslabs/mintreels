@@ -1,4 +1,11 @@
 export type { SpeechProvider } from './speech-provider';
+export type {
+  SynthesizeSpeechInput,
+  SynthesizeSpeechResult,
+  Voice,
+  VoiceAudioFormat,
+  VoiceProvider,
+} from './voice-provider';
 export type { ActionItem, HookGenerationOptions, LLMProvider } from './llm-provider';
 export {
   classifyTranscriptAsk,
@@ -34,6 +41,7 @@ export {
   PyAIClient,
   PyAILLMProvider,
   PyAISpeechProvider,
+  PyAIVoiceProvider,
   mapPyAIError,
   mapJobToSubmission,
   mapResultToCanonical,

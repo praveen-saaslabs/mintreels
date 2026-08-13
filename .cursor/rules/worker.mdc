@@ -13,9 +13,10 @@ Jobs live in `apps/worker/src/jobs`:
 - `summarize`
 - `generate-hooks`
 - `sync-knowledge-base`
-- `render-clip` (registered; FFmpeg trim + Filestack upload; no-op success if the clip or recording row is already gone / soft-deleted)
+- `render-clip` (registered; FFmpeg trim + optional Speak voiceover mix + Filestack upload; no-op success if the clip or recording row is already gone / soft-deleted)
+- `apply-overdub` (registered; Speak TTS + FFmpeg replace audio range on source recording; serialized per recording via API)
 
-The worker currently listens for `ingest-video` and `render-clip`. Use provider interfaces. Do not call PyAI or FFmpeg from HTTP.
+The worker currently listens for `ingest-video`, `render-clip`, `generate-hooks`, and `apply-overdub`. Use provider interfaces. Do not call PyAI or FFmpeg from HTTP.
 
 ## States
 

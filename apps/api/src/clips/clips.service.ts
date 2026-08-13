@@ -16,12 +16,13 @@ import {
   ClipStatus,
   JobStatus,
   JobType,
+  type ClipVoiceover,
 } from '@mintreels/schema';
 import { HttpError } from '../common/http-error';
 import { publicPlaybackUrl } from '../common/playback-url';
 import { QUEUE_PROVIDER } from '../providers/provider-tokens';
 import { clipCreateGuard } from './clip-create-guard';
-import type { CreateClipRequest } from './clips.dto';
+import type { CreateClipRequest, ExportHookClipRequest } from './clips.dto';
 
 const RENDER_QUEUE_MAX_ATTEMPTS = 3;
 
@@ -36,6 +37,13 @@ function clipRatio(width: number | null | undefined, height: number | null | und
     return ClipRatio.Square;
   }
   return ClipRatio.Widescreen;
+}
+
+function normalizeVoiceover(value: ClipVoiceover | null | undefined): ClipVoiceover | null {
+  if (!value || !value.enabled) {
+    return null;
+  }
+  return value;
 }
 
 export function toPublicClip(clip: Clip) {
@@ -54,6 +62,7 @@ export function toPublicClip(clip: Clip) {
     endMs: clip.endMs,
     status: clip.status,
     subtitleStyle: clip.subtitleStyle,
+    voiceover: clip.voiceover ?? null,
     videoUrl: publicPlaybackUrl(clip.storageKey),
     thumbnailUrl: publicPlaybackUrl(clip.thumbnailStorageKey),
     ...(ratio ? { ratio } : {}),
@@ -117,6 +126,7 @@ export class ClipsService {
         subtitleStyle: body.subtitleStyle ?? null,
         storageKey: null,
         thumbnailStorageKey: null,
+        voiceover: normalizeVoiceover(body.voiceover),
         status: ClipStatus.Queued,
       }),
     );
@@ -125,7 +135,12 @@ export class ClipsService {
     return toPublicClip(clip);
   }
 
-  async exportFromHook(recordingId: number, hookId: number, userId: number) {
+  async exportFromHook(
+    recordingId: number,
+    hookId: number,
+    userId: number,
+    body?: ExportHookClipRequest,
+  ) {
     const recording = await this.recordings.findOne({
       where: { id: recordingId, project: { userId } },
       relations: { project: true },
@@ -145,23 +160,25 @@ export class ClipsService {
       throw new HttpError(400, 'INVALID_HOOK_RANGE');
     }
 
+    const requestedVoiceover = normalizeVoiceover(body?.voiceover);
     const existing = await this.clips.findLatestByRecordingAndHookId(recordingId, hookId);
     if (existing) {
       if (existing.status === ClipStatus.Queued || existing.status === ClipStatus.Rendering) {
         existing.recording = existing.recording ?? recording;
         return toPublicClip(existing);
       }
-      if (existing.status === ClipStatus.Ready) {
+      if (existing.status === ClipStatus.Ready && !requestedVoiceover) {
         existing.recording = existing.recording ?? recording;
         return toPublicClip(existing);
       }
-      if (existing.status === ClipStatus.Failed) {
+      if (existing.status === ClipStatus.Failed || requestedVoiceover) {
         existing.status = ClipStatus.Queued;
         existing.storageKey = null;
         existing.thumbnailStorageKey = null;
         existing.startMs = hook.startMs;
         existing.endMs = hook.endMs;
         existing.title = hook.title;
+        existing.voiceover = requestedVoiceover;
         const saved = await this.clips.save(existing);
         saved.recording = recording;
         await this.enqueueRender(saved);
@@ -179,6 +196,7 @@ export class ClipsService {
         subtitleStyle: null,
         storageKey: null,
         thumbnailStorageKey: null,
+        voiceover: requestedVoiceover,
         status: ClipStatus.Queued,
       }),
     );

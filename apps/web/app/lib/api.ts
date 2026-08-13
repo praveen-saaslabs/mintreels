@@ -9,6 +9,7 @@ import type {
 import type {
   ClipFilter,
   ClipSummary,
+  ClipVoiceover,
   ProjectSummary,
   SettingsSnapshot,
   SidebarProject,
@@ -231,6 +232,34 @@ export type CreateClipRequest = {
   endMs: number;
   hookId?: number | null;
   subtitleStyle?: string | null;
+  voiceover?: ClipVoiceover | null;
+};
+
+export type ExportHookClipRequest = {
+  voiceover?: ClipVoiceover | null;
+};
+
+export type VoiceOption = {
+  id: string;
+  name: string;
+  description?: string;
+  language?: string;
+  previewUrl?: string;
+};
+
+export type OverdubJobSnapshot = {
+  jobId: number | null;
+  status: 'queued' | 'running' | 'success' | 'failed' | 'partial' | null;
+  error?: string | null;
+  segmentId?: number | null;
+};
+
+export type PatchTranscriptSegmentRequest = {
+  text: string;
+};
+
+export type ApplyOverdubRequest = {
+  voiceId: string;
 };
 
 export const api = {
@@ -265,16 +294,42 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(body),
     }),
-  exportHookClip: (recordingId: number, hookId: number) =>
+  exportHookClip: (recordingId: number, hookId: number, body?: ExportHookClipRequest) =>
     request<ClipSummary>(
       `/recordings/${encodeURIComponent(recordingId)}/hooks/${encodeURIComponent(hookId)}/export`,
-      { method: 'POST' },
+      {
+        method: 'POST',
+        ...(body ? { body: JSON.stringify(body) } : {}),
+      },
     ),
   createClip: (body: CreateClipRequest) =>
     request<ClipSummary>('/clips', {
       method: 'POST',
       body: JSON.stringify(body),
     }),
+  getVoices: () => request<VoiceOption[]>('/voices'),
+  patchTranscriptSegment: (
+    recordingId: number,
+    segmentId: number,
+    body: PatchTranscriptSegmentRequest,
+  ) =>
+    request<{ id: number; start: number; end: number; text: string; speaker?: string }>(
+      `/recordings/${encodeURIComponent(recordingId)}/transcript/segments/${encodeURIComponent(segmentId)}`,
+      { method: 'PATCH', body: JSON.stringify(body) },
+    ),
+  applyTranscriptOverdub: (
+    recordingId: number,
+    segmentId: number,
+    body: ApplyOverdubRequest,
+  ) =>
+    request<{ jobId: number; status: string; segmentId: number; voiceId: string }>(
+      `/recordings/${encodeURIComponent(recordingId)}/transcript/segments/${encodeURIComponent(segmentId)}/overdub`,
+      { method: 'POST', body: JSON.stringify(body) },
+    ),
+  getTranscriptOverdub: (recordingId: number) =>
+    request<OverdubJobSnapshot>(
+      `/recordings/${encodeURIComponent(recordingId)}/transcript/overdub`,
+    ),
   getKnowledgeBases: () => request<unknown>('/knowledge-bases'),
   getClip: (id: number) => request<ClipSummary>(`/clips/${encodeURIComponent(id)}`),
   deleteClip: (id: number) =>
