@@ -109,6 +109,17 @@ services:
       SMTP_PASSWORD: ${SMTP_PASSWORD:-}
       SMTP_FROM_EMAIL: ${SMTP_FROM_EMAIL:-}
       WEB_ORIGIN: ${WEB_ORIGIN:-http://127.0.0.1:5173}
+      EMBEDDING_PROVIDER: ${EMBEDDING_PROVIDER:-openai}
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL:-text-embedding-3-small}
+      VECTOR_STORE_PROVIDER: ${VECTOR_STORE_PROVIDER:-qdrant}
+      QDRANT_URL: ${QDRANT_URL:-http://qdrant:6333}
+      QDRANT_API_KEY: ${QDRANT_API_KEY:-}
+      QDRANT_COLLECTION: ${QDRANT_COLLECTION:-hook_vectors}
+      QDRANT_TRANSCRIPT_COLLECTION: ${QDRANT_TRANSCRIPT_COLLECTION:-transcript_windows}
+      MOMENT_SEARCH_LIMIT: ${MOMENT_SEARCH_LIMIT:-8}
+      MOMENT_SEARCH_MIN_SIMILARITY: ${MOMENT_SEARCH_MIN_SIMILARITY:-0.35}
+      CLIP_PREROLL_MS: ${CLIP_PREROLL_MS:-3000}
+      CLIP_POSTROLL_MS: ${CLIP_POSTROLL_MS:-5000}
     ports:
       - '3000:3000'
     depends_on:
@@ -116,6 +127,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      qdrant:
+        condition: service_started
 
   worker:
     build:
@@ -155,6 +168,7 @@ services:
       QDRANT_URL: ${QDRANT_URL:-http://qdrant:6333}
       QDRANT_API_KEY: ${QDRANT_API_KEY:-}
       QDRANT_COLLECTION: ${QDRANT_COLLECTION:-hook_vectors}
+      QDRANT_TRANSCRIPT_COLLECTION: ${QDRANT_TRANSCRIPT_COLLECTION:-transcript_windows}
       HOOK_SIMILARITY_THRESHOLD: ${HOOK_SIMILARITY_THRESHOLD:-0.85}
       HOOK_MAX_CANDIDATES: ${HOOK_MAX_CANDIDATES:-50}
       HOOK_FINAL_COUNT: ${HOOK_FINAL_COUNT:-10}

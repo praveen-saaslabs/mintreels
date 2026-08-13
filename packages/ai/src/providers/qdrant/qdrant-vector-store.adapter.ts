@@ -7,10 +7,12 @@ import type {
   VectorSearchResult,
   VectorStoreProvider,
 } from '../../vector-store-provider';
+import { toPointId } from './qdrant-point-id';
 
 const PROVIDER = 'qdrant';
 const DEFAULT_URL = 'http://localhost:6333';
 const DEFAULT_COLLECTION = 'hook_vectors';
+const DEFAULT_TRANSCRIPT_COLLECTION = 'transcript_windows';
 
 export type QdrantVectorStoreConfig = {
   url: string;
@@ -28,6 +30,14 @@ export function qdrantConfigFromEnv(
     ...(apiKey ? { apiKey } : {}),
     ...(collection ? { collection } : {}),
   };
+}
+
+export function qdrantTranscriptConfigFromEnv(
+  env: NodeJS.ProcessEnv = process.env,
+): QdrantVectorStoreConfig {
+  const base = qdrantConfigFromEnv(env);
+  const collection = env[EnvKey.QdrantTranscriptCollection]?.trim() || DEFAULT_TRANSCRIPT_COLLECTION;
+  return { ...base, collection };
 }
 
 /** Payload mirrors the searchable/returnable fields; the vector itself is stored separately by Qdrant. */
@@ -53,15 +63,6 @@ function invalid(message: string): ProviderError {
   return new ProviderError({ provider: PROVIDER, code: 'invalid_request', message, retryable: false });
 }
 
-/** Hook ids are numeric primary keys; Qdrant point ids must be an unsigned int or a UUID. */
-function toPointId(id: string): number {
-  const value = Number(id);
-  if (!Number.isInteger(value) || value < 0) {
-    throw invalid(`Unsupported vector id: ${id}`);
-  }
-  return value;
-}
-
 function safeRecordingId(recordingId: number): number {
   if (!Number.isInteger(recordingId)) {
     throw invalid('recordingId must be an integer');
@@ -80,8 +81,9 @@ function readString(payload: Record<string, unknown>, key: string): string {
 }
 
 /**
- * Vector index over hook vectors backed by a self-hosted Qdrant service. MySQL stays canonical —
- * this collection is derived and rebuildable from `hooks`.
+ * Vector index backed by a self-hosted Qdrant service. One instance per collection
+ * (`hook_vectors` or `transcript_windows`). MySQL stays canonical — collections are derived
+ * and rebuildable.
  *
  * ponytail: the collection's vector size is pinned to the first upsert's embedding width. Changing
  * `EMBEDDING_MODEL` needs a rebuild (drop the collection), not a migration.

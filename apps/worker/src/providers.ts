@@ -7,7 +7,11 @@ import {
   openAICompatibleEmbeddingConfigFromEnv,
 } from '@mintreels/ai';
 import type { EmbeddingProvider, LLMProvider, SpeechProvider, VectorStoreProvider } from '@mintreels/ai';
-import { QdrantVectorStore, qdrantConfigFromEnv } from '@mintreels/ai/providers/qdrant';
+import {
+  QdrantVectorStore,
+  qdrantConfigFromEnv,
+  qdrantTranscriptConfigFromEnv,
+} from '@mintreels/ai/providers/qdrant';
 import { FilestackStorageProvider } from '@mintreels/storage';
 import type { StorageProvider } from '@mintreels/storage';
 import { EnvKey } from '@mintreels/schema';
@@ -50,6 +54,14 @@ export function createVectorStoreProvider(): VectorStoreProvider {
     throw new Error(`Unsupported VECTOR_STORE_PROVIDER: ${provider}`);
   }
   return new QdrantVectorStore(qdrantConfigFromEnv());
+}
+
+export function createTranscriptVectorStoreProvider(): VectorStoreProvider {
+  const provider = requireProvider(EnvKey.VectorStoreProvider, 'qdrant');
+  if (provider !== 'qdrant') {
+    throw new Error(`Unsupported VECTOR_STORE_PROVIDER: ${provider}`);
+  }
+  return new QdrantVectorStore(qdrantTranscriptConfigFromEnv());
 }
 
 export function createStorageProvider(): StorageProvider {

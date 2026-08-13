@@ -27,6 +27,7 @@ PyAI Adapter (or Filestack / BullMQ adapter)
 - `summarize(transcript)` → `Summary`
 - `generateHooks(transcript, options)` → `HookCandidate[]` (`options` carries `loadHookConfig()` weights + `maxCandidates`)
 - `generateActionItems(transcript)` → timestamped action items
+- `askTranscript(transcript, question)` → `{ intent, text, clipQuery }` (`question` | `clip` | `other`)
 - Default: OpenAI-compatible (`packages/ai/src/providers/openai-compatible/llm.ts`) via `LLM_PROVIDER=openai` (or `nvidia`)
 - `summarize` / `generateActionItems` call Chat Completions with `response_format` (`json_schema` strict, fallback `json_object`)
 - `generateHooks` sends deterministic semantic windows (`packages/ai/src/semantic-windows.ts`) with the `hooks-v1` prompt, and returns segment IDs — never timestamps. `packages/ai/src/hook-candidates.ts` resolves segment IDs to milliseconds, divides the 0–10 dimension scores by 10, and applies the configured weights
@@ -49,8 +50,8 @@ PyAI Adapter (or Filestack / BullMQ adapter)
 
 - `upsert` / `search` / `delete` / `deleteByRecordingId` / `healthCheck`
 - Search is recording-scoped (`recordingId` required)
-- Default: self-hosted Qdrant service (`VECTOR_STORE_PROVIDER=qdrant`, `QDRANT_URL`, optional `QDRANT_API_KEY`, `QDRANT_COLLECTION`)
-- Derived index only — MySQL `hooks` rows remain canonical and rebuildable
+- Default: self-hosted Qdrant service (`VECTOR_STORE_PROVIDER=qdrant`, `QDRANT_URL`, optional `QDRANT_API_KEY`, `QDRANT_COLLECTION=hook_vectors`, `QDRANT_TRANSCRIPT_COLLECTION=transcript_windows`)
+- Two derived indexes — hook clustering and transcript windows; MySQL remains canonical and rebuildable
 - Do not import Qdrant types outside `packages/ai/src/providers/qdrant/`
 
 ## KnowledgeBaseProvider

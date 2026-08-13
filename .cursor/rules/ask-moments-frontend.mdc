@@ -1,0 +1,103 @@
+---
+description: Frontend ask box — transcript Q&A, clip search, or funny reject. One input, switch on kind.
+globs: apps/web/**
+alwaysApply: false
+---
+
+# Ask / moments (frontend)
+
+Read [`docs/api-frontend.md`](../../docs/api-frontend.md) § Ask / moments. Call the API **only** through [`apps/web/app/lib/api.ts`](../../apps/web/app/lib/api.ts) with `credentials: 'include'`. Never send `Authorization: Bearer`.
+
+Reference UI: [`moment-search.tsx`](../../apps/web/app/components/summary/moment-search.tsx), [`use-moment-clip-export.ts`](../../apps/web/app/hooks/use-moment-clip-export.ts).
+
+The **backend** classifies intent. Do **not** regex-detect question vs clip on the client.
+
+## One box → `api.askMoments(recordingId, { query })`
+
+`POST /api/recordings/:id/moments/ask`
+
+```json
+{ "query": "What did they say about pricing?", "limit": 8 }
+```
+
+- `id` / `recordingId` are **integers** (recording, not project).
+- `query`: trimmed string, **3–500** chars. Optional `limit` (default 8, max 50) only affects clip hits.
+- Cookie session required → `401` if missing.
+
+Use this for the recording editor ask/search input. Prefer `askMoments` over `searchMoments` unless you only want clip vectors (no Q&A / reject).
+
+## Switch on `kind`
+
+```ts
+type AskMomentsResponse =
+  | { kind: 'answer'; text: string }
+  | { kind: 'moments'; moments: MomentCandidate[] }
+  | { kind: 'reject'; text: string };
+```
+
+| `kind` | When | UI |
+|---|---|---|
+| `answer` | Transcript question | Render `text` (no clip cards) |
+| `moments` | Find / cut a moment | Cards + preview seek + **Cut clip** |
+| `reject` | Off-topic | Render `text` as a light/funny refusal — do not toast as an error |
+
+`moments: []` with `kind: 'moments'` → empty state (“No matching moments”), not a reject.
+
+### Moment card fields (ms)
+
+```json
+{
+  "startMs": 12000,
+  "endMs": 42000,
+  "clipStartMs": 9000,
+  "clipEndMs": 47000,
+  "title": "The enterprise plan starts at",
+  "excerpt": "We should talk about pricing…",
+  "similarity": 0.82
+}
+```
+
+- Preview / seek: `seek(startMs / 1000)` (player is **seconds**).
+- Labels: format `startMs` / `endMs` in the UI.
+- **Cut clip** must send **padded** bounds: `clipStartMs` / `clipEndMs`, not `startMs` / `endMs`.
+- `similarity` is 0..1 (optional badge). `title` / `excerpt` are display-only.
+
+## Cut clip — `api.createClip`
+
+`POST /api/clips` (201). `hookId` omitted / null.
+
+```json
+{
+  "recordingId": 10,
+  "title": "The enterprise plan starts at",
+  "startMs": 9000,
+  "endMs": 47000
+}
+```
+
+Then poll `GET /api/clips/:id` (`api.getClip`) every **2–5s** while `status` is `queued` | `rendering`. Stop on `ready` | `failed`. Download `videoUrl` (HTTPS Filestack only). Same pattern as hook export (`useHookClipExport` / `useMomentClipExport`).
+
+Errors: `404` not owned, `400 INVALID_CLIP_RANGE`, `409 VIDEO_NOT_AVAILABLE`.
+
+AI hook **Cut clip** stays `api.exportHookClip(recordingId, hookId)` — do not mix the two.
+
+## Errors (`{ "error": "…" }`)
+
+| Status | `error` | UI |
+|---|---|---|
+| `400` | validation | Query too short / invalid |
+| `401` | `UNAUTHORIZED` | Send to login |
+| `404` | `Not found` | Recording missing / not owned |
+| `409` | `TRANSCRIPT_REQUIRED` | “Transcript is not ready yet.” |
+| `409` | `TRANSCRIPT_INDEX_NOT_READY` | “Re-run processing to index this transcript.” (`POST /recordings/:id/retry`) |
+| `409` | `VIDEO_NOT_AVAILABLE` | On clip create only |
+
+Do not show stack traces. `kind: 'reject'` is **200**, not an error.
+
+## Do not
+
+- Classify intent in the browser.
+- Call Qdrant, OpenAI, or PyAI from the web app.
+- Persist ask results into the `hooks` list (regenerate-hooks would wipe them).
+- Use `searchMoments` for the ask box (no Q&A / reject).
+- Send `startMs`/`endMs` when cutting an ask-hit — use `clipStartMs`/`clipEndMs`.

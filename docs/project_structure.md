@@ -38,8 +38,10 @@ Placeholder routes:
 - `GET /api/recordings/:id/hooks`
 - `POST /api/recordings/:id/hooks/generate`
 - `POST /api/recordings/:id/hooks/:hookId/export`
+- `POST /api/recordings/:id/moments/search`
+- `POST /api/recordings/:id/moments/ask`
 - `GET/POST /api/knowledge-bases`
-- `POST /api/clips` (501 — use hook export)
+- `POST /api/clips`
 - `GET /api/clips`
 - `GET /api/clips/filters`
 - `GET /api/clips/:id`

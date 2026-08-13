@@ -1,5 +1,13 @@
 export type { SpeechProvider } from './speech-provider';
 export type { ActionItem, HookGenerationOptions, LLMProvider } from './llm-provider';
+export {
+  classifyTranscriptAsk,
+  extractiveAnswer,
+  funnyReject,
+  heuristicTranscriptAsk,
+  parseTranscriptAskResponse,
+} from './transcript-ask';
+export type { TranscriptAskIntent, TranscriptAskResult } from './transcript-ask';
 export type { EmbeddingProvider } from './embedding-provider';
 export type {
   HookCandidate,
@@ -18,6 +26,9 @@ export { cosineSimilarity, selectHooks } from './hook-selection';
 export type { SelectionCandidate, SelectionConfig, SelectionResult } from './hook-selection';
 export { computeClipBoundary } from './clip-boundaries';
 export type { ClipBoundary, ClipBoundaryHook, ClipBoundaryOptions } from './clip-boundaries';
+export { buildSemanticWindows } from './semantic-windows';
+export type { SemanticWindow } from './semantic-windows';
+export { transcriptWindowPointId } from './transcript-window-id';
 export { ProviderError, isProviderError, isRetryableProviderError } from './provider-error';
 export {
   PyAIClient,

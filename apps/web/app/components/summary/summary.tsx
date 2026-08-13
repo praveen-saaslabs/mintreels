@@ -4,6 +4,7 @@ import {
   SummaryTextEmptyState,
 } from '@/components/editor/editor-empty-states';
 import { HookCard } from '@/components/summary/hook-card';
+import { MomentSearch } from '@/components/summary/moment-search';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { EditorPane } from '@/components/video/editor-layout';
 import { useRecordingId } from '@/lib/recording-id';
@@ -108,6 +109,7 @@ export function Summary({ text, pendingHooks = false, pendingSummary = false }: 
         }
       >
         <TabsContent value="hooks" className="mt-0 flex flex-col gap-3 outline-none">
+          <MomentSearch recordingId={recordingId} />
           <p className="text-xs text-muted-foreground">Ranked by predicted retention</p>
           <HooksPane
             rankedHooks={rankedHooks}

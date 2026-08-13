@@ -27,7 +27,11 @@ import {
 } from '@mintreels/schema';
 import { HttpError } from '../common/http-error';
 import { publicPlaybackUrl } from '../common/playback-url';
-import { QUEUE_PROVIDER, VECTOR_STORE_PROVIDER } from '../providers/provider-tokens';
+import {
+  QUEUE_PROVIDER,
+  TRANSCRIPT_VECTOR_STORE_PROVIDER,
+  VECTOR_STORE_PROVIDER,
+} from '../providers/provider-tokens';
 import { toPublicTranscript } from '../transcripts/public-transcript';
 import type { CreateRecordingRequest } from './recordings.dto';
 
@@ -49,6 +53,11 @@ function isRetryableFailure(recording: Recording, job: Job): boolean {
     job.status === JobStatus.Failed ||
     job.status === JobStatus.Partial
   );
+}
+
+function missingIngestSteps(steps: readonly JobStep[]): JobStepName[] {
+  const present = new Set(steps.map((step) => step.step));
+  return JOB_STEP_NAMES.filter((name) => !present.has(name));
 }
 
 function shouldResetStep(status: JobStepStatus): boolean {
@@ -134,6 +143,8 @@ export class RecordingsService {
     private readonly hooks: HookRepository,
     @Inject(QUEUE_PROVIDER) private readonly queue: QueueProvider,
     @Inject(VECTOR_STORE_PROVIDER) private readonly vectorStore: VectorStoreProvider,
+    @Inject(TRANSCRIPT_VECTOR_STORE_PROVIDER)
+    private readonly transcriptVectorStore: VectorStoreProvider,
   ) {}
 
   async create(body: CreateRecordingRequest, userId: number) {
@@ -225,12 +236,40 @@ export class RecordingsService {
     if (isInFlightJob(job.status)) {
       throw new HttpError(409, 'INGEST_IN_PROGRESS');
     }
-    if (!isRetryableFailure(recording, job)) {
-      throw new HttpError(409, 'NOT_RETRYABLE');
-    }
 
     const retryGeneration = retryGenerationFromMetadata(job.metadata);
     const steps = await this.jobSteps.listByJobId(job.id);
+    const missingSteps = missingIngestSteps(steps);
+    const readyNeedsTranscriptIndex =
+      recording.status === RecordingStatus.Ready &&
+      missingSteps.includes(JobStepName.TranscriptEmbeddings);
+    if (!isRetryableFailure(recording, job) && !readyNeedsTranscriptIndex) {
+      throw new HttpError(409, 'NOT_RETRYABLE');
+    }
+
+    if (missingSteps.length > 0) {
+      await this.jobSteps.save(
+        missingSteps.map((step) =>
+          this.jobSteps.create({
+            jobId: job.id,
+            step,
+            status: JobStepStatus.Pending,
+            attempt: 0,
+            maxAttempts: DEFAULT_MAX_ATTEMPTS,
+            provider: null,
+            providerJobId: null,
+            idempotencyKey: [String(recording.id), String(job.id), step, String(retryGeneration)].join(
+              ':',
+            ),
+            result: null,
+            error: null,
+            startedAt: null,
+            completedAt: null,
+          }),
+        ),
+      );
+    }
+
     if (!recording.audioStorageKey) {
       const recovered = audioKeyFromSteps(steps);
       if (recovered) {
@@ -355,8 +394,11 @@ export class RecordingsService {
     if (!recording) {
       throw new HttpError(404, 'Not found');
     }
-    // Drop the derived hook vectors before the canonical rows so a delete never leaves stale index data.
-    await this.vectorStore.deleteByRecordingId(id);
+    // Drop derived indexes before the canonical rows so a delete never leaves stale vectors.
+    await Promise.all([
+      this.vectorStore.deleteByRecordingId(id),
+      this.transcriptVectorStore.deleteByRecordingId(id),
+    ]);
     await this.recordings.remove(recording);
   }
 

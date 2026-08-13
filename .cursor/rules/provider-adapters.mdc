@@ -45,7 +45,9 @@ Dedup, diversity ranking, and clip boundaries are product logic, not adapters. T
 depend only on `VectorStoreProvider` / `EmbeddingProvider` — never on Qdrant/OpenAI types.
 
 `VectorStoreProvider` exposes `fetch(ids)` so downstream steps reuse embeddings already in the index
-instead of re-embedding (cost control). MySQL stays canonical; the index is rebuildable.
+instead of re-embedding (cost control). Two Qdrant collections: hook clustering and transcript windows.
+MySQL stays canonical; indexes are rebuildable. The API may `embed` + `search` via the interface for
+prompt-to-moment lookup.
 
 ## Do not
 

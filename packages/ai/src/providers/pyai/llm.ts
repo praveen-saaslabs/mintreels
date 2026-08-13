@@ -2,6 +2,7 @@ import type { Summary, Transcript } from '@mintreels/domain';
 import { generateExtractiveHooks } from '../../extractive-hooks';
 import type { HookCandidate } from '../../hook-candidates';
 import type { ActionItem, HookGenerationOptions, LLMProvider } from '../../llm-provider';
+import { heuristicTranscriptAsk, type TranscriptAskResult } from '../../transcript-ask';
 import type { EmbeddingProvider } from '../../embedding-provider';
 import type { PyAIClient } from './client';
 
@@ -80,5 +81,9 @@ export class PyAILLMProvider implements LLMProvider, EmbeddingProvider {
 
   async embed(_texts: string[]): Promise<number[][]> {
     throw new Error('PyAILLMProvider.embed is not implemented');
+  }
+
+  async askTranscript(transcript: Transcript, question: string): Promise<TranscriptAskResult> {
+    return heuristicTranscriptAsk(transcript, question);
   }
 }

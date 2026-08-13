@@ -115,6 +115,18 @@ export {
   type ClipRow,
 } from './clips';
 export {
+  askMomentsRequestSchema,
+  askMomentsResponseSchema,
+  momentCandidateSchema,
+  searchMomentsRequestSchema,
+  searchMomentsResponseSchema,
+  type AskMomentsRequest,
+  type AskMomentsResponse,
+  type MomentCandidate,
+  type SearchMomentsRequest,
+  type SearchMomentsResponse,
+} from './moments';
+export {
   jobInsertSchema,
   jobRowSchema,
   jobStatusSchema,

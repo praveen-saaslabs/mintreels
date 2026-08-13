@@ -4,6 +4,7 @@ export { transcriptionHandler } from './transcription';
 export { transcriptionPersistHandler } from './transcription-persist';
 export { summaryHandler } from './summary';
 export { actionItemsHandler } from './action-items';
+export { transcriptEmbeddingsHandler } from './transcript-embeddings';
 export { hooksHandler } from './hooks';
 export { hookEmbeddingsHandler } from './hook-embeddings';
 export { clipRecommendationsHandler } from './clip-recommendations';

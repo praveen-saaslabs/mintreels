@@ -575,7 +575,12 @@ export interface VectorStoreProvider {
 }
 ```
 
-Hook clustering index only. MySQL remains canonical; vectors are rebuildable. Implementation: self-hosted Qdrant service used by the worker (`VECTOR_STORE_PROVIDER=qdrant`, `QDRANT_URL`, optional `QDRANT_API_KEY`/`QDRANT_COLLECTION`). Search always filters by `recordingId`. Do not call Qdrant from `apps/api` or domain services.
+Two rebuildable Qdrant collections behind `VectorStoreProvider` (MySQL stays canonical):
+
+- `QDRANT_COLLECTION=hook_vectors` — hook clustering / dedup (worker ingest + regenerate-hooks).
+- `QDRANT_TRANSCRIPT_COLLECTION=transcript_windows` — semantic transcript windows for prompt search.
+
+Search always filters by `recordingId`. Apps depend on `EmbeddingProvider` / `VectorStoreProvider` only; wire Qdrant/OpenAI at composition roots. The API may `embed` + `search` for interactive moment lookup (`POST /api/recordings/:id/moments/search`) and `LLMProvider.askTranscript` for `POST /api/recordings/:id/moments/ask`. Domain services never import Qdrant.
 
 ---
 
@@ -861,7 +866,9 @@ When the user selects a hook (Cut clip):
 POST /api/recordings/:id/hooks/:hookId/export
 ```
 
-The API looks up the recording video (`storageKey`) and the hook `startMs` / `endMs`, inserts a `clips` row (`queued`, `recordingId`, `hookId`), and enqueues `render-clip`. The worker trims with FFmpeg, uploads the MP4 to Filestack, then asks Filestack for a video thumbnail (`video_convert=preset:thumbnail`, FFmpeg frame upload as fallback). It stores `clip.storageKey` + `clip.thumbnailStorageKey` and sets `status: ready` (or `failed`). The UI polls `GET /api/clips/:id` and, when ready, downloads via public `videoUrl` and shows `thumbnailUrl` (HTTPS Filestack CDN). Generic `POST /api/clips` (arbitrary ranges) and signed `GET /api/clips/:id/download` remain unimplemented (501).
+The API looks up the recording video (`storageKey`) and the hook `startMs` / `endMs`, inserts a `clips` row (`queued`, `recordingId`, `hookId`), and enqueues `render-clip`. The worker trims with FFmpeg, uploads the MP4 to Filestack, then asks Filestack for a video thumbnail (`video_convert=preset:thumbnail`, FFmpeg frame upload as fallback). It stores `clip.storageKey` + `clip.thumbnailStorageKey` and sets `status: ready` (or `failed`). The UI polls `GET /api/clips/:id` and, when ready, downloads via public `videoUrl` and shows `thumbnailUrl` (HTTPS Filestack CDN).
+
+Prompt ask (`POST /api/recordings/:id/moments/ask`) routes to transcript Q&A, clip candidates, or a funny off-topic reject. Direct search remains `POST /api/recordings/:id/moments/search`. **Cut clip** uses `POST /api/clips` with the padded `clipStartMs` / `clipEndMs` (`hookId` null). Signed `GET /api/clips/:id/download` remains unimplemented (501).
 
 MVP render is **trim + encode + upload + thumbnail**. Crop, resize, subtitle burn-in, and VTT sidecar are future FFmpeg work.
 
@@ -1061,6 +1068,8 @@ POST /api/recordings/:id/add-to-global-kb
 GET  /api/recordings/:id/hooks
 POST /api/recordings/:id/hooks/generate
 POST /api/recordings/:id/hooks/:hookId/export
+POST /api/recordings/:id/moments/search
+POST /api/recordings/:id/moments/ask
 ```
 
 ## Clips
@@ -1073,7 +1082,7 @@ GET  /api/clips/:id
 GET  /api/clips/:id/download
 ```
 
-Product clip create is hook export (`POST /api/recordings/:id/hooks/:hookId/export`). Generic `POST /api/clips` and `GET /api/clips/:id/download` are still 501; the UI downloads `videoUrl` from `GET /api/clips/:id`.
+Product clip create is hook export (`POST /api/recordings/:id/hooks/:hookId/export`) or prompt-range `POST /api/clips`. `GET /api/clips/:id/download` is still 501; the UI downloads `videoUrl` from `GET /api/clips/:id`.
 
 ## Projects
 
@@ -1640,6 +1649,9 @@ VECTOR_STORE_PROVIDER=qdrant
 QDRANT_URL=http://qdrant:6333
 QDRANT_API_KEY=
 QDRANT_COLLECTION=hook_vectors
+QDRANT_TRANSCRIPT_COLLECTION=transcript_windows
+MOMENT_SEARCH_LIMIT=8
+MOMENT_SEARCH_MIN_SIMILARITY=0.35
 ```
 
 Never commit actual credentials.
@@ -1688,9 +1700,9 @@ TRANSCRIPTION (poll PyAI job; no webhook)
     ↓
 TRANSCRIPTION_PERSIST
     ↓
-SUMMARY → ACTION_ITEMS → HOOKS
+SUMMARY ∥ ACTION_ITEMS ∥ TRANSCRIPT_EMBEDDINGS ∥ HOOKS
     ↓
-CLIP_RECOMMENDATIONS (skipped — hooks are clip windows)
+HOOK_EMBEDDINGS → CLIP_RECOMMENDATIONS
 ```
 
 KB sync and clip render are out of scope for this pipeline.

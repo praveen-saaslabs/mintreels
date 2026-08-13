@@ -7,6 +7,7 @@ import { migrations } from './migrations';
 import { AuthModule } from './auth/auth.module';
 import { ProvidersModule } from './providers/providers.module';
 import { RecordingsModule } from './recordings/recordings.module';
+import { MomentsModule } from './moments/moments.module';
 import { TranscriptsModule } from './transcripts/transcripts.module';
 import { SummariesModule } from './summaries/summaries.module';
 import { HooksModule } from './hooks/hooks.module';
@@ -23,6 +24,7 @@ import { SettingsModule } from './settings/settings.module';
     ProvidersModule,
     AuthModule,
     RecordingsModule,
+    MomentsModule,
     TranscriptsModule,
     SummariesModule,
     HooksModule,
