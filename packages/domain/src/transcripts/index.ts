@@ -1,6 +1,8 @@
 export type {
   CanonicalTranscript,
+  CanonicalTranscriptFormats,
   CanonicalTranscriptSegment,
+  CanonicalTranscriptWord,
   Transcript,
   TranscriptSegment,
   TranscriptionInput,

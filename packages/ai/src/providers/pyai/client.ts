@@ -62,7 +62,9 @@ export class PyAIClient {
     form.set('audio', new Blob([copy], { type: 'audio/wav' }), input.filename);
     form.set('model', 'pyai-hear');
     form.set('diarize', 'true');
-    form.set('output_formats', 'json');
+    for (const format of ['json', 'srt', 'vtt']) {
+      form.append('output_formats', format);
+    }
 
     const headers: Record<string, string> = {
       Authorization: `Bearer ${this.apiKey}`,

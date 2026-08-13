@@ -52,9 +52,24 @@ export interface CanonicalTranscriptSegment {
   text: string;
 }
 
+export interface CanonicalTranscriptWord {
+  word: string;
+  startMs: number;
+  endMs: number;
+  speaker?: string;
+}
+
+export interface CanonicalTranscriptFormats {
+  srt?: string;
+  vtt?: string;
+}
+
 export interface CanonicalTranscript {
   text: string;
   language?: string;
   durationMs?: number;
+  speakerCount?: number;
+  words?: CanonicalTranscriptWord[];
+  formats?: CanonicalTranscriptFormats;
   segments: CanonicalTranscriptSegment[];
 }

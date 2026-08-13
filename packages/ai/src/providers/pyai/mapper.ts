@@ -1,4 +1,10 @@
-import type { CanonicalTranscript, CanonicalTranscriptSegment, TranscriptionSubmission } from '@mintreels/domain';
+import type {
+  CanonicalTranscript,
+  CanonicalTranscriptFormats,
+  CanonicalTranscriptSegment,
+  CanonicalTranscriptWord,
+  TranscriptionSubmission,
+} from '@mintreels/domain';
 import { ProviderError } from '../../provider-error';
 
 const SUBMISSION_STATUSES = new Set(['queued', 'running', 'completed', 'failed', 'cancelled']);
@@ -111,7 +117,68 @@ export function mapResultToCanonical(result: unknown): CanonicalTranscript {
   if (typeof result.audio_seconds === 'number' && Number.isFinite(result.audio_seconds)) {
     canonical.durationMs = Math.round(result.audio_seconds * 1000);
   }
+  if (
+    typeof result.speakers === 'number' &&
+    Number.isFinite(result.speakers) &&
+    result.speakers >= 0
+  ) {
+    canonical.speakerCount = Math.round(result.speakers);
+  }
+  const words = mapWords(result.words);
+  if (words !== undefined) {
+    canonical.words = words;
+  }
+  const formats = mapFormats(result.formats);
+  if (formats !== undefined) {
+    canonical.formats = formats;
+  }
   return canonical;
+}
+
+function mapWords(raw: unknown): CanonicalTranscriptWord[] | undefined {
+  if (!Array.isArray(raw)) {
+    return undefined;
+  }
+  const words: CanonicalTranscriptWord[] = [];
+  for (const item of raw) {
+    if (!isRecord(item) || typeof item.word !== 'string' || item.word.trim() === '') {
+      continue;
+    }
+    try {
+      const mapped: CanonicalTranscriptWord = {
+        word: item.word,
+        startMs: secondsToMs(item.start, 'start'),
+        endMs: secondsToMs(item.end, 'end'),
+      };
+      if (typeof item.speaker === 'string' && item.speaker.trim() !== '') {
+        mapped.speaker = item.speaker;
+      }
+      words.push(mapped);
+    } catch {
+      // ponytail: skip a bad word rather than failing the whole transcript
+    }
+  }
+  return words;
+}
+
+function mapFormats(raw: unknown): CanonicalTranscriptFormats | undefined {
+  if (!isRecord(raw)) {
+    return undefined;
+  }
+  const formats: CanonicalTranscriptFormats = {};
+  const srt = optionalHttpUrl(raw.srt);
+  const vtt = optionalHttpUrl(raw.vtt);
+  if (srt !== undefined) {
+    formats.srt = srt;
+  }
+  if (vtt !== undefined) {
+    formats.vtt = vtt;
+  }
+  return formats.srt !== undefined || formats.vtt !== undefined ? formats : undefined;
+}
+
+function optionalHttpUrl(value: unknown): string | undefined {
+  return typeof value === 'string' && /^https?:\/\//i.test(value) ? value : undefined;
 }
 
 export function jobResultUrl(job: PyAITranscriptionJobLike): string | undefined {

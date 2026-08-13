@@ -80,7 +80,7 @@ All paths are under `/api`. All GETs below are implemented and cookie-scoped to 
 
 ### Recordings — `GET /api/recordings`, `GET /api/recordings/:id`
 
-**No `storageKey`.** Status: `uploaded` \| `processing` \| `ready` \| `failed`.
+**No `storageKey`.** Playback URLs are `videoUrl` / `audioUrl` (`audioUrl` is `null` until extraction finishes). Status: `uploaded` \| `processing` \| `ready` \| `failed`.
 
 ```json
 {
@@ -92,6 +92,8 @@ All paths are under `/api`. All GETs below are implemented and cookie-scoped to 
   "width": 1920,
   "height": 1080,
   "status": "ready",
+  "videoUrl": "https://cdn.filestackcontent.com/HANDLE",
+  "audioUrl": "https://cdn.filestackcontent.com/AUDIO",
   "createdAt": "2026-08-13T08:00:00.000Z",
   "updatedAt": "2026-08-13T08:00:00.000Z"
 }
@@ -111,12 +113,16 @@ Client uploads video/audio to Filestack, then creates a project + recording:
 
 ### Processing poll — `GET /api/recordings/:id/processing`
 
-Poll while `status` is `processing`. No `storageKey`, no `raw_response`, no secrets.
+Poll while `status` is `processing`. No `storageKey`, no `raw_response`, no secrets. `videoUrl` / `audioUrl` are playback URLs (`audioUrl` is `null` until audio upload completes).
+
+When transcription has persisted, `transcript` is the full result (`text`, word-level timings in seconds, `segments`, `speakers`, `audio_seconds`, optional caption `formats`). Older recordings without stored words return `words: []`.
 
 ```json
 {
   "recordingId": 10,
   "status": "processing",
+  "videoUrl": "https://cdn.filestackcontent.com/HANDLE",
+  "audioUrl": "https://cdn.filestackcontent.com/AUDIO",
   "job": {
     "id": 1,
     "status": "running",
@@ -130,7 +136,21 @@ Poll while `status` is `processing`. No `storageKey`, no `raw_response`, no secr
     { "step": "AUDIO_EXTRACTION", "status": "completed", "attempt": 1 },
     { "step": "TRANSCRIPTION", "status": "processing", "attempt": 1, "provider": "pyai" }
   ],
-  "transcript": { "id": 1, "language": "en", "segmentCount": 12 },
+  "transcript": {
+    "id": 1,
+    "language": "en",
+    "text": "[speaker_1] Hello world",
+    "words": [{ "word": "Hello", "start": 0, "end": 0.4, "speaker": "speaker_1" }],
+    "formats": {
+      "srt": "https://example.com/job.srt",
+      "vtt": "https://example.com/job.vtt"
+    },
+    "segments": [
+      { "id": 0, "start": 0, "end": 1.5, "text": "Hello world", "speaker": "speaker_1" }
+    ],
+    "speakers": 1,
+    "audio_seconds": 1.5
+  },
   "summary": { "id": 1, "text": "..." },
   "actionItems": [],
   "hooks": [],

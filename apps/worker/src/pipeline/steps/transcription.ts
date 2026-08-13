@@ -65,6 +65,9 @@ export function transcriptionHandler(deps: WorkerDeps): StepHandler {
       providerJobId,
       text: canonical.text,
       durationMs: canonical.durationMs ?? null,
+      speakerCount: canonical.speakerCount ?? null,
+      words: canonical.words ?? [],
+      formats: canonical.formats ?? null,
       segments: canonical.segments,
     };
   };

@@ -23,6 +23,31 @@ test('maps a valid transcription result to canonical ms segments', () => {
   assert.equal(canonical.segments[0]?.speaker, 'A');
 });
 
+test('maps words, formats, and speaker count', () => {
+  const canonical = mapResultToCanonical({
+    text: 'Hello world',
+    audio_seconds: 1.5,
+    speakers: 2,
+    words: [
+      { word: 'Hello', start: 0, end: 0.4, speaker: 'A' },
+      { word: 'world', start: 0.4, end: 1.5, speaker: 'B' },
+      { word: 'skip', start: 'bad', end: 1 },
+    ],
+    formats: {
+      srt: 'https://example.com/job.srt',
+      vtt: 'https://example.com/job.vtt',
+    },
+    segments: [{ start: 0, end: 1.5, text: 'Hello world', speaker: 'A' }],
+  });
+  assert.equal(canonical.speakerCount, 2);
+  assert.equal(canonical.words?.length, 2);
+  assert.equal(canonical.words?.[0]?.startMs, 0);
+  assert.equal(canonical.words?.[0]?.endMs, 400);
+  assert.equal(canonical.words?.[1]?.speaker, 'B');
+  assert.equal(canonical.formats?.srt, 'https://example.com/job.srt');
+  assert.equal(canonical.formats?.vtt, 'https://example.com/job.vtt');
+});
+
 test('empty segments produce an empty canonical transcript', () => {
   const canonical = mapResultToCanonical({ text: '', segments: [] });
   assert.equal(canonical.text, '');
