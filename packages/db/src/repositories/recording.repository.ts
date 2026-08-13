@@ -1,6 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { DataSource, Repository } from 'typeorm';
-import { Project } from '../entities/project.entity';
+import { DataSource, In, Repository } from 'typeorm';
 import { Recording } from '../entities/recording.entity';
 
 @Injectable()
@@ -9,29 +8,24 @@ export class RecordingRepository extends Repository<Recording> {
     super(Recording, dataSource.createEntityManager());
   }
 
-  // TODO: implement recording persistence
-  async list(): Promise<Recording[]> {
-    throw new Error('RecordingRepository.list is not implemented');
-  }
-
-  async findById(_id: number): Promise<Recording | null> {
-    throw new Error('RecordingRepository.findById is not implemented');
-  }
-
   async listForUser(userId: number): Promise<Recording[]> {
-    return this.ownedByUser(userId).getMany();
+    return this.find({
+      where: { project: { userId } },
+      order: { createdAt: 'DESC' },
+    });
   }
 
   async findByIdForUser(id: number, userId: number): Promise<Recording | null> {
-    return this.ownedByUser(userId).andWhere('recording.id = :id', { id }).getOne();
+    return this.findOne({ where: { id, project: { userId } } });
   }
 
-  private ownedByUser(userId: number) {
-    return this.createQueryBuilder('recording').innerJoin(
-      Project,
-      'project',
-      'project.id = recording.projectId AND project.userId = :userId',
-      { userId },
-    );
+  async listByProjectIds(projectIds: number[]): Promise<Recording[]> {
+    if (projectIds.length === 0) {
+      return [];
+    }
+    return this.find({
+      where: { projectId: In(projectIds) },
+      select: ['id', 'projectId'],
+    });
   }
 }

@@ -28,6 +28,14 @@ async create(@Body(new ZodValidationPipe(createRecordingRequestSchema)) body: Cr
 
 Use `@mintreels/schema` zod schemas as DTOs via `ZodValidationPipe`. Do not add class-validator DTOs. Add a feature `*.dto.ts` only when the HTTP request shape differs from `*InsertSchema`.
 
+Import status, filter, accent, ratio, and env-key **enums** from `@mintreels/schema`. Do not hardcode `'ready'`, `'failed'`, `'mint'`, or `'AI_PROVIDER'` in handlers.
+
+## Reads
+
+Controllers stay thin. Services call repository `find` / `findOne` / `count`. Do not add QueryBuilder in `apps/api`.
+
+A repository is **one table**. If a feature needs recordings + clips + jobs, the **service** calls `RecordingRepository`, `ClipRepository`, and `JobRepository` and combines the results. Do not put multi-table orchestration on a repository.
+
 ## Route surface
 
 - `POST/GET /api/recordings`, `GET/DELETE /api/recordings/:id`

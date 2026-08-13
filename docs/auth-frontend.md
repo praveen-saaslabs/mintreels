@@ -215,10 +215,7 @@ Fields: email, password. No forgot-password link.
 
 ## Protected APIs
 
-After auth ships, these require the cookie and are scoped to the logged-in user:
-
-- `GET/POST /api/recordings`, `GET/DELETE /api/recordings/:id`, …
-- transcripts, summaries, hooks, clips, knowledge bases
+After login, all product GETs require the cookie and are scoped to the logged-in user. **Shapes and mock mapping:** [`docs/api-frontend.md`](./api-frontend.md).
 
 If user A requests user B’s recording, the API returns **404** (not 403), so IDs are not leaked.
 

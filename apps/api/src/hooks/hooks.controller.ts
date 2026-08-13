@@ -10,6 +10,8 @@ import {
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 import { AuthGuard } from '../auth/auth.guard';
+import { CurrentUser } from '../auth/current-user.decorator';
+import type { RequestUser } from '../auth/auth.types';
 import { HooksService } from './hooks.service';
 
 @ApiTags('Hooks')
@@ -22,11 +24,28 @@ export class HooksController {
 
   @ApiOperation({ summary: 'List all hooks for a recording' })
   @ApiParam({ name: 'id', type: Number })
-  @ApiOkResponse({ description: 'Array of hook objects' })
+  @ApiOkResponse({
+    description: 'Array of hook objects',
+    schema: {
+      example: [
+        {
+          id: 1,
+          recordingId: 10,
+          title: 'The roadmap was never a plan',
+          hook: 'The roadmap was never a plan',
+          reason: 'Strong contrast in the first line',
+          startMs: 252000,
+          endMs: 293000,
+          score: 0.91,
+          createdAt: '2026-08-13T08:00:00.000Z',
+        },
+      ],
+    },
+  })
   @ApiNotFoundResponse({ description: 'Recording not found' })
   @Get(':id/hooks')
-  listByRecordingId(@Param('id', ParseIntPipe) id: number) {
-    return this.hooksService.listByRecordingId(id);
+  listByRecordingId(@CurrentUser() user: RequestUser, @Param('id', ParseIntPipe) id: number) {
+    return this.hooksService.listByRecordingId(id, user.id);
   }
 
   @ApiOperation({ summary: 'Trigger AI hook generation for a recording' })
@@ -34,7 +53,7 @@ export class HooksController {
   @ApiAcceptedResponse({ description: 'Hook generation job enqueued' })
   @ApiNotFoundResponse({ description: 'Recording not found' })
   @Post(':id/hooks/generate')
-  generate(@Param('id', ParseIntPipe) id: number) {
-    return this.hooksService.generate(id);
+  generate(@CurrentUser() user: RequestUser, @Param('id', ParseIntPipe) id: number) {
+    return this.hooksService.generate(id, user.id);
   }
 }

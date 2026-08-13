@@ -8,12 +8,7 @@ export class ProjectRepository extends Repository<Project> {
     super(Project, dataSource.createEntityManager());
   }
 
-  // TODO: implement project persistence
-  async list(): Promise<Project[]> {
-    throw new Error('ProjectRepository.list is not implemented');
-  }
-
-  async findById(_id: number): Promise<Project | null> {
-    throw new Error('ProjectRepository.findById is not implemented');
+  async listForUser(userId: number): Promise<Project[]> {
+    return this.find({ where: { userId }, order: { updatedAt: 'DESC' } });
   }
 }

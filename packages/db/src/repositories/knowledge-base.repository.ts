@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { DataSource, Repository } from 'typeorm';
+import { DataSource, In, Repository } from 'typeorm';
+import { KnowledgeBaseScope } from '@mintreels/schema';
 import { KnowledgeBase } from '../entities/knowledge-base.entity';
 
 @Injectable()
@@ -8,12 +9,20 @@ export class KnowledgeBaseRepository extends Repository<KnowledgeBase> {
     super(KnowledgeBase, dataSource.createEntityManager());
   }
 
-  // TODO: implement knowledge base persistence
-  async list(): Promise<KnowledgeBase[]> {
-    throw new Error('KnowledgeBaseRepository.list is not implemented');
+  async listForUser(userId: number): Promise<KnowledgeBase[]> {
+    return this.find({
+      where: { project: { userId } },
+      order: { updatedAt: 'DESC' },
+    });
   }
 
-  async findById(_id: number): Promise<KnowledgeBase | null> {
-    throw new Error('KnowledgeBaseRepository.findById is not implemented');
+  async listGlobalByProjectIds(projectIds: number[]): Promise<KnowledgeBase[]> {
+    if (projectIds.length === 0) {
+      return [];
+    }
+    return this.find({
+      where: { projectId: In(projectIds), scope: KnowledgeBaseScope.Global },
+      select: ['id', 'projectId', 'scope'],
+    });
   }
 }

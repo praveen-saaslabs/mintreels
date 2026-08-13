@@ -1,5 +1,6 @@
-import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
 import type { SummaryRow } from '@mintreels/schema';
+import { Recording } from './recording.entity';
 
 @Entity({ name: 'summaries' })
 export class Summary implements SummaryRow {
@@ -8,6 +9,10 @@ export class Summary implements SummaryRow {
 
   @Column({ type: 'int', name: 'recording_id' })
   recordingId!: number;
+
+  @ManyToOne(() => Recording, (recording) => recording.summary)
+  @JoinColumn({ name: 'recording_id' })
+  recording?: Recording;
 
   @Column({ type: 'text' })
   text!: string;

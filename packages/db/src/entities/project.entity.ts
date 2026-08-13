@@ -2,10 +2,13 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
 import type { ProjectRow } from '@mintreels/schema';
+import { KnowledgeBase } from './knowledge-base.entity';
+import { Recording } from './recording.entity';
 
 @Entity({ name: 'projects' })
 export class Project implements ProjectRow {
@@ -23,4 +26,10 @@ export class Project implements ProjectRow {
 
   @UpdateDateColumn({ type: 'datetime', name: 'updated_at' })
   updatedAt!: Date;
+
+  @OneToMany(() => Recording, (recording) => recording.project)
+  recordings?: Recording[];
+
+  @OneToMany(() => KnowledgeBase, (knowledgeBase) => knowledgeBase.project)
+  knowledgeBases?: KnowledgeBase[];
 }

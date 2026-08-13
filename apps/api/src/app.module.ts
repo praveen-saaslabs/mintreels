@@ -13,6 +13,9 @@ import { HooksModule } from './hooks/hooks.module';
 import { ClipsModule } from './clips/clips.module';
 import { KnowledgeModule } from './knowledge/knowledge.module';
 import { JobsModule } from './jobs/jobs.module';
+import { ProjectsModule } from './projects/projects.module';
+import { WorkspaceModule } from './workspace/workspace.module';
+import { SettingsModule } from './settings/settings.module';
 
 @Module({
   imports: [
@@ -26,6 +29,9 @@ import { JobsModule } from './jobs/jobs.module';
     ClipsModule,
     KnowledgeModule,
     JobsModule,
+    ProjectsModule,
+    WorkspaceModule,
+    SettingsModule,
   ],
   controllers: [HealthController],
   providers: [

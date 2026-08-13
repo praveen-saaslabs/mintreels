@@ -1,5 +1,6 @@
-import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
 import type { TranscriptSegmentRow } from '@mintreels/schema';
+import { Recording } from './recording.entity';
 
 @Entity({ name: 'transcript_segments' })
 export class TranscriptSegment implements TranscriptSegmentRow {
@@ -8,6 +9,10 @@ export class TranscriptSegment implements TranscriptSegmentRow {
 
   @Column({ type: 'int', name: 'recording_id' })
   recordingId!: number;
+
+  @ManyToOne(() => Recording, (recording) => recording.segments)
+  @JoinColumn({ name: 'recording_id' })
+  recording?: Recording;
 
   @Column({ type: 'int' })
   sequence!: number;

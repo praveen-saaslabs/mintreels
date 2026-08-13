@@ -1,6 +1,6 @@
 ---
 description: Transcript-first domain model and MySQL metadata conventions
-globs: packages/domain/**,packages/db/**
+globs: packages/domain/**,packages/db/**,packages/schema/**
 alwaysApply: false
 ---
 
@@ -23,13 +23,49 @@ IDs are auto-increment integers (not UUIDs).
 
 ## Recordings
 
-Statuses: `uploaded` | `processing` | `ready` | `failed`.
+Statuses live on `RecordingStatus` in `@mintreels/schema` (`uploaded` | `processing` | `ready` | `failed`). Do not repeat those strings.
 
-MySQL 8 (TypeORM in `packages/db`) stores metadata and object keys, never video binaries or embeddings. Validation + DTOs come from `@mintreels/schema` (zod); TypeORM entities align to zod `*RowSchema` shapes.
+MySQL 8 (TypeORM in `packages/db`) stores metadata and object keys, never video binaries or embeddings. Validation + DTOs come from `@mintreels/schema` (zod + TypeScript enums); TypeORM entities align to zod `*RowSchema` shapes.
+
+## TypeORM reads
+
+Prefer `find` / `findOne` / `count` / `In` with relation `where` (e.g. `{ recording: { project: { userId } } }`).
+
+```ts
+// ❌ BAD — QueryBuilder for a simple tenant read
+this.createQueryBuilder('clip').innerJoin(Recording, 'recording', '...').getMany();
+
+// ✅ GOOD
+this.find({ where: { recording: { project: { userId } } }, relations: { recording: { project: true } } });
+```
+
+Do **not** hand-write QueryBuilder or raw SQL for tenant-scoped list/get. Add `@ManyToOne` / `@OneToMany` on existing FK columns so nested `where` works.
+
+QueryBuilder is allowed only when `find` cannot express it. If the user-scoped row set is bounded, `find` then count/filter in memory instead of `SUM(CASE …)`.
+
+## Repositories (one table)
+
+Each `*Repository` queries **only its entity**. No `this.manager.find(OtherEntity)`. No methods that assemble rows from other tables.
+
+```ts
+// ❌ BAD — ProjectRepository loading clips/hooks/jobs
+this.manager.find(Clip, { where: { recordingId: In(ids) } });
+
+// ✅ GOOD — ClipRepository only
+this.find({ where: { recordingId: In(ids) } });
+```
+
+Cross-table reads belong in `apps/api` services: inject each table's repository, call them, then combine.
+
+Nested `where` / `relations` on **this** entity's FKs (e.g. `find({ where: { project: { userId } } })`) is allowed — that still returns this table's rows.
+
+## Enums
+
+Canonical values are TypeScript enums in `@mintreels/schema` (`packages/schema/src/enums.ts`). Zod schemas use those enum members. API and db code import the enum — never `'ready'`, `'failed'`, `'global'`, `'9:16'`, or env key strings inline.
 
 ## Knowledge bases
 
-Scopes: `recording` (one KB per recording) and `global` (one project-wide KB).
+Scopes: `KnowledgeBaseScope.Recording` (one KB per recording) and `KnowledgeBaseScope.Global` (one project-wide KB).
 
 Store `provider` and `provider_knowledge_base_id`. “Add to global KB” goes through `KnowledgeBaseProvider` — do not copy vectors into MySQL.
 

@@ -1,6 +1,8 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import {
+  Recording,
+  RecordingRepository,
   Transcript,
   TranscriptSegment,
   TranscriptRepository,
@@ -11,9 +13,14 @@ import { TranscriptsController } from './transcripts.controller';
 import { TranscriptsService } from './transcripts.service';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Transcript, TranscriptSegment]), AuthModule],
+  imports: [TypeOrmModule.forFeature([Transcript, TranscriptSegment, Recording]), AuthModule],
   controllers: [TranscriptsController],
-  providers: [TranscriptsService, TranscriptRepository, TranscriptSegmentRepository],
+  providers: [
+    TranscriptsService,
+    TranscriptRepository,
+    TranscriptSegmentRepository,
+    RecordingRepository,
+  ],
   exports: [TranscriptsService],
 })
 export class TranscriptsModule {}

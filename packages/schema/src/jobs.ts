@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { idSchema } from './common';
+import { JobStatus, JobType } from './enums';
 
 /**
  * jobs — docs/architecture.md §29
@@ -8,15 +9,20 @@ import { idSchema } from './common';
  * status: queued | running | success | failed
  */
 export const jobTypeSchema = z.enum([
-  'VIDEO_INGEST',
-  'TRANSCRIBE',
-  'GENERATE_SUMMARY',
-  'SYNC_KNOWLEDGE_BASE',
-  'GENERATE_HOOKS',
-  'RENDER_CLIP',
+  JobType.VideoIngest,
+  JobType.Transcribe,
+  JobType.GenerateSummary,
+  JobType.SyncKnowledgeBase,
+  JobType.GenerateHooks,
+  JobType.RenderClip,
 ]);
 
-export const jobStatusSchema = z.enum(['queued', 'running', 'success', 'failed']);
+export const jobStatusSchema = z.enum([
+  JobStatus.Queued,
+  JobStatus.Running,
+  JobStatus.Success,
+  JobStatus.Failed,
+]);
 
 export const jobRowSchema = z.object({
   id: idSchema,
@@ -44,7 +50,6 @@ export const jobInsertSchema = jobRowSchema.partial({
   createdAt: true,
 });
 
-export type JobType = z.infer<typeof jobTypeSchema>;
-export type JobStatus = z.infer<typeof jobStatusSchema>;
+export { JobStatus, JobType } from './enums';
 export type JobRow = z.infer<typeof jobRowSchema>;
 export type JobInsert = z.infer<typeof jobInsertSchema>;

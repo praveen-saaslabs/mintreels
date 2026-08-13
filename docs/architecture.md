@@ -1036,8 +1036,30 @@ POST /api/recordings/:id/hooks/generate
 
 ```http
 POST /api/clips
+GET  /api/clips
+GET  /api/clips/filters
 GET  /api/clips/:id
 GET  /api/clips/:id/download
+```
+
+## Projects
+
+```http
+GET /api/projects
+GET /api/projects/sidebar
+```
+
+## Workspace
+
+```http
+GET /api/workspace/user
+GET /api/workspace/stats
+```
+
+## Settings
+
+```http
+GET /api/settings
 ```
 
 ---

@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { idSchema, timestampsSchema } from './common';
+import { KnowledgeBaseScope } from './enums';
 
 /**
  * knowledge_bases / knowledge_documents — docs/architecture.md §12
@@ -7,7 +8,10 @@ import { idSchema, timestampsSchema } from './common';
  * scope: recording | global
  * MySQL stores provider metadata IDs only (no embeddings).
  */
-export const knowledgeBaseScopeSchema = z.enum(['recording', 'global']);
+export const knowledgeBaseScopeSchema = z.enum([
+  KnowledgeBaseScope.Recording,
+  KnowledgeBaseScope.Global,
+]);
 
 export const knowledgeBaseRowSchema = z
   .object({
@@ -44,7 +48,7 @@ export const knowledgeDocumentInsertSchema = knowledgeDocumentRowSchema.partial(
   createdAt: true,
 });
 
-export type KnowledgeBaseScope = z.infer<typeof knowledgeBaseScopeSchema>;
+export { KnowledgeBaseScope } from './enums';
 export type KnowledgeBaseRow = z.infer<typeof knowledgeBaseRowSchema>;
 export type KnowledgeBaseInsert = z.infer<typeof knowledgeBaseInsertSchema>;
 export type KnowledgeDocumentRow = z.infer<typeof knowledgeDocumentRowSchema>;

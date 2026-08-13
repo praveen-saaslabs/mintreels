@@ -1,5 +1,6 @@
-import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn } from 'typeorm';
-import type { ClipRow, ClipStatus } from '@mintreels/schema';
+import { Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
+import { ClipStatus, type ClipRow } from '@mintreels/schema';
+import { Recording } from './recording.entity';
 
 @Entity({ name: 'clips' })
 export class Clip implements ClipRow {
@@ -8,6 +9,10 @@ export class Clip implements ClipRow {
 
   @Column({ type: 'int', name: 'recording_id' })
   recordingId!: number;
+
+  @ManyToOne(() => Recording, (recording) => recording.clips)
+  @JoinColumn({ name: 'recording_id' })
+  recording?: Recording;
 
   @Column({ type: 'int', name: 'hook_id', nullable: true })
   hookId!: number | null;

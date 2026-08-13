@@ -2,10 +2,13 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  JoinColumn,
+  ManyToOne,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import type { KnowledgeBaseRow, KnowledgeBaseScope } from '@mintreels/schema';
+import { KnowledgeBaseScope, type KnowledgeBaseRow } from '@mintreels/schema';
+import { Project } from './project.entity';
 
 @Entity({ name: 'knowledge_bases' })
 export class KnowledgeBase implements KnowledgeBaseRow {
@@ -14,6 +17,10 @@ export class KnowledgeBase implements KnowledgeBaseRow {
 
   @Column({ type: 'int', name: 'project_id' })
   projectId!: number;
+
+  @ManyToOne(() => Project, (project) => project.knowledgeBases)
+  @JoinColumn({ name: 'project_id' })
+  project?: Project;
 
   @Column({ type: 'text' })
   name!: string;
