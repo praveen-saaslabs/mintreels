@@ -78,4 +78,4 @@ LLM adapter (`openai` | `nvidia`) reads:
 | Provider | Key | Base URL | Model default |
 | --- | --- | --- | --- |
 | `openai` | `OPENAI_API_KEY` | optional `OPENAI_BASE_URL` | `gpt-4o-mini` (`OPENAI_MODEL`) |
-| `nvidia` | `NVIDIA_API_KEY` | `https://integrate.api.nvidia.com/v1` | `meta/llama-3.3-70b-instruct` (`NVIDIA_MODEL`) |
+| `nvidia` | `NVIDIA_API_KEY` | `https://integrate.api.nvidia.com/v1` | `meta/llama-3.1-8b-instruct` (`NVIDIA_MODEL`) |
