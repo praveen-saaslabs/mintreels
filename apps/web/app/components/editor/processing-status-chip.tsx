@@ -98,7 +98,7 @@ export function ProcessingStatusChip({
     <div className="pointer-events-auto absolute top-3 right-3 z-20 max-w-[min(100%-1.5rem,20rem)]">
       <div
         className={cn(
-          'glass overflow-hidden rounded-xl shadow-(--glass-shadow-elevated)',
+          'glass overflow-hidden rounded shadow-(--glass-shadow-elevated)',
           failed && 'border-(--mr-bad)/40',
         )}
       >

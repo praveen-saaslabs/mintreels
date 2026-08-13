@@ -38,7 +38,7 @@ export function RenderDefaults() {
       <div className="text-[11px] font-semibold tracking-[0.06em] text-[var(--mr-mfg)] uppercase">
         Render defaults
       </div>
-      <div className="glass overflow-hidden rounded-2xl">
+      <div className="glass overflow-hidden rounded">
         {isLoading
           ? Array.from({ length: 3 }).map((_, index) => (
               <div
@@ -73,7 +73,7 @@ export function RenderDefaults() {
                             type="button"
                             onClick={() => setChoice(row.id, option.id)}
                             className={cn(
-                              'inline-flex h-7 items-center rounded-[9px] px-2.5 text-xs font-medium',
+                              'inline-flex h-7 items-center rounded-full px-2.5 text-xs font-medium',
                               active
                                 ? 'glass-strong text-[var(--mr-fg)]'
                                 : 'glass-chip text-[var(--mr-mfg)] hover:text-[var(--mr-fg)]',

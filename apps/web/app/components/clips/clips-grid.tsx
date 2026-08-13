@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { formatClipCaption, formatClipProjectLabel, isClipSubtitled } from '@/lib/data/format';
+import { formatClipCaption, formatClipProjectLabel } from '@/lib/data/format';
 import type { ClipFilterId, ClipSummary } from '@/lib/data/types';
 import { useClipsQuery } from '@/hooks/use-home-queries';
 import { ClipCard } from './clip-card';
@@ -8,16 +8,14 @@ function matchesFilter(clip: ClipSummary, filterId: ClipFilterId): boolean {
   switch (filterId) {
     case 'all':
       return true;
+    case 'queued':
+      return clip.status === 'queued';
+    case 'rendering':
+      return clip.status === 'rendering';
     case 'ready':
       return clip.status === 'ready';
-    case 'rendering':
-      return clip.status === 'rendering' || clip.status === 'queued';
     case 'failed':
       return clip.status === 'failed';
-    case 'ratio_9_16':
-      return clip.ratio === '9:16';
-    case 'subtitled':
-      return isClipSubtitled(clip);
     default:
       return true;
   }
@@ -51,7 +49,7 @@ export function ClipsGrid({
 
   if (error) {
     return (
-      <div className="space-y-3 glass rounded-2xl border-[color-mix(in_oklch,var(--mr-bad)_40%,transparent)] p-4 text-sm text-[var(--mr-bad)]">
+      <div className="space-y-3 glass rounded border-[color-mix(in_oklch,var(--mr-bad)_40%,transparent)] p-4 text-sm text-[var(--mr-bad)]">
         <p>{error instanceof Error ? error.message : 'Failed to load clips'}</p>
         <button
           type="button"
@@ -68,7 +66,7 @@ export function ClipsGrid({
     return (
       <div className="grid grid-cols-[repeat(auto-fill,minmax(180px,1fr))] items-stretch gap-3.5">
         {Array.from({ length: 8 }).map((_, index) => (
-          <div key={index} className="glass h-[280px] animate-pulse rounded-2xl" />
+          <div key={index} className="glass h-[280px] animate-pulse rounded" />
         ))}
       </div>
     );
@@ -76,7 +74,7 @@ export function ClipsGrid({
 
   if (filteredClips.length === 0) {
     return (
-      <div className="glass rounded-2xl p-6 text-sm text-[var(--mr-mfg)]">
+      <div className="glass rounded p-6 text-sm text-[var(--mr-mfg)]">
         No clips match this filter.
       </div>
     );

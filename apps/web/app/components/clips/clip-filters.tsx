@@ -22,7 +22,7 @@ export function ClipFilters({
             type="button"
             onClick={() => onActiveFilterIdChange(filter.id)}
             className={cn(
-              'inline-flex h-7 items-center rounded-xl px-2.5 text-xs font-medium transition-colors',
+              'inline-flex h-7 items-center rounded-full px-2.5 text-xs font-medium transition-colors',
               active
                 ? 'glass-strong text-[var(--mr-fg)]'
                 : 'glass-chip text-[var(--mr-mfg)] hover:text-[var(--mr-fg)]',

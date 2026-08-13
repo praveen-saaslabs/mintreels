@@ -81,7 +81,7 @@ export function HookCard({ hook, selected, recordingId, onPreview }: HookCardPro
       onClick={onPreview}
       onKeyDown={onKeyDown}
       className={cn(
-        'glass flex w-full cursor-pointer items-stretch overflow-hidden rounded-md text-left',
+        'glass flex w-full cursor-pointer items-stretch overflow-hidden rounded text-left',
         'outline-none transition-[border-color,box-shadow] focus-visible:ring-2 focus-visible:ring-ring/50',
         selected
           ? 'border-[var(--mr-acc)] shadow-[var(--glass-shadow-elevated)] ring-2 ring-[color-mix(in_oklch,var(--mr-acc)_35%,transparent)]'

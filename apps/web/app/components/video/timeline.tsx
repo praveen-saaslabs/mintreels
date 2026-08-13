@@ -573,10 +573,8 @@ export function Timeline({
     paintHookRegions(regions, hooks, waveDuration, selectedHookId);
   }, [duration, hooks, selectedHookId, waveformReady]);
 
-  const showWaveformEmpty =
-    !waveformReady && !loadError && (pending || Boolean(audioUrl));
-  const showWaveformUnavailable =
-    !waveformReady && !showWaveformEmpty && (loadError || !pending);
+  const showWaveformEmpty = !waveformReady && !loadError && (pending || Boolean(audioUrl));
+  const showWaveformUnavailable = !waveformReady && !showWaveformEmpty && (loadError || !pending);
 
   let speakerRow: ReactNode = null;
   if (speakers.length > 0) {
@@ -608,7 +606,7 @@ export function Timeline({
             <div
               key={segment.id}
               className={cn(
-                'absolute inset-y-0 rounded-sm opacity-85',
+                'absolute inset-y-0 rounded opacity-85',
                 speakerSwatchClass(segment.speaker),
               )}
               style={{
@@ -623,7 +621,7 @@ export function Timeline({
   }
 
   return (
-    <section className="glass-panel m-1.5 flex h-[calc(100%-0.75rem)] min-h-0 w-[calc(100%-0.75rem)] select-none flex-col overflow-hidden">
+    <section className="border-t border-[var(--glass-border-subtle)] flex h-full min-h-0 w-full select-none flex-col overflow-hidden border-x-0!">
       <div className="flex min-h-0 flex-1 flex-col gap-2 px-4 py-3">
         {speakerRow}
 
@@ -634,7 +632,7 @@ export function Timeline({
         */}
         <div
           ref={waveformShellRef}
-          className="mint-waveform-shell relative w-full shrink-0 touch-none overflow-hidden rounded-xl bg-muted/55 ring-1 ring-[var(--glass-border-subtle)]"
+          className="mint-waveform-shell relative w-full shrink-0 touch-none overflow-hidden rounded bg-muted/55 ring-1 ring-[var(--glass-border-subtle)]"
           style={{ height: WAVEFORM_HEIGHT, minHeight: WAVEFORM_HEIGHT }}
           onPointerDown={suppressSelectionOnPointerDown}
         >

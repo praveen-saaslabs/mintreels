@@ -47,7 +47,7 @@ export function ProjectListNav() {
                   >
                     <span
                       className={cn(
-                        'size-1.5 shrink-0 rounded-[2px]',
+                        'size-1.5 shrink-0 rounded',
                         accentClass(project.accent),
                       )}
                     />

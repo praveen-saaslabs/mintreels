@@ -312,7 +312,7 @@ export function VideoPlayer({ src, pending = false }: Readonly<VideoPlayerProps>
               {/* Opaque media surface so glass chrome never washes the picture */}
               <div
                 className={cn(
-                  'relative z-2 h-full w-full overflow-hidden rounded-2xl bg-background',
+                  'relative z-2 h-full w-full overflow-hidden rounded bg-background',
                   'ring-1 ring-[var(--glass-border-subtle)]',
                   'shadow-[var(--glass-shadow-elevated)]',
                 )}
@@ -375,7 +375,7 @@ export function VideoPlayer({ src, pending = false }: Readonly<VideoPlayerProps>
               size="icon"
               variant="default"
               aria-label={playing ? 'Pause' : 'Play'}
-              className="size-[34px] shrink-0 rounded-[10px]"
+              className="size-[34px] shrink-0 rounded"
               disabled={showVideoEmpty || showVideoUnavailable}
               onClick={() => {
                 void togglePlayback();
@@ -423,7 +423,7 @@ export function VideoPlayer({ src, pending = false }: Readonly<VideoPlayerProps>
                   type="button"
                   onClick={() => setAspect(preset)}
                   className={cn(
-                    'inline-flex h-[26px] items-center rounded-lg px-2.5 text-[11px] font-medium transition-colors',
+                    'inline-flex h-[26px] items-center rounded px-2.5 text-[11px] font-medium transition-colors',
                     aspect === preset
                       ? 'bg-foreground text-background'
                       : 'glass-chip text-foreground/70 hover:bg-[var(--glass-bg-strong)]',

@@ -190,9 +190,9 @@ export function NewProjectUploadModal() {
             type="button"
             disabled={busy}
             onClick={() => inputRef.current?.click()}
-            className="glass flex w-full flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-[var(--glass-border)] px-4 py-10 text-center transition-colors hover:border-[var(--mr-acc)] disabled:pointer-events-none disabled:opacity-60"
+            className="glass flex w-full flex-col items-center justify-center gap-2 rounded border border-dashed border-[var(--glass-border)] px-4 py-10 text-center transition-colors hover:border-[var(--mr-acc)] disabled:pointer-events-none disabled:opacity-60"
           >
-            <span className="flex size-10 items-center justify-center rounded-xl bg-[var(--mr-acc)]/15 text-[var(--mr-acc)]">
+            <span className="flex size-10 items-center justify-center rounded bg-[var(--mr-acc)]/15 text-[var(--mr-acc)]">
               <Upload className="size-5" />
             </span>
             <span className="text-sm font-medium text-[var(--mr-fg)]">

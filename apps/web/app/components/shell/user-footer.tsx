@@ -43,7 +43,7 @@ export function UserFooter() {
   return (
     <div className="flex w-full items-center gap-1 px-1 py-1">
       <div className="flex min-w-0 flex-1 items-center gap-2">
-        <div className="glass-chip flex size-7 shrink-0 items-center justify-center rounded-lg text-[11px] font-semibold">
+        <div className="glass-chip flex size-7 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold">
           {initials}
         </div>
         <div className="min-w-0 flex-1 group-data-[collapsible=icon]:hidden">

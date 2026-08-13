@@ -144,7 +144,8 @@ export function Transcriptions({ pending = false }: Readonly<{ pending?: boolean
 
   const activeSegment = findSegmentAtTime(segments, currentTime);
   const visibleActiveSegment =
-    activeSegment !== undefined && visibleSegments.some((segment) => segment.id === activeSegment.id)
+    activeSegment !== undefined &&
+    visibleSegments.some((segment) => segment.id === activeSegment.id)
       ? activeSegment
       : undefined;
   const activeSegmentWords = visibleActiveSegment
@@ -162,7 +163,7 @@ export function Transcriptions({ pending = false }: Readonly<{ pending?: boolean
   );
 
   return (
-    <section className="glass-panel m-1.5 flex h-[calc(100%-0.75rem)] min-h-0 w-[calc(100%-0.75rem)] flex-col overflow-hidden">
+    <section className="flex h-full min-h-0 w-full flex-col overflow-hidden border-r border-[var(--glass-border-subtle)]">
       <header className="shrink-0 space-y-2 select-none border-b border-[var(--glass-border-subtle)] px-3 py-2.5">
         <h2 className="text-sm font-medium text-foreground">Transcriptions</h2>
         {hasTranscript ? (

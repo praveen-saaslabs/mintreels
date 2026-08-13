@@ -312,7 +312,7 @@
 @utility glass-panel {
   background-color: var(--glass-bg);
   border: 1px solid var(--glass-border-subtle);
-  border-radius: var(--glass-radius);
+  border-radius: 0;
   box-shadow: var(--glass-shadow), var(--glass-highlight);
   -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
   backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
@@ -374,7 +374,13 @@
   ) !important;
 }
 
-/* Editor drag surfaces — avoid global text selection while scrubbing / resizing */
+/* Editor drag surfaces — splitters sit above flush panes; no text select while resizing */
+.mr-editor .spaces-resize-handle,
+.mr-editor .spaces-touch-handle {
+  z-index: 30;
+  pointer-events: auto;
+}
+
 .mr-editor .spaces-resize-handle,
 .mr-editor .spaces-touch-handle,
 .mr-editor.spaces-resizing,

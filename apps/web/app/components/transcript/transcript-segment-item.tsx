@@ -47,7 +47,7 @@ export const TranscriptSegmentItem = memo(function TranscriptSegmentItem({
         type="button"
         onClick={onClick}
         className={cn(
-          'w-full rounded-xl border border-transparent px-2 py-2 text-left transition-colors',
+          'w-full rounded border border-transparent px-2 py-2 text-left transition-colors',
           isActive
             ? 'border-mr-acc bg-transcript-active shadow-[var(--glass-highlight)]'
             : 'hover:bg-[var(--glass-bg)]',
@@ -57,9 +57,7 @@ export const TranscriptSegmentItem = memo(function TranscriptSegmentItem({
           <time className="font-mono text-xs text-muted-foreground">
             {formatTimestamp(segment.start)}
           </time>
-          {segment.speaker ? (
-            <SpeakerBadge speaker={segment.speaker} />
-          ) : null}
+          {segment.speaker ? <SpeakerBadge speaker={segment.speaker} /> : null}
         </span>
         {isActive && words && words.length > 0 ? (
           <span className="block text-sm leading-relaxed text-foreground">
@@ -77,7 +75,7 @@ export const TranscriptSegmentItem = memo(function TranscriptSegmentItem({
                     ref={isCurrentWord ? activeWordRef : undefined}
                     data-word-start={String(word.start)}
                     aria-current={isCurrentWord ? 'true' : undefined}
-                    className={cn('rounded-sm', isCurrentWord && 'bg-transcript-word')}
+                    className={cn('rounded', isCurrentWord && 'bg-transcript-word')}
                   >
                     {word.word}
                   </span>

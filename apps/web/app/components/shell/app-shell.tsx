@@ -30,7 +30,7 @@ export function AppShell() {
         <Sidebar collapsible="icon" className="border-[var(--glass-border-subtle)]">
           <SidebarHeader className="h-[52px] justify-center border-b border-[var(--glass-border-subtle)] px-3">
             <div className="flex items-center gap-2 px-1">
-              <div className="size-2.5 shrink-0 rounded-[3px] bg-[var(--mr-acc)]" />
+              <div className="size-2.5 shrink-0 rounded bg-[var(--mr-acc)]" />
               <span className="font-semibold tracking-[-0.01em] group-data-[collapsible=icon]:hidden">
                 MintReels
               </span>

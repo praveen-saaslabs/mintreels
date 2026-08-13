@@ -17,7 +17,7 @@ export function AuthLayout({
     <div className="mr-ambient flex min-h-svh items-center justify-center px-4 py-10">
       <div className="w-full max-w-md space-y-6">
         <div className="flex items-center justify-center gap-2">
-          <div className="size-2.5 rounded-[3px] bg-[var(--mr-acc)]" />
+          <div className="size-2.5 rounded bg-[var(--mr-acc)]" />
           <Link to="/login" className="text-lg font-semibold tracking-[-0.01em]">
             MintReels
           </Link>

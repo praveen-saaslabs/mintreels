@@ -53,7 +53,7 @@ export function VideoSurfaceEmptyState({ className }: Readonly<{ className?: str
     <EditorEmptyState
       icon={Play}
       label="Video will play here"
-      className={cn('absolute inset-0 rounded-2xl bg-muted/40', className)}
+      className={cn('absolute inset-0 rounded bg-muted/40', className)}
     />
   );
 }

@@ -18,7 +18,7 @@ export function ProvidersSection() {
 
   if (error) {
     return (
-      <div className="space-y-3 glass rounded-2xl border-[color-mix(in_oklch,var(--mr-bad)_40%,transparent)] p-4 text-sm text-[var(--mr-bad)]">
+      <div className="space-y-3 glass rounded border-[color-mix(in_oklch,var(--mr-bad)_40%,transparent)] p-4 text-sm text-[var(--mr-bad)]">
         <p>{error instanceof Error ? error.message : 'Failed to load settings'}</p>
         <button
           type="button"
@@ -36,7 +36,7 @@ export function ProvidersSection() {
       <div className="text-[11px] font-semibold tracking-[0.06em] text-[var(--mr-mfg)] uppercase">
         Providers
       </div>
-      <div className="glass overflow-hidden rounded-2xl">
+      <div className="glass overflow-hidden rounded">
         {isLoading || !settings
           ? Array.from({ length: 4 }).map((_, index) => (
               <div
@@ -55,7 +55,7 @@ export function ProvidersSection() {
                     {provider.envKey}
                   </div>
                 </div>
-                <div className="glass flex h-8 min-w-0 items-center gap-2 rounded-xl px-2.5">
+                <div className="glass flex h-8 min-w-0 items-center gap-2 rounded px-2.5">
                   <span className="truncate font-mono text-[11.5px] text-[var(--mr-fg2)]">
                     {provider.maskedKey}
                   </span>
