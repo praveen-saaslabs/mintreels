@@ -16,7 +16,8 @@ export function EditorLayout({ area1, area2, area3, area4 }: EditorLayoutProps) 
       </Space.LeftResizable>
       <Space.Fill>
         <Space.Fill>{area2}</Space.Fill>
-        <Space.BottomResizable size="30%" minimumSize={120} maximumSize={480}>
+        {/* Wave (~72) + strip + hook thumbs need ~300px; cap so video keeps room */}
+        <Space.BottomResizable size="30%" minimumSize={300} maximumSize={380}>
           {area3}
         </Space.BottomResizable>
       </Space.Fill>
@@ -27,11 +28,19 @@ export function EditorLayout({ area1, area2, area3, area4 }: EditorLayoutProps) 
   );
 }
 
-export function EditorPane({ title, children }: { title: string; children: ReactNode }) {
+export function EditorPane({
+  title,
+  header,
+  children,
+}: {
+  title?: string;
+  header?: ReactNode;
+  children: ReactNode;
+}) {
   return (
-    <section className="flex h-full min-h-0 w-full flex-col border border-neutral-300 bg-background">
-      <header className="shrink-0 border-b border-neutral-200 px-3 py-2">
-        <h2 className="text-sm font-medium text-foreground">{title}</h2>
+    <section className="flex h-full min-h-0 w-full flex-col border border-border bg-background">
+      <header className="shrink-0 border-b border-border px-3 py-2">
+        {header ?? <h2 className="text-sm font-medium text-foreground">{title}</h2>}
       </header>
       <div className="min-h-0 flex-1 overflow-auto p-3">{children}</div>
     </section>

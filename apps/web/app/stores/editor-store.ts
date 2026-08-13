@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import editorHooksSeed from '@/fixtures/editor-hooks.json';
 import editorProjectSeed from '@/fixtures/editor-project.json';
 
 export type EditorWord = {
@@ -36,6 +37,19 @@ export type EditorProject = {
   result: EditorProjectResult | null;
 };
 
+export type EditorHookStatus = 'ready' | 'rendering' | 'queued' | 'failed';
+
+export type EditorHook = {
+  id: string;
+  label: string;
+  title: string;
+  start: number;
+  end: number;
+  ratio: '9:16' | '1:1' | '16:9';
+  status: EditorHookStatus;
+  score?: number;
+};
+
 export type EditorVideoState = {
   currentTime: number;
   duration: number;
@@ -46,10 +60,15 @@ export type EditorVideoState = {
 
 type EditorStore = {
   video: EditorVideoState;
+  /** Shared HTMLVideoElement for wavesurfer MediaElement sync. */
+  mediaElement: HTMLVideoElement | null;
   project: EditorProject | null;
+  hooks: EditorHook[];
+  selectedHookId: string | null;
   setCurrentTime: (time: number) => void;
   setDuration: (duration: number) => void;
   setPlaying: (playing: boolean) => void;
+  setMediaElement: (element: HTMLVideoElement | null) => void;
   setSrc: (src: string) => void;
   seek: (time: number) => void;
   resetVideo: () => void;
@@ -57,6 +76,9 @@ type EditorStore = {
   setProjectStatus: (status: string) => void;
   setProjectResult: (result: EditorProjectResult | null) => void;
   resetProject: () => void;
+  setHooks: (hooks: EditorHook[]) => void;
+  selectHook: (id: string | null) => void;
+  selectHookAndSeek: (id: string) => void;
   resetEditor: () => void;
 };
 
@@ -74,6 +96,7 @@ function clampTime(time: number, duration: number): number {
 }
 
 const seededProject = editorProjectSeed as EditorProject;
+const seededHooks = editorHooksSeed as EditorHook[];
 
 export const SEEDED_VIDEO_SRC = encodeURI(
   '/Lee Harris on Global Unrest Spiritual Awakening and Reclaiming Faith in Turbulent Times - Video.mp4',
@@ -89,7 +112,10 @@ const emptyVideo = (duration = 0, src = SEEDED_VIDEO_SRC): EditorVideoState => (
 
 export const useEditorStore = create<EditorStore>((set, get) => ({
   video: emptyVideo(seededProject.result?.audio_seconds ?? 0),
+  mediaElement: null,
   project: seededProject,
+  hooks: seededHooks,
+  selectedHookId: null,
 
   setCurrentTime: (time) => {
     const { duration } = get().video;
@@ -114,6 +140,10 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
     }));
   },
 
+  setMediaElement: (element) => {
+    set({ mediaElement: element });
+  },
+
   setSrc: (src) => {
     set((state) => ({
       video: { ...state.video, src },
@@ -134,7 +164,7 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
   resetVideo: () => {
     const duration = get().project?.result?.audio_seconds ?? 0;
     const src = get().video.src || SEEDED_VIDEO_SRC;
-    set({ video: emptyVideo(duration, src) });
+    set({ video: emptyVideo(duration, src), selectedHookId: null });
   },
 
   setProject: (project) => {
@@ -175,10 +205,38 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
     set({ project: null });
   },
 
+  setHooks: (hooks) => {
+    set({ hooks, selectedHookId: null });
+  },
+
+  selectHook: (id) => {
+    set({ selectedHookId: id });
+  },
+
+  selectHookAndSeek: (id) => {
+    const hook = get().hooks.find((item) => item.id === id);
+    if (!hook) {
+      return;
+    }
+
+    const { duration } = get().video;
+    set((state) => ({
+      selectedHookId: id,
+      video: {
+        ...state.video,
+        currentTime: clampTime(hook.start, duration),
+        seekEpoch: state.video.seekEpoch + 1,
+      },
+    }));
+  },
+
   resetEditor: () => {
     set({
       video: emptyVideo(),
+      mediaElement: null,
       project: null,
+      hooks: [],
+      selectedHookId: null,
     });
   },
 }));

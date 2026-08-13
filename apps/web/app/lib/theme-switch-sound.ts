@@ -4,9 +4,9 @@ export function playThemeSwitchSound(nextTheme: 'light' | 'dark') {
     return;
   }
 
-  const AudioCtx = window.AudioContext ?? (window as typeof window & {
-    webkitAudioContext?: typeof AudioContext;
-  }).webkitAudioContext;
+  const AudioCtx =
+    window.AudioContext ??
+    (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
 
   if (!AudioCtx) {
     return;
