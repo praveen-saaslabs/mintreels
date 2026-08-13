@@ -105,20 +105,32 @@
   --sidebar-border: oklch(0.145 0 0 / 8%);
   --sidebar-ring: oklch(0.62 0.13 165 / 0.45);
 
-  /* Liquid glass material tokens (light) */
-  --glass-bg: oklch(1 0 0 / 52%);
-  --glass-bg-elevated: oklch(1 0 0 / 68%);
-  --glass-bg-strong: oklch(1 0 0 / 78%);
-  --glass-border: oklch(1 0 0 / 55%);
-  --glass-border-subtle: oklch(0.145 0 0 / 8%);
-  --glass-blur: 18px;
-  --glass-blur-sm: 10px;
-  --glass-saturate: 1.45;
-  --glass-shadow: 0 4px 24px oklch(0.2 0.02 165 / 0.06);
-  --glass-shadow-elevated: 0 8px 32px oklch(0.2 0.02 165 / 0.1);
-  --glass-highlight: inset 0 1px 0 oklch(1 0 0 / 0.65);
-  --glass-radius: 1rem;
-  --glass-radius-lg: 1.25rem;
+  /* Liquid glass material tokens (light) — Apple materials via backdrop-filter */
+  --glass-bg: oklch(1 0 0 / 42%);
+  --glass-bg-elevated: oklch(1 0 0 / 58%);
+  --glass-bg-strong: oklch(1 0 0 / 72%);
+  --glass-border: oklch(1 0 0 / 58%);
+  --glass-border-subtle: oklch(0.145 0 0 / 7%);
+  --glass-blur: 28px;
+  --glass-blur-sm: 14px;
+  --glass-blur-lg: 40px;
+  --glass-saturate: 1.8;
+  --glass-shadow: 0 4px 24px oklch(0.2 0.02 165 / 0.07), 0 1px 2px oklch(0.2 0.02 165 / 0.04);
+  --glass-shadow-elevated:
+    0 12px 40px oklch(0.2 0.02 165 / 0.12), 0 2px 6px oklch(0.2 0.02 165 / 0.06);
+  --glass-highlight: inset 0 1px 0 oklch(1 0 0 / 0.72);
+  --glass-rim:
+    inset 0 -0.5px 0 oklch(0.145 0 0 / 0.06), inset 0.5px 0 0 oklch(1 0 0 / 0.35),
+    inset -0.5px 0 0 oklch(1 0 0 / 0.2);
+  --glass-sheen: linear-gradient(
+    155deg,
+    oklch(1 0 0 / 0.34) 0%,
+    oklch(1 0 0 / 0.1) 22%,
+    transparent 48%,
+    oklch(1 0 0 / 0.04) 100%
+  );
+  --glass-radius: 1.125rem;
+  --glass-radius-lg: 1.375rem;
   --speaker-1: oklch(0.48 0.1 250);
   --speaker-1-bg: oklch(0.95 0.03 250);
   --speaker-2: oklch(0.48 0.1 155);
@@ -196,19 +208,30 @@
   --sidebar-ring: oklch(0.78 0.14 165 / 0.45);
 
   /* Liquid glass material tokens (dark) */
-  --glass-bg: oklch(0.22 0.01 165 / 48%);
-  --glass-bg-elevated: oklch(0.25 0.012 165 / 62%);
-  --glass-bg-strong: oklch(0.28 0.012 165 / 72%);
-  --glass-border: oklch(1 0 0 / 14%);
+  --glass-bg: oklch(0.2 0.012 165 / 38%);
+  --glass-bg-elevated: oklch(0.24 0.014 165 / 52%);
+  --glass-bg-strong: oklch(0.28 0.014 165 / 66%);
+  --glass-border: oklch(1 0 0 / 16%);
   --glass-border-subtle: oklch(1 0 0 / 10%);
-  --glass-blur: 20px;
-  --glass-blur-sm: 12px;
-  --glass-saturate: 1.35;
-  --glass-shadow: 0 4px 28px oklch(0 0 0 / 0.35);
-  --glass-shadow-elevated: 0 10px 36px oklch(0 0 0 / 0.45);
-  --glass-highlight: inset 0 1px 0 oklch(1 0 0 / 0.12);
-  --glass-radius: 1rem;
-  --glass-radius-lg: 1.25rem;
+  --glass-blur: 32px;
+  --glass-blur-sm: 16px;
+  --glass-blur-lg: 48px;
+  --glass-saturate: 1.65;
+  --glass-shadow: 0 4px 28px oklch(0 0 0 / 0.38), 0 1px 2px oklch(0 0 0 / 0.2);
+  --glass-shadow-elevated: 0 14px 44px oklch(0 0 0 / 0.5), 0 2px 8px oklch(0 0 0 / 0.25);
+  --glass-highlight: inset 0 1px 0 oklch(1 0 0 / 0.18);
+  --glass-rim:
+    inset 0 -0.5px 0 oklch(0 0 0 / 0.35), inset 0.5px 0 0 oklch(1 0 0 / 0.1),
+    inset -0.5px 0 0 oklch(1 0 0 / 0.06);
+  --glass-sheen: linear-gradient(
+    155deg,
+    oklch(1 0 0 / 0.16) 0%,
+    oklch(1 0 0 / 0.05) 24%,
+    transparent 50%,
+    oklch(1 0 0 / 0.03) 100%
+  );
+  --glass-radius: 1.125rem;
+  --glass-radius-lg: 1.375rem;
   --speaker-1: oklch(0.8 0.08 250);
   --speaker-1-bg: oklch(0.3 0.05 250);
   --speaker-2: oklch(0.8 0.08 155);
@@ -269,70 +292,140 @@
   background-color: var(--mr-bg);
   background-image:
     radial-gradient(
-      ellipse 85% 55% at 12% -8%,
-      color-mix(in oklch, var(--mr-acc) 18%, transparent),
+      ellipse 90% 60% at 8% -12%,
+      color-mix(in oklch, var(--mr-acc) 22%, transparent),
+      transparent 60%
+    ),
+    radial-gradient(ellipse 75% 50% at 96% 4%, oklch(0.94 0.025 200 / 0.34), transparent 54%),
+    radial-gradient(
+      ellipse 60% 45% at 50% 112%,
+      color-mix(in oklch, var(--mr-acc) 14%, transparent),
       transparent 58%
     ),
-    radial-gradient(
-      ellipse 70% 45% at 92% 8%,
-      oklch(0.94 0.02 200 / 0.28),
-      transparent 52%
-    ),
-    radial-gradient(
-      ellipse 55% 40% at 48% 108%,
-      color-mix(in oklch, var(--mr-acc) 10%, transparent),
-      transparent 55%
-    );
+    radial-gradient(ellipse 40% 30% at 70% 40%, oklch(0.97 0.015 145 / 0.2), transparent 70%);
 }
 
+/* Shared liquid-glass material recipe */
 @utility glass {
   background-color: var(--glass-bg);
+  background-image: var(--glass-sheen);
   border: 1px solid var(--glass-border-subtle);
-  box-shadow: var(--glass-shadow), var(--glass-highlight);
+  box-shadow: var(--glass-shadow), var(--glass-highlight), var(--glass-rim);
   -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
   backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
 }
 
 @utility glass-elevated {
   background-color: var(--glass-bg-elevated);
+  background-image: var(--glass-sheen);
   border: 1px solid var(--glass-border);
-  box-shadow: var(--glass-shadow-elevated), var(--glass-highlight);
-  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
-  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  box-shadow: var(--glass-shadow-elevated), var(--glass-highlight), var(--glass-rim);
+  -webkit-backdrop-filter: blur(var(--glass-blur-lg)) saturate(var(--glass-saturate));
+  backdrop-filter: blur(var(--glass-blur-lg)) saturate(var(--glass-saturate));
 }
 
 @utility glass-strong {
   background-color: var(--glass-bg-strong);
+  background-image: var(--glass-sheen);
   border: 1px solid var(--glass-border);
   box-shadow: var(--glass-shadow), var(--glass-highlight);
   -webkit-backdrop-filter: blur(var(--glass-blur-sm)) saturate(var(--glass-saturate));
   backdrop-filter: blur(var(--glass-blur-sm)) saturate(var(--glass-saturate));
 }
 
+/* Structural editor panes — thicker material (stronger blur + deeper shadow) */
 @utility glass-panel {
   background-color: var(--glass-bg);
-  border: 1px solid var(--glass-border-subtle);
-  border-radius: 0;
-  box-shadow: var(--glass-shadow), var(--glass-highlight);
-  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
-  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  background-image: var(--glass-sheen);
+  border: 1px solid color-mix(in oklch, var(--glass-border) 55%, transparent);
+  border-radius: var(--glass-radius-lg);
+  box-shadow: var(--glass-shadow-elevated), var(--glass-highlight), var(--glass-rim);
+  -webkit-backdrop-filter: blur(var(--glass-blur-lg)) saturate(var(--glass-saturate));
+  backdrop-filter: blur(var(--glass-blur-lg)) saturate(var(--glass-saturate));
+  isolation: isolate;
+  transform: translateZ(0);
 }
 
+/* Floating interactive chrome (transport tray, chips) — lighter / snappier */
 @utility glass-tray {
   background-color: var(--glass-bg-elevated);
+  background-image: var(--glass-sheen);
   border: 1px solid var(--glass-border);
   border-radius: var(--glass-radius-lg);
-  box-shadow: var(--glass-shadow), var(--glass-highlight);
+  box-shadow: var(--glass-shadow-elevated), var(--glass-highlight), var(--glass-rim);
   -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
   backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
 }
 
 @utility glass-chip {
   background-color: var(--glass-bg-strong);
-  border: 1px solid var(--glass-border-subtle);
-  box-shadow: var(--glass-highlight);
+  background-image: var(--glass-sheen);
+  border: 1px solid color-mix(in oklch, var(--glass-border) 70%, transparent);
+  box-shadow:
+    var(--glass-highlight),
+    inset 0 -0.5px 0 oklch(0.145 0 0 / 0.05);
   -webkit-backdrop-filter: blur(var(--glass-blur-sm)) saturate(var(--glass-saturate));
   backdrop-filter: blur(var(--glass-blur-sm)) saturate(var(--glass-saturate));
+  transition:
+    transform 100ms ease-out,
+    background-color 160ms ease,
+    border-color 160ms ease;
+
+  &:active {
+    transform: scale(0.97);
+  }
+}
+
+/* Scroll-edge fade instead of a hard 1px header divider — no nested blur (skill §12) */
+@utility glass-pane-header {
+  position: relative;
+  z-index: 2;
+  background: color-mix(in oklch, var(--glass-bg-elevated) 55%, transparent);
+
+  &::after {
+    content: '';
+    pointer-events: none;
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -14px;
+    height: 14px;
+    background: linear-gradient(
+      to bottom,
+      color-mix(in oklch, var(--glass-bg) 75%, transparent),
+      transparent
+    );
+  }
+}
+
+@utility glass-pane-body {
+  position: relative;
+  z-index: 1;
+}
+
+@utility glass-materialize {
+  animation: glass-materialize 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes glass-materialize {
+  from {
+    opacity: 0;
+    transform: scale(0.985) translateZ(0);
+    -webkit-backdrop-filter: blur(0) saturate(1);
+    backdrop-filter: blur(0) saturate(1);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateZ(0);
+  }
+}
+
+@supports (-apple-visual-effect: -apple-system-glass-material) {
+  .glass-panel,
+  .glass-tray,
+  .glass-elevated {
+    -apple-visual-effect: -apple-system-glass-material;
+  }
 }
 
 /* Waveform playhead is an overlay (rAF). Hide WaveSurfer's cursor. */
@@ -374,19 +467,39 @@
   ) !important;
 }
 
-/* Editor drag surfaces — splitters sit above flush panes; no text select while resizing */
+/* Editor: liquid chrome + instant press feedback */
 .mr-editor .spaces-resize-handle,
 .mr-editor .spaces-touch-handle {
-  z-index: 30;
-  pointer-events: auto;
+  user-select: none;
+  -webkit-user-select: none;
+  background: color-mix(in oklch, var(--glass-border) 35%, transparent) !important;
+  border-radius: 999px;
+  opacity: 0;
+  transition:
+    opacity 180ms ease,
+    background-color 180ms ease,
+    transform 100ms ease-out;
 }
 
-.mr-editor .spaces-resize-handle,
-.mr-editor .spaces-touch-handle,
+.mr-editor .spaces-resize-handle:hover,
+.mr-editor .spaces-touch-handle:hover,
+.mr-editor.spaces-resizing .spaces-resize-handle,
+.mr-editor .spaces-resizing .spaces-resize-handle {
+  opacity: 1;
+  background: color-mix(in oklch, var(--mr-acc) 45%, var(--glass-border)) !important;
+}
+
 .mr-editor.spaces-resizing,
 .mr-editor .spaces-resizing {
   user-select: none;
   -webkit-user-select: none;
+}
+
+.mr-editor .glass-chip:active,
+.mr-editor button:active:not(:disabled),
+.mr-editor [data-slot='button']:active:not(:disabled) {
+  transform: scale(0.97);
+  transition: transform 100ms ease-out;
 }
 
 .mr-no-drag {
@@ -406,4 +519,56 @@
 
 @utility animate-mr-pulse {
   animation: mrpulse 1.4s ease-in-out infinite;
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .glass,
+  .glass-elevated,
+  .glass-strong,
+  .glass-panel,
+  .glass-tray,
+  .glass-chip,
+  .glass-pane-header {
+    background-color: var(--background);
+    background-image: none;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    box-shadow: var(--glass-shadow);
+  }
+}
+
+@media (prefers-contrast: more) {
+  .glass,
+  .glass-elevated,
+  .glass-strong,
+  .glass-panel,
+  .glass-tray,
+  .glass-chip {
+    background-color: var(--background);
+    background-image: none;
+    border-color: var(--foreground);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .glass-materialize {
+    animation: none;
+  }
+
+  .glass-chip,
+  .mr-editor .glass-chip,
+  .mr-editor button,
+  .mr-editor [data-slot='button'],
+  .mr-editor .spaces-resize-handle,
+  .mr-editor .spaces-touch-handle {
+    transition: none;
+  }
+
+  .mr-editor .glass-chip:active,
+  .mr-editor button:active:not(:disabled),
+  .mr-editor [data-slot='button']:active:not(:disabled) {
+    transform: none;
+  }
 }

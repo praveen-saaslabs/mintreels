@@ -368,14 +368,14 @@ export function VideoPlayer({ src, pending = false }: Readonly<VideoPlayerProps>
             </div>
           </div>
 
-          {/* Frosted transport tray — glass chrome over ambient, not over media */}
-          <div className="glass-tray flex flex-none flex-wrap items-center gap-2.5 px-3 py-2.5">
+          {/* Liquid transport tray — glass chrome over ambient, not over media */}
+          <div className="glass-tray glass-materialize flex flex-none flex-wrap items-center gap-2.5 px-3 py-2.5" style={{ animationDelay: '100ms' }}>
             <Button
               type="button"
               size="icon"
               variant="default"
               aria-label={playing ? 'Pause' : 'Play'}
-              className="size-[34px] shrink-0 rounded"
+              className="size-[34px] shrink-0 rounded-[10px] transition-transform duration-100 ease-out active:scale-[0.97]"
               disabled={showVideoEmpty || showVideoUnavailable}
               onClick={() => {
                 void togglePlayback();
@@ -423,7 +423,7 @@ export function VideoPlayer({ src, pending = false }: Readonly<VideoPlayerProps>
                   type="button"
                   onClick={() => setAspect(preset)}
                   className={cn(
-                    'inline-flex h-[26px] items-center rounded px-2.5 text-[11px] font-medium transition-colors',
+                    'inline-flex h-[26px] items-center rounded-lg px-2.5 text-[11px] font-medium tracking-[0.01em] transition-[transform,colors] duration-100 ease-out active:scale-[0.97]',
                     aspect === preset
                       ? 'bg-foreground text-background'
                       : 'glass-chip text-foreground/70 hover:bg-[var(--glass-bg-strong)]',

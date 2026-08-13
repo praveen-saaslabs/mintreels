@@ -64,11 +64,16 @@ export function EditorPane({
   children: ReactNode;
 }) {
   return (
-    <section className="flex h-full min-h-0 w-full flex-col overflow-hidden border-l border-[var(--glass-border-subtle)]">
-      <header className="shrink-0 border-b border-[var(--glass-border-subtle)] pt-2 pl-3">
-        {header ?? <h2 className="text-sm font-medium text-foreground">{title}</h2>}
+    <section
+      className="glass-panel glass-materialize m-1.5 flex h-[calc(100%-0.75rem)] min-h-0 w-[calc(100%-0.75rem)] flex-col overflow-hidden"
+      style={{ animationDelay: '60ms' }}
+    >
+      <header className="glass-pane-header shrink-0 px-3 pt-2.5 pb-2">
+        {header ?? (
+          <h2 className="text-sm font-medium tracking-[-0.01em] text-foreground">{title}</h2>
+        )}
       </header>
-      <div className="min-h-0 flex-1 overflow-auto p-3">{children}</div>
+      <div className="glass-pane-body min-h-0 flex-1 overflow-auto p-3">{children}</div>
     </section>
   );
 }

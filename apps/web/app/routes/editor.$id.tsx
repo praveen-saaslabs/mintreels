@@ -40,7 +40,7 @@ function EditorStatusPanel({
       <div className="glass w-full max-w-md space-y-4 rounded p-6">
         <div className="space-y-1.5">
           <h1 className="text-xl font-semibold tracking-[-0.02em]">{title}</h1>
-          <p className="text-sm text-muted-foreground">{description}</p>
+          <p className="text-sm leading-relaxed text-muted-foreground">{description}</p>
         </div>
         {onRetry ? (
           <div className="flex justify-end">
