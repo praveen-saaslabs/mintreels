@@ -53,18 +53,32 @@ services:
       timeout: 5s
       retries: 10
 
+  qdrant:
+    image: qdrant/qdrant:latest
+    restart: unless-stopped
+    ports:
+      - '127.0.0.1:6333:6333'
+    volumes:
+      - qdrant_data:/qdrant/storage
+    # No healthcheck: the image is distroless (no shell/curl). The worker connects
+    # lazily and only touches Qdrant during job processing, well after startup.
+
   api:
     build:
       context: .
       dockerfile: docker/Dockerfile.dev
     working_dir: /app/apps/api
-    command: sh -c "cd /app && pnpm install && cd /app/apps/api && node --watch --import @swc-node/register/esm-register src/main.ts"
+    command: sh -c "cd /app && pnpm install --filter @mintreels/api... --prefer-offline --frozen-lockfile && cd /app/apps/api && node --watch --import @swc-node/register/esm-register src/main.ts"
     volumes:
       - ./:/app
       - api_node_modules:/app/node_modules
       - api_app_node_modules:/app/apps/api/node_modules
+      - pnpm_store:/pnpm/store
     environment:
       CI: 'true'
+      # Persist pnpm's content store on a shared volume so `pnpm install` reuses
+      # already-fetched packages across restarts instead of re-downloading them.
+      npm_config_store_dir: /pnpm/store
       DATABASE_URL: mysql://${MYSQL_USER:-mintreels}:${MYSQL_PASSWORD:-mintreels}@mysql:3306/${MYSQL_DATABASE:-mintreels}
       REDIS_URL: redis://redis:6379
       PORT: '3000'
@@ -108,12 +122,14 @@ services:
       context: .
       dockerfile: docker/Dockerfile.dev
     working_dir: /app/apps/worker
-    command: sh -c "cd /app && pnpm install && cd /app/apps/worker && node --watch --import @swc-node/register/esm-register src/worker.ts"
+    command: sh -c "cd /app && pnpm install --filter @mintreels/worker... --prefer-offline --frozen-lockfile && cd /app/apps/worker && node --watch --import @swc-node/register/esm-register src/worker.ts"
     volumes:
       - ./:/app
       - worker_node_modules:/app/node_modules
+      - pnpm_store:/pnpm/store
     environment:
       CI: 'true'
+      npm_config_store_dir: /pnpm/store
       DATABASE_URL: mysql://${MYSQL_USER:-mintreels}:${MYSQL_PASSWORD:-mintreels}@mysql:3306/${MYSQL_DATABASE:-mintreels}
       REDIS_URL: redis://redis:6379
       AI_PROVIDER: ${AI_PROVIDER:-pyai}
@@ -133,23 +149,45 @@ services:
       JOB_MAX_ATTEMPTS: ${JOB_MAX_ATTEMPTS:-4}
       JOB_RETRY_BASE_DELAY_MS: ${JOB_RETRY_BASE_DELAY_MS:-5000}
       JOB_STEP_STALE_TIMEOUT_MS: ${JOB_STEP_STALE_TIMEOUT_MS:-1800000}
+      EMBEDDING_PROVIDER: ${EMBEDDING_PROVIDER:-openai}
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL:-text-embedding-3-small}
+      VECTOR_STORE_PROVIDER: ${VECTOR_STORE_PROVIDER:-qdrant}
+      QDRANT_URL: ${QDRANT_URL:-http://qdrant:6333}
+      QDRANT_API_KEY: ${QDRANT_API_KEY:-}
+      QDRANT_COLLECTION: ${QDRANT_COLLECTION:-hook_vectors}
+      HOOK_SIMILARITY_THRESHOLD: ${HOOK_SIMILARITY_THRESHOLD:-0.85}
+      HOOK_MAX_CANDIDATES: ${HOOK_MAX_CANDIDATES:-50}
+      HOOK_FINAL_COUNT: ${HOOK_FINAL_COUNT:-10}
+      CLIP_PREROLL_MS: ${CLIP_PREROLL_MS:-3000}
+      CLIP_POSTROLL_MS: ${CLIP_POSTROLL_MS:-5000}
+      HOOK_WEIGHT_QUALITY: ${HOOK_WEIGHT_QUALITY:-0.30}
+      HOOK_WEIGHT_STANDALONE: ${HOOK_WEIGHT_STANDALONE:-0.20}
+      HOOK_WEIGHT_CURIOSITY: ${HOOK_WEIGHT_CURIOSITY:-0.15}
+      HOOK_WEIGHT_EMOTIONAL: ${HOOK_WEIGHT_EMOTIONAL:-0.10}
+      HOOK_WEIGHT_SPECIFICITY: ${HOOK_WEIGHT_SPECIFICITY:-0.10}
+      HOOK_WEIGHT_SHAREABILITY: ${HOOK_WEIGHT_SHAREABILITY:-0.10}
+      HOOK_WEIGHT_NOVELTY: ${HOOK_WEIGHT_NOVELTY:-0.05}
     depends_on:
       mysql:
         condition: service_healthy
       redis:
         condition: service_healthy
+      qdrant:
+        condition: service_started
 
   web:
     build:
       context: .
       dockerfile: docker/Dockerfile.dev
     working_dir: /app/apps/web
-    command: sh -c "cd /app && pnpm install && pnpm --filter @mintreels/web exec vite --host 0.0.0.0 --port 5173"
+    command: sh -c "cd /app && pnpm install --filter @mintreels/web... --prefer-offline --frozen-lockfile && pnpm --filter @mintreels/web exec vite --host 0.0.0.0 --port 5173"
     volumes:
       - ./:/app
       - web_node_modules:/app/node_modules
+      - pnpm_store:/pnpm/store
     environment:
       CI: 'true'
+      npm_config_store_dir: /pnpm/store
       VITE_API_TARGET: http://api:3000
       # Browser Filestack key (falls back to worker/API key if unset)
       VITE_FILESTACK_API_KEY: ${VITE_FILESTACK_API_KEY:-${FILESTACK_API_KEY:-}}
@@ -165,3 +203,5 @@ volumes:
   api_app_node_modules:
   worker_node_modules:
   web_node_modules:
+  qdrant_data:
+  pnpm_store:

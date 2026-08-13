@@ -97,6 +97,7 @@ export enum JobStepName {
   Summary = 'SUMMARY',
   ActionItems = 'ACTION_ITEMS',
   Hooks = 'HOOKS',
+  HookEmbeddings = 'HOOK_EMBEDDINGS',
   ClipRecommendations = 'CLIP_RECOMMENDATIONS',
 }
 
@@ -108,6 +109,7 @@ export const JOB_STEP_NAMES = [
   JobStepName.Summary,
   JobStepName.ActionItems,
   JobStepName.Hooks,
+  JobStepName.HookEmbeddings,
   JobStepName.ClipRecommendations,
 ] as const;
 
@@ -118,6 +120,32 @@ export enum JobStepStatus {
   Retrying = 'retrying',
   Failed = 'failed',
   Skipped = 'skipped',
+}
+
+export enum HookType {
+  Story = 'story',
+  Lesson = 'lesson',
+  Controversy = 'controversy',
+  Surprise = 'surprise',
+  Failure = 'failure',
+  Success = 'success',
+  Advice = 'advice',
+  Emotion = 'emotion',
+  Data = 'data',
+  Quote = 'quote',
+}
+
+export enum HookStatus {
+  Candidate = 'candidate',
+  Selected = 'selected',
+  Rejected = 'rejected',
+}
+
+export enum EmbeddingStatus {
+  Pending = 'pending',
+  Processing = 'processing',
+  Completed = 'completed',
+  Failed = 'failed',
 }
 
 export enum EnvKey {
@@ -139,4 +167,22 @@ export enum EnvKey {
   JobMaxAttempts = 'JOB_MAX_ATTEMPTS',
   JobRetryBaseDelayMs = 'JOB_RETRY_BASE_DELAY_MS',
   JobStepStaleTimeoutMs = 'JOB_STEP_STALE_TIMEOUT_MS',
+  EmbeddingProvider = 'EMBEDDING_PROVIDER',
+  EmbeddingModel = 'EMBEDDING_MODEL',
+  VectorStoreProvider = 'VECTOR_STORE_PROVIDER',
+  QdrantUrl = 'QDRANT_URL',
+  QdrantApiKey = 'QDRANT_API_KEY',
+  QdrantCollection = 'QDRANT_COLLECTION',
+  HookSimilarityThreshold = 'HOOK_SIMILARITY_THRESHOLD',
+  HookMaxCandidates = 'HOOK_MAX_CANDIDATES',
+  HookFinalCount = 'HOOK_FINAL_COUNT',
+  ClipPrerollMs = 'CLIP_PREROLL_MS',
+  ClipPostrollMs = 'CLIP_POSTROLL_MS',
+  HookWeightQuality = 'HOOK_WEIGHT_QUALITY',
+  HookWeightStandalone = 'HOOK_WEIGHT_STANDALONE',
+  HookWeightCuriosity = 'HOOK_WEIGHT_CURIOSITY',
+  HookWeightEmotional = 'HOOK_WEIGHT_EMOTIONAL',
+  HookWeightSpecificity = 'HOOK_WEIGHT_SPECIFICITY',
+  HookWeightShareability = 'HOOK_WEIGHT_SHAREABILITY',
+  HookWeightNovelty = 'HOOK_WEIGHT_NOVELTY',
 }

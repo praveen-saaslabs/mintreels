@@ -1,5 +1,5 @@
 import { Global, Module } from '@nestjs/common';
-import type { LLMProvider, SpeechProvider } from '@mintreels/ai';
+import type { LLMProvider, SpeechProvider, VectorStoreProvider } from '@mintreels/ai';
 import type { KnowledgeBaseProvider } from '@mintreels/knowledge';
 import type { QueueProvider } from '@mintreels/queue';
 import type { StorageProvider } from '@mintreels/storage';
@@ -9,6 +9,7 @@ import {
   createQueueProvider,
   createSpeechProvider,
   createStorageProvider,
+  createVectorStoreProvider,
 } from './factories';
 import {
   KB_PROVIDER,
@@ -16,6 +17,7 @@ import {
   QUEUE_PROVIDER,
   SPEECH_PROVIDER,
   STORAGE_PROVIDER,
+  VECTOR_STORE_PROVIDER,
 } from './provider-tokens';
 
 const NEST_PROBE_KEYS = new Set([
@@ -66,7 +68,18 @@ function lazy<T extends object>(factory: () => T): T {
       provide: QUEUE_PROVIDER,
       useFactory: (): QueueProvider => lazy(createQueueProvider),
     },
+    {
+      provide: VECTOR_STORE_PROVIDER,
+      useFactory: (): VectorStoreProvider => lazy(createVectorStoreProvider),
+    },
   ],
-  exports: [SPEECH_PROVIDER, LLM_PROVIDER, KB_PROVIDER, STORAGE_PROVIDER, QUEUE_PROVIDER],
+  exports: [
+    SPEECH_PROVIDER,
+    LLM_PROVIDER,
+    KB_PROVIDER,
+    STORAGE_PROVIDER,
+    QUEUE_PROVIDER,
+    VECTOR_STORE_PROVIDER,
+  ],
 })
 export class ProvidersModule {}

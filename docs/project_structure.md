@@ -64,7 +64,7 @@ Each job is `queued`, `running`, then `success` or `failed`, with bounded retrie
 
 ## AI providers
 
-`SpeechProvider`, `LLMProvider`, and `EmbeddingProvider` are defined in `@mintreels/ai`. PyAI is the default implementation, selected with `AI_PROVIDER=pyai`.
+`SpeechProvider`, `LLMProvider`, `EmbeddingProvider`, and `VectorStoreProvider` are defined in `@mintreels/ai`. PyAI is the default speech implementation (`AI_PROVIDER=pyai`). Embeddings and the vector store are OpenAI-compatible + Qdrant (see `docs/ai-video-analysis-architecture.md`).
 
 ## Knowledge Base adapter
 

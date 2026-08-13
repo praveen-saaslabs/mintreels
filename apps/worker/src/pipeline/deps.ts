@@ -9,7 +9,12 @@ import type {
   TranscriptRepository,
   TranscriptSegmentRepository,
 } from '@mintreels/db';
-import type { LLMProvider, SpeechProvider } from '@mintreels/ai';
+import type {
+  EmbeddingProvider,
+  LLMProvider,
+  SpeechProvider,
+  VectorStoreProvider,
+} from '@mintreels/ai';
 import type { StorageProvider } from '@mintreels/storage';
 
 export interface WorkerDeps {
@@ -24,5 +29,7 @@ export interface WorkerDeps {
   hooks: HookRepository;
   speech: SpeechProvider;
   llm: LLMProvider;
+  embeddings: EmbeddingProvider;
+  vectorStore: VectorStoreProvider;
   storage: StorageProvider;
 }

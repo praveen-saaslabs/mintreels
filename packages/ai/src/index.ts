@@ -1,6 +1,23 @@
 export type { SpeechProvider } from './speech-provider';
-export type { ActionItem, LLMProvider } from './llm-provider';
+export type { ActionItem, HookGenerationOptions, LLMProvider } from './llm-provider';
 export type { EmbeddingProvider } from './embedding-provider';
+export type {
+  HookCandidate,
+  HookDimensionScores,
+  HookScoreDimension,
+  HookScoreWeights,
+} from './hook-candidates';
+export type {
+  VectorItem,
+  VectorSearchOptions,
+  VectorSearchResult,
+  VectorStoreProvider,
+} from './vector-store-provider';
+export { InMemoryVectorStore } from './in-memory-vector-store';
+export { cosineSimilarity, selectHooks } from './hook-selection';
+export type { SelectionCandidate, SelectionConfig, SelectionResult } from './hook-selection';
+export { computeClipBoundary } from './clip-boundaries';
+export type { ClipBoundary, ClipBoundaryHook, ClipBoundaryOptions } from './clip-boundaries';
 export { ProviderError, isProviderError, isRetryableProviderError } from './provider-error';
 export {
   PyAIClient,
@@ -11,13 +28,18 @@ export {
   mapResultToCanonical,
 } from './providers/pyai';
 export {
+  DEFAULT_EMBEDDING_DIMENSIONS,
   DEFAULT_NVIDIA_BASE_URL,
   DEFAULT_NVIDIA_MODEL,
+  DEFAULT_OPENAI_EMBEDDING_MODEL,
   DEFAULT_OPENAI_MODEL,
+  OpenAICompatibleEmbeddingProvider,
   OpenAICompatibleLLMProvider,
   openAICompatibleConfigFromEnv,
+  openAICompatibleEmbeddingConfigFromEnv,
 } from './providers/openai-compatible';
 export type {
+  OpenAICompatibleEmbeddingConfig,
   OpenAICompatibleLLMConfig,
   OpenAICompatibleProviderId,
 } from './providers/openai-compatible';

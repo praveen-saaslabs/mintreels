@@ -25,19 +25,33 @@ PyAI Adapter (or Filestack / BullMQ adapter)
 `packages/ai/src/llm-provider.ts`
 
 - `summarize(transcript)` → `Summary`
-- `generateHooks(transcript)` → `Hook[]`
+- `generateHooks(transcript, options)` → `HookCandidate[]` (`options` carries `loadHookConfig()` weights + `maxCandidates`)
 - `generateActionItems(transcript)` → timestamped action items
 - Default: OpenAI-compatible (`packages/ai/src/providers/openai-compatible/llm.ts`) via `LLM_PROVIDER=openai` (or `nvidia`)
 - `summarize` / `generateActionItems` call Chat Completions with `response_format` (`json_schema` strict, fallback `json_object`)
-- `generateHooks` stays extractive (`packages/ai/src/extractive-hooks.ts`)
+- `generateHooks` sends deterministic semantic windows (`packages/ai/src/semantic-windows.ts`) with the `hooks-v1` prompt, and returns segment IDs — never timestamps. `packages/ai/src/hook-candidates.ts` resolves segment IDs to milliseconds, divides the 0–10 dimension scores by 10, and applies the configured weights
+- `packages/ai/src/extractive-hooks.ts` is the fallback when the LLM call fails or yields nothing usable
 - Speech stays `AI_PROVIDER=pyai`. Do not point LLM at PyAI — `@pyai/sdk` has Recap only, no chat/summarize/action-items API
 
 ## EmbeddingProvider
 
 `packages/ai/src/embedding-provider.ts`
 
-- `embed(text)` → `number[]`
-- Used only if a future local KB needs embeddings. The PyAI KB adapter does **not** store vectors in MySQL.
+- `embed(texts)` → `number[][]` (batched)
+- `provider` / `model` / `dimensions` metadata for versioning
+- Default (Part 3): OpenAI-compatible (`EMBEDDING_PROVIDER`, `EMBEDDING_MODEL`)
+- PyAI has no confirmed embedding endpoint — do not invent one
+- The PyAI KB adapter does **not** store vectors in MySQL
+
+## VectorStoreProvider
+
+`packages/ai/src/vector-store-provider.ts`
+
+- `upsert` / `search` / `delete` / `deleteByRecordingId` / `healthCheck`
+- Search is recording-scoped (`recordingId` required)
+- Default: self-hosted Qdrant service (`VECTOR_STORE_PROVIDER=qdrant`, `QDRANT_URL`, optional `QDRANT_API_KEY`, `QDRANT_COLLECTION`)
+- Derived index only — MySQL `hooks` rows remain canonical and rebuildable
+- Do not import Qdrant types outside `packages/ai/src/providers/qdrant/`
 
 ## KnowledgeBaseProvider
 
@@ -71,6 +85,8 @@ LLM_PROVIDER=openai
 KNOWLEDGE_BASE_PROVIDER=pyai
 STORAGE_PROVIDER=filestack
 QUEUE_PROVIDER=bullmq
+EMBEDDING_PROVIDER=openai
+VECTOR_STORE_PROVIDER=qdrant
 ```
 
 LLM adapter (`openai` | `nvidia`) reads:

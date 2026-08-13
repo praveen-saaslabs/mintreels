@@ -1,10 +1,13 @@
 import {
+  OpenAICompatibleEmbeddingProvider,
   OpenAICompatibleLLMProvider,
   PyAIClient,
   PyAISpeechProvider,
   openAICompatibleConfigFromEnv,
+  openAICompatibleEmbeddingConfigFromEnv,
 } from '@mintreels/ai';
-import type { LLMProvider, SpeechProvider } from '@mintreels/ai';
+import type { EmbeddingProvider, LLMProvider, SpeechProvider, VectorStoreProvider } from '@mintreels/ai';
+import { QdrantVectorStore, qdrantConfigFromEnv } from '@mintreels/ai/providers/qdrant';
 import { FilestackStorageProvider } from '@mintreels/storage';
 import type { StorageProvider } from '@mintreels/storage';
 import { EnvKey } from '@mintreels/schema';
@@ -31,6 +34,22 @@ export function createLLMProvider(): LLMProvider {
     return new OpenAICompatibleLLMProvider(openAICompatibleConfigFromEnv(provider));
   }
   throw new Error(`Unsupported LLM_PROVIDER: ${provider}`);
+}
+
+export function createEmbeddingProvider(): EmbeddingProvider {
+  const provider = requireProvider(EnvKey.EmbeddingProvider, 'openai');
+  if (provider !== 'openai') {
+    throw new Error(`Unsupported EMBEDDING_PROVIDER: ${provider}`);
+  }
+  return new OpenAICompatibleEmbeddingProvider(openAICompatibleEmbeddingConfigFromEnv());
+}
+
+export function createVectorStoreProvider(): VectorStoreProvider {
+  const provider = requireProvider(EnvKey.VectorStoreProvider, 'qdrant');
+  if (provider !== 'qdrant') {
+    throw new Error(`Unsupported VECTOR_STORE_PROVIDER: ${provider}`);
+  }
+  return new QdrantVectorStore(qdrantConfigFromEnv());
 }
 
 export function createStorageProvider(): StorageProvider {

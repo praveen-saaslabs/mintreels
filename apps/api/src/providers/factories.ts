@@ -4,7 +4,8 @@ import {
   PyAISpeechProvider,
   openAICompatibleConfigFromEnv,
 } from '@mintreels/ai';
-import type { LLMProvider, SpeechProvider } from '@mintreels/ai';
+import type { LLMProvider, SpeechProvider, VectorStoreProvider } from '@mintreels/ai';
+import { QdrantVectorStore, qdrantConfigFromEnv } from '@mintreels/ai/providers/qdrant';
 import { EnvKey } from '@mintreels/schema';
 import { PyAIKnowledgeBaseProvider, PyAIKnowledgeClient } from '@mintreels/knowledge';
 import type { KnowledgeBaseProvider } from '@mintreels/knowledge';
@@ -59,4 +60,12 @@ export function createQueueProvider(): QueueProvider {
     throw new Error(`Unsupported QUEUE_PROVIDER: ${provider}`);
   }
   return new BullMQQueueProvider();
+}
+
+export function createVectorStoreProvider(): VectorStoreProvider {
+  const provider = requireProvider(EnvKey.VectorStoreProvider, 'qdrant');
+  if (provider !== 'qdrant') {
+    throw new Error(`Unsupported VECTOR_STORE_PROVIDER: ${provider}`);
+  }
+  return new QdrantVectorStore(qdrantConfigFromEnv());
 }

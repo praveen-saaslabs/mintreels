@@ -12,7 +12,13 @@ import {
   TranscriptSegmentRepository,
 } from '@mintreels/db';
 import { createProcessors } from './processors';
-import { createLLMProvider, createSpeechProvider, createStorageProvider } from './providers';
+import {
+  createEmbeddingProvider,
+  createLLMProvider,
+  createSpeechProvider,
+  createStorageProvider,
+  createVectorStoreProvider,
+} from './providers';
 
 async function main(): Promise<void> {
   const dataSource = createDataSource();
@@ -30,11 +36,15 @@ async function main(): Promise<void> {
     hooks: new HookRepository(dataSource),
     speech: createSpeechProvider(),
     llm: createLLMProvider(),
+    embeddings: createEmbeddingProvider(),
+    vectorStore: createVectorStoreProvider(),
     storage: createStorageProvider(),
   };
 
   const worker = createProcessors(deps);
-  console.log('MintReels worker listening on queue mintreels for ingest-video and render-clip');
+  console.log(
+    'MintReels worker listening on queue mintreels for ingest-video, render-clip, generate-hooks',
+  );
 
   const shutdown = async () => {
     await worker.close();

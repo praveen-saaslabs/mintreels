@@ -25,7 +25,7 @@ import type { SpeechProvider } from '@mintreels/ai';
 
 ## Apps depend on interfaces
 
-Use `SpeechProvider`, `LLMProvider`, `EmbeddingProvider`, `KnowledgeBaseProvider`, `StorageProvider`, `QueueProvider`. Wire concrete implementations only at composition roots (`apps/api/src/providers.ts`, worker bootstrap).
+Use `SpeechProvider`, `LLMProvider`, `EmbeddingProvider`, `VectorStoreProvider`, `KnowledgeBaseProvider`, `StorageProvider`, `QueueProvider`. Wire concrete implementations only at composition roots: `apps/api/src/providers/factories.ts` (behind DI tokens in `providers.module.ts`) and `apps/worker/src/providers.ts`. Constructing `QdrantVectorStore` there is allowed — it is the composition root, same as `BullMQQueueProvider`.
 
 ## PyAI lives only here
 

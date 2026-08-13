@@ -10,6 +10,7 @@ export const jobStepNameSchema = z.enum([
   JobStepName.Summary,
   JobStepName.ActionItems,
   JobStepName.Hooks,
+  JobStepName.HookEmbeddings,
   JobStepName.ClipRecommendations,
 ]);
 
