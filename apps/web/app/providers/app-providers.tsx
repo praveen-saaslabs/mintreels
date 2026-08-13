@@ -2,6 +2,7 @@ import { useMemo, type ReactNode } from 'react';
 import { createClipsRepository } from '@/lib/data/clips-repository';
 import { createProjectsRepository } from '@/lib/data/projects-repository';
 import { createSettingsRepository } from '@/lib/data/settings-repository';
+import { AuthProvider } from './auth-provider';
 import { ClipsProvider } from './clips-provider';
 import { ProjectsProvider } from './projects-provider';
 import { SettingsProvider } from './settings-provider';
@@ -20,11 +21,13 @@ export function AppProviders({ children }: { children: ReactNode }) {
 
   return (
     <ThemeProvider>
-      <ProjectsProvider repository={projectsRepository}>
-        <ClipsProvider repository={clipsRepository}>
-          <SettingsProvider repository={settingsRepository}>{children}</SettingsProvider>
-        </ClipsProvider>
-      </ProjectsProvider>
+      <AuthProvider>
+        <ProjectsProvider repository={projectsRepository}>
+          <ClipsProvider repository={clipsRepository}>
+            <SettingsProvider repository={settingsRepository}>{children}</SettingsProvider>
+          </ClipsProvider>
+        </ProjectsProvider>
+      </AuthProvider>
     </ThemeProvider>
   );
 }
