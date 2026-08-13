@@ -61,22 +61,19 @@ Inside Docker, Compose always uses `mysql:3306` and `redis:6379` (it ignores a h
 | --- | --- |
 | `PYAI_API_KEY` | PyAI speech / LLM / KB |
 | `PYAI_BASE_URL` | PyAI API base URL |
-| `S3_ENDPOINT` | Optional custom S3-compatible endpoint (R2, MinIO) |
-| `S3_REGION` | Object storage region |
-| `S3_BUCKET` | Bucket name |
-| `S3_ACCESS_KEY_ID` | Storage access key |
-| `S3_SECRET_ACCESS_KEY` | Storage secret |
+| `FILESTACK_API_KEY` | Filestack API key (worker store/delete) |
+| `FILESTACK_APP_SECRET` | Optional; required only if Filestack security policies are enabled |
 
 ### Provider switches (defaults)
 
 ```env
 AI_PROVIDER=pyai
 KNOWLEDGE_BASE_PROVIDER=pyai
-STORAGE_PROVIDER=s3
+STORAGE_PROVIDER=filestack
 QUEUE_PROVIDER=bullmq
 ```
 
-The API boots without PyAI/S3 keys (providers are constructed lazily). Transcription, KB, and clip jobs will fail until those vars are set.
+The API boots without PyAI/Filestack keys (providers are constructed lazily). Transcription, KB, and clip jobs will fail until those vars are set.
 
 ## Run locally without Docker
 

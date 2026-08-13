@@ -11,12 +11,24 @@ export const transcriptRowSchema = z.object({
   id: idSchema,
   recordingId: idSchema,
   language: z.string().nullable(),
+  provider: z.string().nullable(),
+  providerJobId: z.string().nullable(),
+  status: z.string().nullable(),
+  text: z.string().nullable(),
+  durationMs: z.number().int().nonnegative().nullable(),
+  rawResponse: z.unknown().nullable(),
   createdAt: z.coerce.date(),
 });
 
 export const transcriptInsertSchema = transcriptRowSchema.partial({
   id: true,
   language: true,
+  provider: true,
+  providerJobId: true,
+  status: true,
+  text: true,
+  durationMs: true,
+  rawResponse: true,
   createdAt: true,
 });
 

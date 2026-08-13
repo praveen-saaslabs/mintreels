@@ -6,7 +6,6 @@ export interface UploadInput {
 
 export interface StoredObject {
   key: string;
-  bucket: string;
   size?: number;
 }
 

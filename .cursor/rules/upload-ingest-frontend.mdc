@@ -1,0 +1,61 @@
+---
+description: Frontend upload → create project/recording → poll ingest. Filestack URL in, processing snapshot out.
+globs: apps/web/**
+alwaysApply: false
+---
+
+# Upload ingest (frontend)
+
+Read [`docs/api-frontend.md`](../../docs/api-frontend.md) and [`docs/auth-frontend.md`](../../docs/auth-frontend.md). Call the API **only** through [`apps/web/app/lib/api.ts`](../../apps/web/app/lib/api.ts) with `credentials: 'include'`. Never send `Authorization: Bearer`.
+
+This is the `/new` → `/projects/:projectId` flow.
+
+## Sequence
+
+1. User picks video or audio in the UI.
+2. Upload the file to **Filestack in the browser** (picker or JS SDK). Keep the Filestack key in frontend env only (`VITE_FILESTACK_API_KEY` or equivalent). Never put `FILESTACK_APP_SECRET` or `PYAI_*` in Vite.
+3. Take the CDN URL from Filestack (`https://cdn.filestackcontent.com/{HANDLE}`).
+4. `POST /api/recordings` via `api.createRecording({ title, originalFilename, url })`.
+5. Response `201`: `{ id, projectId, jobId }` — `id` is the **recording** id.
+6. Navigate immediately to `/projects/{projectId}` (recording detail can use `id`).
+7. Start polling `GET /api/recordings/{id}/processing` via `api.getRecordingProcessing(id)`.
+
+The worker is **not** called from the browser. `POST /api/recordings` creates the project + recording + job and enqueues BullMQ `ingest-video`. The Docker worker consumes that queue.
+
+## Create — `POST /api/recordings`
+
+```json
+{ "title": "Ep. 14", "originalFilename": "ep14.mp4", "url": "https://cdn.filestackcontent.com/HANDLE" }
+```
+
+```json
+{ "id": 10, "projectId": 4, "jobId": 1 }
+```
+
+- Do **not** send `projectId`. The API creates the project (`name` = `title`).
+- `url` must be HTTPS Filestack CDN (or `www.filestackapi.com/api/file/{handle}`). Other hosts → `400`.
+- IDs are **integers**. JSON is camelCase.
+- Cookie session required → `401` if missing.
+
+## Poll — `GET /api/recordings/:id/processing`
+
+This is the only status API for ingest. Poll `id` (recording id), not `projectId`.
+
+Suggested interval: **2–5 seconds**. Stop when recording `status` is `ready` or `failed`, or job `status` is `success` | `failed` | `partial`.
+
+Recording status: `uploaded` | `processing` | `ready` | `failed`.
+
+Job status: `queued` | `running` | `success` | `failed` | `partial`.
+
+Step status: `pending` | `processing` | `completed` | `retrying` | `failed` | `skipped`.
+
+Use `job.currentStep` and `steps[]` for a progress UI. When present, render `transcript`, `summary`, `actionItems`, `hooks` incrementally. `audit` is optional debug.
+
+Never display `storageKey`, Filestack handles, `raw_response`, API keys, or `maskedKey` other than `"configured"` / `"not configured"`.
+
+## Do not
+
+- Proxy the file through Nest.
+- Call PyAI, Redis, or BullMQ from the browser.
+- Call `POST /api/recordings/upload-url` (removed).
+- Wait for processing before navigating — navigate, then poll.

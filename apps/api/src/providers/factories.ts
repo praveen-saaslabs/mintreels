@@ -4,7 +4,7 @@ import { PyAIKnowledgeBaseProvider, PyAIKnowledgeClient } from '@mintreels/knowl
 import type { KnowledgeBaseProvider } from '@mintreels/knowledge';
 import { BullMQQueueProvider } from '@mintreels/queue';
 import type { QueueProvider } from '@mintreels/queue';
-import { S3StorageProvider } from '@mintreels/storage';
+import { FilestackStorageProvider } from '@mintreels/storage';
 import type { StorageProvider } from '@mintreels/storage';
 
 function requireProvider(name: string, fallback: string): string {
@@ -40,11 +40,11 @@ export function createKnowledgeBaseProvider(): KnowledgeBaseProvider {
 }
 
 export function createStorageProvider(): StorageProvider {
-  const provider = requireProvider('STORAGE_PROVIDER', 's3');
-  if (provider !== 's3') {
+  const provider = requireProvider('STORAGE_PROVIDER', 'filestack');
+  if (provider !== 'filestack') {
     throw new Error(`Unsupported STORAGE_PROVIDER: ${provider}`);
   }
-  return new S3StorageProvider();
+  return new FilestackStorageProvider();
 }
 
 export function createQueueProvider(): QueueProvider {

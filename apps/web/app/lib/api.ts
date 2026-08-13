@@ -14,6 +14,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const normalized = path.startsWith('/') ? path : `/${path}`;
   const response = await fetch(`${API_BASE}${normalized}`, {
     ...init,
+    credentials: 'include',
     headers: {
       Accept: 'application/json',
       ...(init?.headers ?? {}),
@@ -30,7 +31,15 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 export const api = {
   getRecordings: () => request<unknown>('/recordings'),
   getRecording: (id: number) => request<unknown>(`/recordings/${encodeURIComponent(id)}`),
+  createRecording: (body: { title: string; originalFilename: string; url: string }) =>
+    request<{ id: number; projectId: number; jobId: number }>('/recordings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    }),
   getTranscript: (id: number) => request<unknown>(`/recordings/${encodeURIComponent(id)}/transcript`),
+  getRecordingProcessing: (id: number) =>
+    request<unknown>(`/recordings/${encodeURIComponent(id)}/processing`),
   getSummary: (id: number) => request<unknown>(`/recordings/${encodeURIComponent(id)}/summary`),
   getHooks: (id: number) => request<unknown>(`/recordings/${encodeURIComponent(id)}/hooks`),
   getKnowledgeBases: () => request<unknown>('/knowledge-bases'),

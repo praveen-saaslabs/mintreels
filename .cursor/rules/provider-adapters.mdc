@@ -21,7 +21,7 @@ transcribe(input: TranscriptionInput): Promise<Transcript>
 ```env
 AI_PROVIDER=pyai
 KNOWLEDGE_BASE_PROVIDER=pyai
-STORAGE_PROVIDER=s3
+STORAGE_PROVIDER=filestack
 QUEUE_PROVIDER=bullmq
 ```
 
@@ -31,7 +31,7 @@ QUEUE_PROVIDER=bullmq
 - PyAI AI: `packages/ai/src/providers/pyai/`
 - KB interface: `packages/knowledge/src/provider.ts`
 - PyAI KB: `packages/knowledge/src/adapters/pyai/` (mapper keeps vendor types inside)
-- Storage: `packages/storage/src/provider.ts` + `s3.ts` via official `@aws-sdk/*` (no hand-rolled SigV4)
+- Storage: `packages/storage/src/provider.ts` + `filestack.ts` (Filestack REST; HMAC policy only if `FILESTACK_APP_SECRET` is set)
 - Queue: `packages/queue/src/provider.ts` + `bullmq.ts`
 
 ## Do not

@@ -18,4 +18,43 @@ export interface TranscriptionInput {
   recordingId: number;
   storageKey: string;
   language?: string;
+  audioUrl?: string;
+  idempotencyKey?: string;
+}
+
+export type TranscriptionJobStatus = 'queued' | 'running' | 'completed' | 'failed' | 'cancelled';
+
+export interface TranscriptionAudioFile {
+  body: Uint8Array;
+  filename: string;
+}
+
+export interface TranscriptionSubmitInput {
+  audioUrl?: string;
+  audio?: TranscriptionAudioFile;
+  idempotencyKey?: string;
+  language?: string;
+  recordingId?: number;
+  storageKey?: string;
+}
+
+export interface TranscriptionSubmission {
+  providerJobId: string;
+  status: TranscriptionJobStatus;
+  error?: string;
+}
+
+export interface CanonicalTranscriptSegment {
+  sequence: number;
+  startMs: number;
+  endMs: number;
+  speaker?: string;
+  text: string;
+}
+
+export interface CanonicalTranscript {
+  text: string;
+  language?: string;
+  durationMs?: number;
+  segments: CanonicalTranscriptSegment[];
 }

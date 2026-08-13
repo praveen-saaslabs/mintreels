@@ -5,7 +5,7 @@
 - Node.js 20+
 - pnpm 10+
 - Docker (MySQL 8, Redis, api, worker, web)
-- FFmpeg (later, for media jobs)
+- FFmpeg (worker host, for audio extraction)
 
 ## Install
 
@@ -23,8 +23,9 @@ See `.env.example`. Required later for running services:
 - `DATABASE_URL` (MySQL connection string)
 - `MYSQL_ROOT_PASSWORD`, `MYSQL_USER`, `MYSQL_PASSWORD`, `MYSQL_DATABASE` for Docker Compose
 - `REDIS_URL`
-- `S3_*` for object storage
-- `PYAI_API_KEY` and `PYAI_BASE_URL` for PyAI
+- `FILESTACK_API_KEY` (and optional `FILESTACK_APP_SECRET` if Filestack security policies are on)
+- `PYAI_API_KEY` and `PYAI_BASE_URL` (default `https://api.pyai.com`) for PyAI
+- `JOB_MAX_ATTEMPTS` (default 4), `JOB_RETRY_BASE_DELAY_MS` (default 5000), `JOB_STEP_STALE_TIMEOUT_MS` (default 1800000)
 
 ## Run the full stack
 
@@ -59,3 +60,6 @@ API health: `GET http://127.0.0.1:3000/health`
 - IDs are auto-increment integers (not UUIDs).
 - Validation/DTOs live in `@mintreels/schema` (zod).
 - Long-running AI/media work belongs in the worker, not HTTP handlers.
+- The worker consumes BullMQ queue `mintreels`, job name `ingest-video` (full sequential pipeline via `job_steps`).
+- Poll ingest progress with `GET /api/recordings/:id/processing`. Transcription uses PyAI job polling, not webhooks.
+- FFmpeg is required on the worker for audio extraction.

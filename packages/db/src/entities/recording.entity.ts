@@ -40,6 +40,9 @@ export class Recording implements RecordingRow {
   @Column({ type: 'text', name: 'storage_key' })
   storageKey!: string;
 
+  @Column({ type: 'text', name: 'audio_storage_key', nullable: true })
+  audioStorageKey!: string | null;
+
   @Column({ type: 'int', name: 'duration_ms', nullable: true })
   durationMs!: number | null;
 

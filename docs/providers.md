@@ -7,15 +7,18 @@ Application
     ↓
 Provider Interface
     ↓
-PyAI Adapter (or S3 / BullMQ adapter)
+PyAI Adapter (or Filestack / BullMQ adapter)
 ```
 
 ## SpeechProvider
 
 `packages/ai/src/speech-provider.ts`
 
-- `transcribe(input)` → timestamped `Transcript`
-- Default: PyAI (`packages/ai/src/providers/pyai/speech.ts`)
+- `submitTranscription(input)` → `TranscriptionSubmission` (`providerJobId` + status)
+- `getTranscriptionStatus(providerJobId)` / `getTranscriptionResult(providerJobId)` — **poll** PyAI `GET /v1/transcription/jobs/{id}` (no webhooks)
+- `transcribe(input)` — convenience: submit + poll + map to timestamped `Transcript`
+- Default: PyAI (`packages/ai/src/providers/pyai/speech.ts`) via `@pyai/sdk` **only inside that adapter**
+- Jobs are submitted as multipart `audio` (OpenAPI) so PyAI does not need a public `audio_url`. Status/result still use the SDK. Webhooks are not required.
 
 ## LLMProvider
 
@@ -23,7 +26,8 @@ PyAI Adapter (or S3 / BullMQ adapter)
 
 - `summarize(transcript)` → `Summary`
 - `generateHooks(transcript)` → `Hook[]`
-- Default: PyAI (`packages/ai/src/providers/pyai/llm.ts`)
+- `generateActionItems(transcript)` → timestamped action items
+- Default: PyAI (`packages/ai/src/providers/pyai/llm.ts`) — extractive MVP until Recap/chat is available
 
 ## EmbeddingProvider
 
@@ -47,7 +51,7 @@ PyAI Adapter (or S3 / BullMQ adapter)
 `packages/storage/src/provider.ts`
 
 - `upload` / `download` / `getSignedUrl` / `delete`
-- Default: S3-compatible (`packages/storage/src/s3.ts`) via `@aws-sdk/client-s3`
+- Default: Filestack (`packages/storage/src/filestack.ts`). Frontend uploads and sends a CDN URL; the worker downloads that URL and stores extracted audio.
 
 ## QueueProvider
 
@@ -61,6 +65,6 @@ PyAI Adapter (or S3 / BullMQ adapter)
 ```env
 AI_PROVIDER=pyai
 KNOWLEDGE_BASE_PROVIDER=pyai
-STORAGE_PROVIDER=s3
+STORAGE_PROVIDER=filestack
 QUEUE_PROVIDER=bullmq
 ```
