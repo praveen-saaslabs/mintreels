@@ -8,8 +8,7 @@ export class TranscriptRepository extends Repository<Transcript> {
     super(Transcript, dataSource.createEntityManager());
   }
 
-  // TODO: implement transcript persistence
-  async findByRecordingId(_recordingId: number): Promise<Transcript | null> {
-    throw new Error('TranscriptRepository.findByRecordingId is not implemented');
+  async findByRecordingId(recordingId: number): Promise<Transcript | null> {
+    return this.findOne({ where: { recordingId } });
   }
 }

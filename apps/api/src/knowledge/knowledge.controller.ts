@@ -8,6 +8,9 @@ import {
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 import { AuthGuard } from '../auth/auth.guard';
+import { KnowledgeBaseScope } from '@mintreels/schema';
+import { CurrentUser } from '../auth/current-user.decorator';
+import type { RequestUser } from '../auth/auth.types';
 import { ZodValidationPipe } from '../common/zod-validation.pipe';
 import {
   createKnowledgeBaseRequestSchema,
@@ -24,10 +27,27 @@ export class KnowledgeController {
   constructor(private readonly knowledgeService: KnowledgeService) {}
 
   @ApiOperation({ summary: 'List all knowledge bases' })
-  @ApiOkResponse({ description: 'Array of knowledge base objects' })
+  @ApiOkResponse({
+    description: 'Array of knowledge base objects',
+    schema: {
+      example: [
+        {
+          id: 1,
+          projectId: 2,
+          name: 'Global KB',
+          scope: KnowledgeBaseScope.Global,
+          provider: 'pyai',
+          providerKnowledgeBaseId: 'kb_abc',
+          recordingId: null,
+          createdAt: '2026-08-13T08:00:00.000Z',
+          updatedAt: '2026-08-13T08:00:00.000Z',
+        },
+      ],
+    },
+  })
   @Get()
-  list() {
-    return this.knowledgeService.list();
+  list(@CurrentUser() user: RequestUser) {
+    return this.knowledgeService.list(user.id);
   }
 
   @ApiOperation({ summary: 'Create a new knowledge base' })

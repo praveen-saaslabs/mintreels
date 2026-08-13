@@ -1,5 +1,6 @@
-import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
 import type { HookRow } from '@mintreels/schema';
+import { Recording } from './recording.entity';
 
 @Entity({ name: 'hooks' })
 export class Hook implements HookRow {
@@ -8,6 +9,10 @@ export class Hook implements HookRow {
 
   @Column({ type: 'int', name: 'recording_id' })
   recordingId!: number;
+
+  @ManyToOne(() => Recording, (recording) => recording.hooks)
+  @JoinColumn({ name: 'recording_id' })
+  recording?: Recording;
 
   @Column({ type: 'text' })
   title!: string;

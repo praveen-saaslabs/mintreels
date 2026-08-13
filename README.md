@@ -97,3 +97,5 @@ Keep `DATABASE_URL` and `REDIS_URL` pointed at `127.0.0.1`.
 - Architecture: `docs/architecture.md`
 - Dev notes: `docs/development.md`
 - Providers: `docs/providers.md`
+- Frontend auth: `docs/auth-frontend.md`
+- Frontend GET APIs: `docs/api-frontend.md`

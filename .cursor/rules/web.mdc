@@ -8,6 +8,8 @@ alwaysApply: false
 
 React + React Router + ShadCN (Tailwind v4, Base UI primitives). Call the backend only through `apps/web/app/lib/api.ts`.
 
+GET response shapes and mock→API mapping: `docs/api-frontend.md`. Auth: `docs/auth-frontend.md`.
+
 The UI must not know retrieval is PyAI. Do not import `@mintreels/ai` providers, PyAI clients, AWS SDKs, or BullMQ.
 
 Compose ShadCN buttons with Base UI `render` (for example `render={<Link to="..." />}`). Do not use Radix `asChild`.

@@ -8,8 +8,7 @@ export class TranscriptSegmentRepository extends Repository<TranscriptSegment> {
     super(TranscriptSegment, dataSource.createEntityManager());
   }
 
-  // TODO: implement transcript segment persistence
-  async listByRecordingId(_recordingId: number): Promise<TranscriptSegment[]> {
-    throw new Error('TranscriptSegmentRepository.listByRecordingId is not implemented');
+  async listByRecordingId(recordingId: number): Promise<TranscriptSegment[]> {
+    return this.find({ where: { recordingId }, order: { sequence: 'ASC' } });
   }
 }

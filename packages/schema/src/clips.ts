@@ -1,12 +1,18 @@
 import { z } from 'zod';
 import { idSchema } from './common';
+import { ClipStatus } from './enums';
 
 /**
  * clips — docs/architecture.md §23
  *
  * Rendered from a selected hook / time range; status mirrors job lifecycle for exports.
  */
-export const clipStatusSchema = z.enum(['queued', 'rendering', 'ready', 'failed']);
+export const clipStatusSchema = z.enum([
+  ClipStatus.Queued,
+  ClipStatus.Rendering,
+  ClipStatus.Ready,
+  ClipStatus.Failed,
+]);
 
 export const clipRowSchema = z.object({
   id: idSchema,
@@ -29,6 +35,6 @@ export const clipInsertSchema = clipRowSchema.partial({
   createdAt: true,
 });
 
-export type ClipStatus = z.infer<typeof clipStatusSchema>;
+export { ClipStatus } from './enums';
 export type ClipRow = z.infer<typeof clipRowSchema>;
 export type ClipInsert = z.infer<typeof clipInsertSchema>;

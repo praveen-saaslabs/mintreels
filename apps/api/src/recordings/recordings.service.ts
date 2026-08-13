@@ -1,7 +1,22 @@
 import { Injectable } from '@nestjs/common';
-import { RecordingRepository } from '@mintreels/db';
+import { RecordingRepository, type Recording } from '@mintreels/db';
 import { HttpError, notImplemented } from '../common/http-error';
 import type { CreateRecordingRequest } from './recordings.dto';
+
+function toPublicRecording(recording: Recording) {
+  return {
+    id: recording.id,
+    projectId: recording.projectId,
+    title: recording.title,
+    originalFilename: recording.originalFilename,
+    durationMs: recording.durationMs,
+    width: recording.width,
+    height: recording.height,
+    status: recording.status,
+    createdAt: recording.createdAt,
+    updatedAt: recording.updatedAt,
+  };
+}
 
 @Injectable()
 export class RecordingsService {
@@ -12,7 +27,8 @@ export class RecordingsService {
   }
 
   async list(userId: number) {
-    return this.recordings.listForUser(userId);
+    const recordings = await this.recordings.listForUser(userId);
+    return recordings.map(toPublicRecording);
   }
 
   async getById(id: number, userId: number) {
@@ -20,7 +36,7 @@ export class RecordingsService {
     if (!recording) {
       throw new HttpError(404, 'Not found');
     }
-    return recording;
+    return toPublicRecording(recording);
   }
 
   async remove(id: number, userId: number): Promise<void> {

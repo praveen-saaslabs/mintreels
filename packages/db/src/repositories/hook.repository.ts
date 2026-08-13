@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { DataSource, Repository } from 'typeorm';
+import { DataSource, In, Repository } from 'typeorm';
 import { Hook } from '../entities/hook.entity';
 
 @Injectable()
@@ -8,8 +8,20 @@ export class HookRepository extends Repository<Hook> {
     super(Hook, dataSource.createEntityManager());
   }
 
-  // TODO: implement hook persistence
-  async listByRecordingId(_recordingId: number): Promise<Hook[]> {
-    throw new Error('HookRepository.listByRecordingId is not implemented');
+  async listByRecordingId(recordingId: number): Promise<Hook[]> {
+    return this.find({
+      where: { recordingId },
+      order: { score: 'DESC', id: 'ASC' },
+    });
+  }
+
+  async listByRecordingIds(recordingIds: number[]): Promise<Hook[]> {
+    if (recordingIds.length === 0) {
+      return [];
+    }
+    return this.find({
+      where: { recordingId: In(recordingIds) },
+      select: ['id', 'recordingId'],
+    });
   }
 }

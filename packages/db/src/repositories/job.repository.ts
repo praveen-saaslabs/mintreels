@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { DataSource, Repository } from 'typeorm';
+import { DataSource, In, Repository } from 'typeorm';
+import type { JobStatus } from '@mintreels/schema';
 import { Job } from '../entities/job.entity';
 
 @Injectable()
@@ -8,8 +9,15 @@ export class JobRepository extends Repository<Job> {
     super(Job, dataSource.createEntityManager());
   }
 
-  // TODO: implement job persistence
-  async findById(_id: number): Promise<Job | null> {
-    throw new Error('JobRepository.findById is not implemented');
+  async listByRecordingIds(recordingIds: number[], statuses?: JobStatus[]): Promise<Job[]> {
+    if (recordingIds.length === 0) {
+      return [];
+    }
+    return this.find({
+      where: statuses
+        ? { recordingId: In(recordingIds), status: In(statuses) }
+        : { recordingId: In(recordingIds) },
+      select: ['id', 'recordingId', 'status'],
+    });
   }
 }

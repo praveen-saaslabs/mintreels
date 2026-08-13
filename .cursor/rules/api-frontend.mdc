@@ -1,0 +1,17 @@
+---
+description: Frontend GET API contract — cookie auth, integer ids, map mocks to live JSON
+globs: apps/web/**
+alwaysApply: false
+---
+
+# Frontend ↔ API (GET)
+
+Read `docs/api-frontend.md` before wiring home/recordings/clips/settings to the backend. Auth cookie rules: `docs/auth-frontend.md`.
+
+- Call only through `apps/web/app/lib/api.ts` with `credentials: 'include'`.
+- IDs are integers. JSON is camelCase. Times are ISO + `startMs`/`endMs` — format labels in the UI.
+- Mock types (`proj_q3`, `updatedLabel`, `"41s"`) are view-models, not the API.
+- Empty lists → `200 []`. Missing/not owned → `404 { "error": "Not found" }`. No cookie → `401`.
+- Never render `storageKey`, real API keys, or `maskedKey` other than `"configured"` / `"not configured"`.
+- Live data: `VITE_USE_MOCK_DATA=false`. Swagger: `/docs`.
+- Do not call POST create/generate yet (still 501).

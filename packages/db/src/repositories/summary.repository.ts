@@ -8,8 +8,7 @@ export class SummaryRepository extends Repository<Summary> {
     super(Summary, dataSource.createEntityManager());
   }
 
-  // TODO: implement summary persistence
-  async findByRecordingId(_recordingId: number): Promise<Summary | null> {
-    throw new Error('SummaryRepository.findByRecordingId is not implemented');
+  async findByRecordingId(recordingId: number): Promise<Summary | null> {
+    return this.findOne({ where: { recordingId } });
   }
 }

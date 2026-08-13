@@ -1,5 +1,6 @@
-import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn } from 'typeorm';
-import type { JobRow, JobStatus, JobType } from '@mintreels/schema';
+import { Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
+import { JobStatus, JobType, type JobRow } from '@mintreels/schema';
+import { Recording } from './recording.entity';
 
 @Entity({ name: 'jobs' })
 export class Job implements JobRow {
@@ -11,6 +12,10 @@ export class Job implements JobRow {
 
   @Column({ type: 'int', name: 'recording_id', nullable: true })
   recordingId!: number | null;
+
+  @ManyToOne(() => Recording, (recording) => recording.jobs, { nullable: true })
+  @JoinColumn({ name: 'recording_id' })
+  recording?: Recording | null;
 
   @Column({ type: 'text' })
   status!: JobStatus;

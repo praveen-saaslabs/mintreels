@@ -39,7 +39,14 @@ Placeholder routes:
 - `POST /api/recordings/:id/hooks/generate`
 - `GET/POST /api/knowledge-bases`
 - `POST /api/clips`
+- `GET /api/clips`
+- `GET /api/clips/filters`
 - `GET /api/clips/:id`
+- `GET /api/projects`
+- `GET /api/projects/sidebar`
+- `GET /api/workspace/user`
+- `GET /api/workspace/stats`
+- `GET /api/settings`
 
 ## Worker
 
