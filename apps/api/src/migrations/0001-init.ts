@@ -4,8 +4,8 @@ import type { MigrationInterface, QueryRunner } from 'typeorm';
  * Baseline schema. Creates every table that maps to an entity in @mintreels/db.
  * All future schema changes go through new migration files, never entity sync.
  */
-export class Init0001 implements MigrationInterface {
-  name = 'Init0001';
+export class Init1700000000000 implements MigrationInterface {
+  name = 'Init1700000000000';
 
   async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(

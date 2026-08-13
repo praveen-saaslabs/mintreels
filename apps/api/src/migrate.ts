@@ -26,7 +26,10 @@ function createMigration(name: string): void {
   const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
   const fileName = `${String(seq).padStart(4, '0')}-${slug || 'migration'}.ts`;
   const filePath = join(migrationsDir, fileName);
-  const cls = className(name);
+  // TypeORM requires the migration name to end with a 13-digit JS timestamp;
+  // it parses the last 13 chars and sorts migrations by that timestamp.
+  const timestamp = Date.now();
+  const cls = `${className(name)}${timestamp}`;
 
   const skeleton = `import type { MigrationInterface, QueryRunner } from 'typeorm';
 
