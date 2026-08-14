@@ -154,7 +154,7 @@ Provider switches (defaults):
 
 ```env
 AI_PROVIDER=pyai
-KNOWLEDGE_BASE_PROVIDER=pyai
+KNOWLEDGE_BASE_PROVIDER=qdrant db
 STORAGE_PROVIDER=filestack
 QUEUE_PROVIDER=bullmq
 ```
