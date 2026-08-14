@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { clipVoiceoverSchema } from '@mintreels/schema';
+import { clipFitModeSchema, clipRatioSchema, clipVoiceoverSchema } from '@mintreels/schema';
 
 export const createRecordingRequestSchema = z.object({
   title: z.string().min(1),
@@ -26,3 +26,14 @@ export const applyRecordingVoiceoverRequestSchema = clipVoiceoverSchema
   );
 
 export type ApplyRecordingVoiceoverRequest = z.infer<typeof applyRecordingVoiceoverRequestSchema>;
+
+export const exportRecordingRequestSchema = z
+  .object({
+    aspectRatio: clipRatioSchema.optional(),
+    fitMode: clipFitModeSchema.optional(),
+    burnSubtitles: z.boolean().optional(),
+    force: z.boolean().optional(),
+  })
+  .default({});
+
+export type ExportRecordingRequest = z.infer<typeof exportRecordingRequestSchema>;

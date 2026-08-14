@@ -36,16 +36,6 @@ export function formatProjectJobText(project: ProjectSummary): string {
   }
 }
 
-export function formatKbLabel(kbScope: ProjectSummary['kbScope']): string {
-  if (kbScope === 'global') {
-    return 'Global KB · synced';
-  }
-  if (kbScope === 'recording') {
-    return 'Recording KB';
-  }
-  return 'KB not built';
-}
-
 export function formatClipProjectLabel(clip: ClipSummary): string {
   return `${clip.projectName} · ${clip.recordingTitle}`;
 }
@@ -56,7 +46,10 @@ export function formatClipRange(clip: ClipSummary): string {
 
 export function formatClipDuration(clip: ClipSummary): string {
   const seconds = Math.max(0, Math.round((clip.endMs - clip.startMs) / 1000));
-  return `${String(seconds)}s`;
+  if (seconds < 60) {
+    return `${String(seconds)}s`;
+  }
+  return formatTimestamp(seconds);
 }
 
 export function formatClipCaption(clip: ClipSummary): string {

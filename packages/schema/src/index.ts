@@ -2,10 +2,12 @@ export { deletedAtSchema, idSchema, timestampsSchema } from './common';
 export {
   CLIP_FILTER_LABELS,
   ClipFilterId,
+  ClipFitMode,
   ClipRatio,
   ClipStatus,
   EmbeddingStatus,
   EnvKey,
+  GuestSessionStatus,
   HookStatus,
   HookType,
   JOB_STEP_NAMES,
@@ -49,6 +51,12 @@ export {
   type ProjectInsert,
   type ProjectRow,
 } from './projects';
+export {
+  guestSessionInsertSchema,
+  guestSessionRowSchema,
+  type GuestSessionInsert,
+  type GuestSessionRow,
+} from './guest-sessions';
 export {
   recordingInsertSchema,
   recordingRowSchema,
@@ -108,7 +116,9 @@ export {
   type HookRow,
 } from './hooks';
 export {
+  clipFitModeSchema,
   clipInsertSchema,
+  clipRatioSchema,
   clipRowSchema,
   clipStatusSchema,
   clipVoiceoverPlacementSchema,

@@ -31,7 +31,7 @@ export function ProjectsGrid({ searchQuery }: { searchQuery: string }) {
   }
 
   return (
-    <div className="grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-4">
+    <div className="grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] items-stretch gap-4">
       {isLoading
         ? Array.from({ length: 4 }).map((_, index) => (
             <div key={index} className="glass h-[260px] animate-pulse rounded-lg" />
@@ -40,7 +40,7 @@ export function ProjectsGrid({ searchQuery }: { searchQuery: string }) {
 
       <Link
         to="/editor/new"
-        className="glass flex min-h-[200px] items-center justify-center gap-2 rounded-lg border-dashed text-[13px] font-medium text-[var(--mr-mfg)] hover:border-[var(--mr-acc)] hover:text-[var(--mr-fg)]"
+        className="glass flex h-full min-h-[260px] items-center justify-center gap-2 rounded-lg border-dashed text-[13px] font-medium text-[var(--mr-mfg)] hover:border-[var(--mr-acc)] hover:text-[var(--mr-fg)]"
       >
         <Plus className="size-4" />
         New project

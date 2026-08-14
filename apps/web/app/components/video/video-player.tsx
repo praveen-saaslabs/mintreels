@@ -18,7 +18,11 @@ import { DEMO_MEDIA } from '@/lib/demo-media';
 import { isHttpsFilestackPlaybackUrl } from '@/lib/filestack-playback';
 import { finiteDuration, finiteSeconds, formatTimestamp, maxClockDuration } from '@/lib/time';
 import { cn } from '@/lib/utils';
-import { useEditorStore } from '@/stores/editor-store';
+import {
+  EDITOR_ASPECT_PRESETS,
+  type EditorAspectRatio,
+  useEditorStore,
+} from '@/stores/editor-store';
 
 type VideoPlayerProps = {
   src?: string;
@@ -26,11 +30,7 @@ type VideoPlayerProps = {
   poster?: string;
 };
 
-type AspectPreset = '9:16' | '1:1' | '16:9';
-
-const ASPECT_PRESETS: AspectPreset[] = ['9:16', '1:1', '16:9'];
-
-const ASPECT_RATIO: Record<AspectPreset, { w: number; h: number }> = {
+const ASPECT_RATIO: Record<EditorAspectRatio, { w: number; h: number }> = {
   '9:16': { w: 9, h: 16 },
   '1:1': { w: 1, h: 1 },
   '16:9': { w: 16, h: 9 },
@@ -109,16 +109,20 @@ export function VideoPlayer({ src, pending = false, poster }: Readonly<VideoPlay
   const setPlaying = useEditorStore((state) => state.setPlaying);
   const setMediaElement = useEditorStore((state) => state.setMediaElement);
   const seek = useEditorStore((state) => state.seek);
+  const aspect = useEditorStore((state) => state.playerAspect);
+  const captionsOn = useEditorStore((state) => state.playerCaptionsOn);
+  const setPlayerAspect = useEditorStore((state) => state.setPlayerAspect);
+  const setPlayerCaptionsOn = useEditorStore((state) => state.setPlayerCaptionsOn);
+  // Fit preview (blur pad) for every aspect, including 16:9 — matches export.
 
   const videoRef = useRef<HTMLVideoElement>(null);
+  const fitBackdropRef = useRef<HTMLVideoElement>(null);
   const ambientCanvasRef = useAmbientGlow(videoRef);
   const currentTimeRef = useRef(currentTime);
   currentTimeRef.current = currentTime;
   /** Primary-button down position; used to ignore click after a drag on the surface. */
   const surfacePointerDownRef = useRef<{ x: number; y: number } | null>(null);
 
-  const [aspect, setAspect] = useState<AspectPreset>('16:9');
-  const [captionsOn, setCaptionsOn] = useState(true);
   const [captionStyle, setCaptionStyle] = useState<CaptionStyle>(DEFAULT_CAPTION_STYLE);
   const { clockDuration, capture: captureDuration } = useElementClockDuration(
     videoRef,
@@ -140,15 +144,58 @@ export function VideoPlayer({ src, pending = false, poster }: Readonly<VideoPlay
     };
   }, [setMediaElement, resolvedSrc]);
 
+  // Keep Fit blurred backdrop roughly in sync with the main player.
+  useEffect(() => {
+    const main = videoRef.current;
+    const backdrop = fitBackdropRef.current;
+    if (!main || !backdrop) {
+      return;
+    }
+
+    const sync = () => {
+      if (Math.abs(backdrop.currentTime - main.currentTime) > 0.3) {
+        backdrop.currentTime = main.currentTime;
+      }
+      if (!main.paused && backdrop.paused) {
+        void backdrop.play().catch(() => undefined);
+      }
+      if (main.paused && !backdrop.paused) {
+        backdrop.pause();
+      }
+    };
+
+    main.addEventListener('timeupdate', sync);
+    main.addEventListener('play', sync);
+    main.addEventListener('pause', sync);
+    main.addEventListener('seeked', sync);
+    sync();
+
+    return () => {
+      main.removeEventListener('timeupdate', sync);
+      main.removeEventListener('play', sync);
+      main.removeEventListener('pause', sync);
+      main.removeEventListener('seeked', sync);
+      backdrop.pause();
+    };
+  }, [resolvedSrc]);
+
   // Sole seek driver. Timeline overlay playhead follows this element's currentTime on rAF.
+  // Re-apply on loadedmetadata so deep-link seeks survive src attach.
   useEffect(() => {
     const video = videoRef.current;
     if (!video || seekEpoch === 0) {
       return;
     }
 
-    video.currentTime = currentTimeRef.current;
-  }, [seekEpoch]);
+    const applySeek = () => {
+      video.currentTime = currentTimeRef.current;
+    };
+    applySeek();
+    video.addEventListener('loadedmetadata', applySeek);
+    return () => {
+      video.removeEventListener('loadedmetadata', applySeek);
+    };
+  }, [seekEpoch, resolvedSrc]);
 
   async function togglePlayback() {
     const video = videoRef.current;
@@ -331,9 +378,24 @@ export function VideoPlayer({ src, pending = false, poster }: Readonly<VideoPlay
                   'shadow-[var(--glass-shadow-elevated)]',
                 )}
               >
+                {/* Fit preview: blurred cover backdrop under object-contain (matches export). */}
+                {resolvedSrc ? (
+                  <video
+                    ref={fitBackdropRef}
+                    aria-hidden
+                    muted
+                    playsInline
+                    tabIndex={-1}
+                    draggable={false}
+                    preload="metadata"
+                    poster={resolvedPoster}
+                    src={resolvedSrc}
+                    className="pointer-events-none absolute inset-0 z-0 h-full w-full scale-110 object-cover opacity-80 blur-2xl"
+                  />
+                ) : null}
                 <video
                   ref={videoRef}
-                  className="mr-no-drag absolute inset-0 h-full w-full cursor-pointer object-contain select-none"
+                  className="mr-no-drag absolute inset-0 z-1 h-full w-full cursor-pointer select-none object-contain"
                   style={{ background: 'transparent' }}
                   draggable={false}
                   preload="auto"
@@ -448,7 +510,7 @@ export function VideoPlayer({ src, pending = false, poster }: Readonly<VideoPlay
                 captionsOn ? 'text-foreground' : 'text-foreground/50',
               )}
               disabled={showVideoEmpty || showVideoUnavailable}
-              onClick={() => setCaptionsOn((on) => !on)}
+              onClick={() => setPlayerCaptionsOn(!captionsOn)}
             >
               <Captions className="size-3.5" />
             </Button>
@@ -458,12 +520,14 @@ export function VideoPlayer({ src, pending = false, poster }: Readonly<VideoPlay
               disabled={showVideoEmpty || showVideoUnavailable}
             />
 
-            <div className="ml-0.5 flex shrink-0 gap-1">
-              {ASPECT_PRESETS.map((preset) => (
+            <div className="ml-0.5 flex shrink-0 flex-wrap items-center gap-1">
+              {EDITOR_ASPECT_PRESETS.map((preset) => (
                 <button
                   key={preset}
                   type="button"
-                  onClick={() => setAspect(preset)}
+                  onClick={() => {
+                    setPlayerAspect(preset);
+                  }}
                   className={cn(
                     'inline-flex h-[26px] items-center rounded-lg px-2.5 text-[11px] font-medium tracking-[0.01em] transition-[transform,colors] duration-100 ease-out active:scale-[0.97]',
                     aspect === preset

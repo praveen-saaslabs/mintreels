@@ -7,17 +7,19 @@ import {
   ApiOperation,
   ApiParam,
   ApiTags,
+  ApiTooManyRequestsResponse,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
-import { AuthGuard } from '../auth/auth.guard';
-import { CurrentUser } from '../auth/current-user.decorator';
-import type { RequestUser } from '../auth/auth.types';
+import { IdentityGuard } from '../guest/identity.guard';
+import { GuestRateLimitGuard, RateLimit } from '../guest/guest-rate-limit.guard';
+import { CurrentActor } from '../guest/current-actor.decorator';
+import { ownership, type RequestActor } from '../auth/auth.types';
 import { SummariesService } from './summaries.service';
 
 @ApiTags('Summaries')
 @ApiCookieAuth('auth_token')
 @ApiUnauthorizedResponse({ description: 'UNAUTHORIZED' })
-@UseGuards(AuthGuard)
+@UseGuards(IdentityGuard, GuestRateLimitGuard)
 @Controller('api/recordings')
 export class SummariesController {
   constructor(private readonly summariesService: SummariesService) {}
@@ -37,16 +39,18 @@ export class SummariesController {
   })
   @ApiNotFoundResponse({ description: 'Recording or summary not found' })
   @Get(':id/summary')
-  getByRecordingId(@CurrentUser() user: RequestUser, @Param('id', ParseIntPipe) id: number) {
-    return this.summariesService.getByRecordingId(id, user.id);
+  getByRecordingId(@CurrentActor() actor: RequestActor, @Param('id', ParseIntPipe) id: number) {
+    return this.summariesService.getByRecordingId(id, ownership(actor));
   }
 
   @ApiOperation({ summary: 'Trigger AI summary generation for a recording' })
   @ApiParam({ name: 'id', type: Number })
   @ApiAcceptedResponse({ description: 'Summary job enqueued' })
+  @ApiTooManyRequestsResponse({ description: 'RATE_LIMITED' })
   @ApiNotFoundResponse({ description: 'Recording not found' })
+  @RateLimit('ai-generations')
   @Post(':id/summary')
-  create(@CurrentUser() user: RequestUser, @Param('id', ParseIntPipe) id: number) {
-    return this.summariesService.create(id, user.id);
+  create(@CurrentActor() actor: RequestActor, @Param('id', ParseIntPipe) id: number) {
+    return this.summariesService.create(id, ownership(actor));
   }
 }

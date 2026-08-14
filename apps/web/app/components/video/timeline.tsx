@@ -9,6 +9,7 @@ import { speakerCssColor, speakerSwatchClass } from '@/lib/speaker-style';
 import { finiteDuration, maxClockDuration } from '@/lib/time';
 import { EMPTY_SEGMENTS, formatSpeakerLabel, uniqueSpeakers } from '@/lib/transcript';
 import { cn } from '@/lib/utils';
+import { hookSequenceById } from '@/lib/hook-rank';
 import { useEditorStore, type EditorHook } from '@/stores/editor-store';
 
 type TimelineProps = {
@@ -251,6 +252,7 @@ function paintHookRegions(
   }
 
   const validHooks = hooks.filter((hook) => hook.end > hook.start);
+  const sequenceById = hookSequenceById(validHooks);
   const existing = plugin.getRegions();
   const byId = new Map(existing.map((region) => [region.id, region]));
   const sameLayout =
@@ -273,8 +275,11 @@ function paintHookRegions(
         continue;
       }
       const selected = hook.id === selectedHookId;
+      const label = sequenceById.get(hook.id) ?? '';
+      const currentLabel = region.element?.querySelector('span')?.textContent ?? '';
       region.setOptions({
         color: selected ? HOOK_REGION_FILL_SELECTED : HOOK_REGION_FILL,
+        ...(currentLabel !== label ? { content: createHookLabel(label) } : {}),
       });
       styleHookRegion(region, selected);
     }
@@ -285,6 +290,7 @@ function paintHookRegions(
 
   for (const hook of validHooks) {
     const selected = hook.id === selectedHookId;
+    const label = sequenceById.get(hook.id) ?? '';
     const region = plugin.addRegion({
       id: hook.id,
       start: Math.max(0, hook.start),
@@ -292,7 +298,7 @@ function paintHookRegions(
       color: selected ? HOOK_REGION_FILL_SELECTED : HOOK_REGION_FILL,
       drag: false,
       resize: false,
-      content: createHookLabel(hook.label),
+      content: createHookLabel(label),
     });
     styleHookRegion(region, selected);
   }

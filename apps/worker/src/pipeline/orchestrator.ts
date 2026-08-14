@@ -4,7 +4,7 @@ import { JOB_STEP_NAMES, JobStatus, JobStepName, JobType, RecordingStatus } from
 import { writeAudit } from './audit';
 import { loadJobConfig } from './config';
 import type { WorkerDeps } from './deps';
-import { pipelineLog } from './log';
+import { logPipeline, logPipelineError } from './log';
 import { RecordingGoneError } from './recording-gone';
 import { executeStep, StepRetryLaterError, type StepHandler, type StepStore } from './step-runner';
 import { ensureRecordingThumbnail } from './video-thumbnail';
@@ -84,8 +84,9 @@ function createRunStep(params: {
   config: ReturnType<typeof loadJobConfig>;
   store: StepStore;
   stepHandlers: Record<JobStepName, StepHandler>;
+  jobName: string;
 }): (stepName: JobStepName) => Promise<Awaited<ReturnType<typeof executeStep>>> {
-  const { job, deps, recordingId, config, store, stepHandlers } = params;
+  const { job, deps, recordingId, config, store, stepHandlers, jobName } = params;
   return async (stepName: JobStepName) => {
     job.currentStep = stepName;
     await deps.jobs.save(job);
@@ -105,9 +106,14 @@ function createRunStep(params: {
       },
     });
 
-    console.log(
-      pipelineLog({ jobId: job.id, recordingId, step: stepName, attempt: job.attempt, message: outcome }),
-    );
+    logPipeline({
+      job: jobName,
+      jobId: job.id,
+      recordingId,
+      step: stepName,
+      attempt: job.attempt,
+      message: outcome,
+    });
 
     return outcome;
   };
@@ -120,6 +126,13 @@ export async function executePipeline(
   const config = loadJobConfig();
   const recording = await deps.recordings.findOneBy({ id: input.recordingId });
   if (!recording) {
+    logPipeline({
+      job: 'ingest-video',
+      recordingId: input.recordingId,
+      step: 'pipeline',
+      message: 'pipeline_start recording missing no-op',
+      ...(input.jobId !== undefined ? { jobId: input.jobId } : {}),
+    });
     return JobStatus.Success;
   }
   let job: Job | null =
@@ -152,6 +165,15 @@ export async function executePipeline(
   job.error = null;
   await deps.jobs.save(job);
 
+  logPipeline({
+    job: 'ingest-video',
+    jobId: job.id,
+    recordingId: input.recordingId,
+    step: 'pipeline',
+    attempt: job.attempt,
+    message: 'pipeline_start',
+  });
+
   await setRecordingStatus(deps.recordings, input.recordingId, RecordingStatus.Processing);
   await ensureRecordingThumbnail({ deps, recordingId: input.recordingId });
 
@@ -159,7 +181,15 @@ export async function executePipeline(
   const stepHandlers = handlers(deps);
   let analysisFailed = false;
 
-  const runStep = createRunStep({ job, deps, recordingId: input.recordingId, config, store, stepHandlers });
+  const runStep = createRunStep({
+    job,
+    deps,
+    recordingId: input.recordingId,
+    config,
+    store,
+    stepHandlers,
+    jobName: 'ingest-video',
+  });
 
   try {
     for (const stepName of CRITICAL_STEPS) {
@@ -171,6 +201,14 @@ export async function executePipeline(
         job.finishedAt = new Date();
         await deps.jobs.save(job);
         await setRecordingStatus(deps.recordings, input.recordingId, RecordingStatus.Failed);
+        logPipeline({
+          job: 'ingest-video',
+          jobId: job.id,
+          recordingId: input.recordingId,
+          step: 'pipeline',
+          attempt: job.attempt,
+          message: `pipeline_finish status=${JobStatus.Failed}`,
+        });
         return JobStatus.Failed;
       }
     }
@@ -198,6 +236,14 @@ export async function executePipeline(
         input.recordingId,
         transcript ? RecordingStatus.Ready : RecordingStatus.Failed,
       );
+      logPipeline({
+        job: 'ingest-video',
+        jobId: job.id,
+        recordingId: input.recordingId,
+        step: 'pipeline',
+        attempt: job.attempt,
+        message: `pipeline_finish status=${JobStatus.Partial}`,
+      });
       return JobStatus.Partial;
     }
 
@@ -211,9 +257,26 @@ export async function executePipeline(
       input.recordingId,
       transcript ? RecordingStatus.Ready : RecordingStatus.Failed,
     );
-    return transcript ? JobStatus.Success : JobStatus.Failed;
+    const finalStatus = transcript ? JobStatus.Success : JobStatus.Failed;
+    logPipeline({
+      job: 'ingest-video',
+      jobId: job.id,
+      recordingId: input.recordingId,
+      step: 'pipeline',
+      attempt: job.attempt,
+      message: `pipeline_finish status=${finalStatus}`,
+    });
+    return finalStatus;
   } catch (error) {
     if (error instanceof RecordingGoneError) {
+      logPipeline({
+        job: 'ingest-video',
+        jobId: job.id,
+        recordingId: input.recordingId,
+        step: 'pipeline',
+        attempt: job.attempt,
+        message: 'pipeline_finish recording gone no-op',
+      });
       return JobStatus.Success;
     }
     if (error instanceof StepRetryLaterError) {
@@ -225,6 +288,14 @@ export async function executePipeline(
     job.finishedAt = new Date();
     await deps.jobs.save(job);
     await setRecordingStatus(deps.recordings, input.recordingId, RecordingStatus.Failed);
+    logPipelineError({
+      job: 'ingest-video',
+      jobId: job.id,
+      recordingId: input.recordingId,
+      step: 'pipeline',
+      attempt: job.attempt,
+      message: `pipeline_finish status=${JobStatus.Failed} ${job.error}`,
+    });
     throw error;
   }
 }
@@ -251,9 +322,26 @@ export async function executeHookPipeline(
   job.error = null;
   await deps.jobs.save(job);
 
+  logPipeline({
+    job: 'generate-hooks',
+    jobId: job.id,
+    recordingId: input.recordingId,
+    step: 'pipeline',
+    attempt: job.attempt,
+    message: 'pipeline_start',
+  });
+
   const store = stepStore(deps);
   const stepHandlers = handlers(deps);
-  const runStep = createRunStep({ job, deps, recordingId: input.recordingId, config, store, stepHandlers });
+  const runStep = createRunStep({
+    job,
+    deps,
+    recordingId: input.recordingId,
+    config,
+    store,
+    stepHandlers,
+    jobName: 'generate-hooks',
+  });
 
   try {
     let failed = false;
@@ -269,6 +357,14 @@ export async function executeHookPipeline(
     job.error = null;
     job.finishedAt = new Date();
     await deps.jobs.save(job);
+    logPipeline({
+      job: 'generate-hooks',
+      jobId: job.id,
+      recordingId: input.recordingId,
+      step: 'pipeline',
+      attempt: job.attempt,
+      message: `pipeline_finish status=${job.status}`,
+    });
     return job.status;
   } catch (error) {
     if (error instanceof StepRetryLaterError) {
@@ -279,6 +375,14 @@ export async function executeHookPipeline(
     job.errorCode = 'pipeline_error';
     job.finishedAt = new Date();
     await deps.jobs.save(job);
+    logPipelineError({
+      job: 'generate-hooks',
+      jobId: job.id,
+      recordingId: input.recordingId,
+      step: 'pipeline',
+      attempt: job.attempt,
+      message: `pipeline_finish status=${JobStatus.Failed} ${job.error}`,
+    });
     throw error;
   }
 }

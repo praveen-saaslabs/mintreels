@@ -1,7 +1,8 @@
 import type { Summary, Transcript } from '@mintreels/domain';
 import { generateExtractiveHooks } from '../../extractive-hooks';
 import type { HookCandidate } from '../../hook-candidates';
-import type { ActionItem, HookGenerationOptions, LLMProvider } from '../../llm-provider';
+import type { ActionItem, HookGenerationOptions, LLMProvider, SocialCopyResult } from '../../llm-provider';
+import { heuristicSocialCopy, type SocialCopyContext } from '../../prompts/social-copy.prompt';
 import { heuristicTranscriptAsk, type TranscriptAskResult } from '../../transcript-ask';
 import type { EmbeddingProvider } from '../../embedding-provider';
 import type { PyAIClient } from './client';
@@ -85,5 +86,9 @@ export class PyAILLMProvider implements LLMProvider, EmbeddingProvider {
 
   async askTranscript(transcript: Transcript, question: string): Promise<TranscriptAskResult> {
     return heuristicTranscriptAsk(transcript, question);
+  }
+
+  async generateSocialCopy(context: SocialCopyContext): Promise<SocialCopyResult> {
+    return heuristicSocialCopy(context);
   }
 }

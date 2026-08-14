@@ -22,6 +22,9 @@ import { DEFAULT_MAX_ATTEMPTS } from '@mintreels/domain';
 import type { QueueProvider } from '@mintreels/queue';
 import { parseFilestackRef } from '@mintreels/storage';
 import {
+  ClipFitMode,
+  ClipRatio,
+  ClipStatus,
   JOB_STEP_NAMES,
   JobStatus,
   JobStepName,
@@ -29,7 +32,9 @@ import {
   JobType,
   RecordingStatus,
 } from '@mintreels/schema';
+import type { Ownership } from '../auth/auth.types';
 import { HttpError } from '../common/http-error';
+import { GuestQuotaService } from '../guest/guest-quota.service';
 import { publicPlaybackUrl } from '../common/playback-url';
 import {
   QUEUE_PROVIDER,
@@ -37,7 +42,78 @@ import {
   VECTOR_STORE_PROVIDER,
 } from '../providers/provider-tokens';
 import { toPublicTranscript } from '../transcripts/public-transcript';
-import type { CreateRecordingRequest, ApplyRecordingVoiceoverRequest } from './recordings.dto';
+import type {
+  ApplyRecordingVoiceoverRequest,
+  CreateRecordingRequest,
+  ExportRecordingRequest,
+} from './recordings.dto';
+
+const EXPORT_QUEUE_MAX_ATTEMPTS = 3;
+const DEFAULT_EXPORT_ASPECT = ClipRatio.Vertical;
+const DEFAULT_EXPORT_FIT = ClipFitMode.Fit;
+const DEFAULT_EXPORT_BURN = true;
+const EXPORT_CANCELLED = 'EXPORT_CANCELLED';
+
+type PreviousExportSnapshot = {
+  exportStorageKey: string | null;
+  exportThumbnailStorageKey: string | null;
+  exportStatus: ClipStatus | null;
+  exportAspectRatio: ClipRatio | null;
+  exportFitMode: ClipFitMode | null;
+  exportBurnSubtitles: boolean | null;
+};
+
+function snapshotPreviousExport(recording: Recording): PreviousExportSnapshot {
+  return {
+    exportStorageKey: recording.exportStorageKey,
+    exportThumbnailStorageKey: recording.exportThumbnailStorageKey,
+    exportStatus: recording.exportStatus,
+    exportAspectRatio: recording.exportAspectRatio,
+    exportFitMode: recording.exportFitMode,
+    exportBurnSubtitles: recording.exportBurnSubtitles,
+  };
+}
+
+function parsePreviousExport(metadata: Record<string, unknown> | null): PreviousExportSnapshot {
+  const raw = metadata?.previousExport;
+  if (typeof raw !== 'object' || raw === null) {
+    return {
+      exportStorageKey: null,
+      exportThumbnailStorageKey: null,
+      exportStatus: null,
+      exportAspectRatio: null,
+      exportFitMode: null,
+      exportBurnSubtitles: null,
+    };
+  }
+  const prev = raw as Record<string, unknown>;
+  const status =
+    prev.exportStatus === ClipStatus.Queued ||
+    prev.exportStatus === ClipStatus.Rendering ||
+    prev.exportStatus === ClipStatus.Ready ||
+    prev.exportStatus === ClipStatus.Failed
+      ? prev.exportStatus
+      : null;
+  const aspect =
+    prev.exportAspectRatio === ClipRatio.Vertical ||
+    prev.exportAspectRatio === ClipRatio.Square ||
+    prev.exportAspectRatio === ClipRatio.Widescreen
+      ? prev.exportAspectRatio
+      : null;
+  const fit =
+    prev.exportFitMode === ClipFitMode.Fit || prev.exportFitMode === ClipFitMode.Fill
+      ? prev.exportFitMode
+      : null;
+  return {
+    exportStorageKey: typeof prev.exportStorageKey === 'string' ? prev.exportStorageKey : null,
+    exportThumbnailStorageKey:
+      typeof prev.exportThumbnailStorageKey === 'string' ? prev.exportThumbnailStorageKey : null,
+    exportStatus: status,
+    exportAspectRatio: aspect,
+    exportFitMode: fit,
+    exportBurnSubtitles: typeof prev.exportBurnSubtitles === 'boolean' ? prev.exportBurnSubtitles : null,
+  };
+}
 
 function retryGenerationFromMetadata(metadata: Record<string, unknown> | null): number {
   const raw = metadata?.retryGeneration;
@@ -129,10 +205,17 @@ function toPublicRecording(recording: Recording) {
     videoUrl: publicPlaybackUrl(recording.storageKey),
     audioUrl: publicPlaybackUrl(recording.audioStorageKey),
     thumbnailUrl: publicPlaybackUrl(recording.thumbnailStorageKey),
+    exportStatus: recording.exportStatus,
+    exportAspectRatio: recording.exportAspectRatio,
+    exportFitMode: recording.exportFitMode,
+    exportBurnSubtitles: recording.exportBurnSubtitles,
+    exportVideoUrl: publicPlaybackUrl(recording.exportStorageKey),
+    exportThumbnailUrl: publicPlaybackUrl(recording.exportThumbnailStorageKey),
     createdAt: recording.createdAt,
     updatedAt: recording.updatedAt,
   };
 }
+
 
 function voiceoverScript(
   body: ApplyRecordingVoiceoverRequest,
@@ -171,9 +254,14 @@ export class RecordingsService {
     @Inject(VECTOR_STORE_PROVIDER) private readonly vectorStore: VectorStoreProvider,
     @Inject(TRANSCRIPT_VECTOR_STORE_PROVIDER)
     private readonly transcriptVectorStore: VectorStoreProvider,
+    private readonly guestQuota: GuestQuotaService,
   ) {}
 
-  async create(body: CreateRecordingRequest, userId: number) {
+  async create(body: CreateRecordingRequest, owner: Ownership) {
+    // Guest caps: a new recording also creates a project, so check both.
+    await this.guestQuota.assertCanCreateProject(owner);
+    await this.guestQuota.assertCanCreateRecording(owner);
+
     let storageKey: string;
     try {
       storageKey = parseFilestackRef(body.url).url;
@@ -183,7 +271,7 @@ export class RecordingsService {
 
     const project = await this.projects.save(
       this.projects.create({
-        userId,
+        ...owner,
         name: body.title,
       }),
     );
@@ -196,6 +284,12 @@ export class RecordingsService {
         storageKey,
         audioStorageKey: null,
         thumbnailStorageKey: null,
+        exportStorageKey: null,
+        exportThumbnailStorageKey: null,
+        exportStatus: null,
+        exportAspectRatio: null,
+        exportFitMode: null,
+        exportBurnSubtitles: null,
         durationMs: null,
         width: null,
         height: null,
@@ -249,8 +343,8 @@ export class RecordingsService {
     return { id: recording.id, projectId: project.id, jobId: job.id };
   }
 
-  async retry(id: number, userId: number) {
-    const recording = await this.recordings.findByIdForUser(id, userId);
+  async retry(id: number, owner: Ownership) {
+    const recording = await this.recordings.findByIdForOwner(id, owner);
     if (!recording) {
       throw new HttpError(404, 'Not found');
     }
@@ -346,28 +440,187 @@ export class RecordingsService {
     return { id: recording.id, projectId: recording.projectId, jobId: job.id };
   }
 
-  async list(userId: number) {
-    const recordings = await this.recordings.listForUser(userId);
+  async list(owner: Ownership) {
+    const recordings = await this.recordings.listForOwner(owner);
     return recordings.map(toPublicRecording);
   }
 
-  async getById(id: number, userId: number) {
-    const recording = await this.recordings.findByIdForUser(id, userId);
+  async getById(id: number, owner: Ownership) {
+    const recording = await this.recordings.findByIdForOwner(id, owner);
     if (!recording) {
       throw new HttpError(404, 'Not found');
     }
     return toPublicRecording(recording);
   }
 
-  async getProcessing(id: number, userId: number) {
-    const recording = await this.recordings.findByIdForUser(id, userId);
+  async exportRecording(id: number, owner: Ownership, body: ExportRecordingRequest) {
+    this.requireExportAuth(owner);
+    const recording = await this.recordings.findByIdForOwner(id, owner);
+    if (!recording) {
+      throw new HttpError(404, 'Not found');
+    }
+    if (recording.storageKey.trim() === '') {
+      throw new HttpError(409, 'VIDEO_NOT_AVAILABLE');
+    }
+
+    const aspectRatio = body.aspectRatio ?? DEFAULT_EXPORT_ASPECT;
+    const fitMode = body.fitMode ?? DEFAULT_EXPORT_FIT;
+    const burnSubtitles = body.burnSubtitles ?? DEFAULT_EXPORT_BURN;
+    const force = body.force === true;
+
+    if (burnSubtitles) {
+      const segments = await this.segments.listByRecordingId(id);
+      if (segments.length === 0) {
+        throw new HttpError(409, 'TRANSCRIPT_REQUIRED');
+      }
+    }
+
+    const optionsMatch =
+      recording.exportAspectRatio === aspectRatio &&
+      recording.exportFitMode === fitMode &&
+      recording.exportBurnSubtitles === burnSubtitles;
+    const inFlightOrReady =
+      recording.exportStatus === ClipStatus.Queued ||
+      recording.exportStatus === ClipStatus.Rendering ||
+      recording.exportStatus === ClipStatus.Ready;
+
+    if (!force && optionsMatch && inFlightOrReady) {
+      const latest = await this.jobs.findLatestByRecordingAndType(id, JobType.ExportRecording);
+      return {
+        ...toPublicRecording(recording),
+        jobId: latest?.id ?? null,
+      };
+    }
+
+    const previousExport = snapshotPreviousExport(recording);
+
+    recording.exportStorageKey = null;
+    recording.exportThumbnailStorageKey = null;
+    recording.exportStatus = ClipStatus.Queued;
+    recording.exportAspectRatio = aspectRatio;
+    recording.exportFitMode = fitMode;
+    recording.exportBurnSubtitles = burnSubtitles;
+    await this.recordings.save(recording);
+
+    const job = await this.jobs.save(
+      this.jobs.create({
+        type: JobType.ExportRecording,
+        recordingId: recording.id,
+        status: JobStatus.Queued,
+        attempt: 0,
+        maxAttempts: DEFAULT_MAX_ATTEMPTS,
+        error: null,
+        errorCode: null,
+        errorMetadata: null,
+        currentStep: null,
+        startedAt: null,
+        finishedAt: null,
+        metadata: {
+          aspectRatio,
+          fitMode,
+          burnSubtitles,
+          previousExport,
+        },
+      }),
+    );
+
+    await this.jobAuditLogs.save(
+      this.jobAuditLogs.create({
+        jobId: job.id,
+        step: null,
+        event: 'job_queued',
+        message: 'EXPORT_RECORDING enqueued',
+        metadata: { aspectRatio, fitMode, burnSubtitles },
+      }),
+    );
+
+    await this.queue.enqueue({
+      id: `export-recording-${String(job.id)}`,
+      name: 'export-recording',
+      payload: {
+        recordingId: recording.id,
+        jobId: job.id,
+        aspectRatio,
+        fitMode,
+        burnSubtitles,
+      },
+      maxAttempts: EXPORT_QUEUE_MAX_ATTEMPTS,
+    });
+
+    return {
+      ...toPublicRecording(recording),
+      jobId: job.id,
+    };
+  }
+
+  async cancelExportRecording(id: number, owner: Ownership) {
+    this.requireExportAuth(owner);
+    const recording = await this.recordings.findByIdForOwner(id, owner);
+    if (!recording) {
+      throw new HttpError(404, 'Not found');
+    }
+    if (
+      recording.exportStatus !== ClipStatus.Queued &&
+      recording.exportStatus !== ClipStatus.Rendering
+    ) {
+      throw new HttpError(409, 'EXPORT_NOT_IN_PROGRESS');
+    }
+
+    const job = await this.jobs.findLatestByRecordingAndType(id, JobType.ExportRecording);
+    if (!job) {
+      throw new HttpError(409, 'EXPORT_NOT_IN_PROGRESS');
+    }
+    if (job.status === JobStatus.Success || job.status === JobStatus.Failed) {
+      throw new HttpError(409, 'EXPORT_NOT_IN_PROGRESS');
+    }
+
+    await this.queue.remove(`export-recording-${String(job.id)}`);
+
+    job.status = JobStatus.Failed;
+    job.errorCode = EXPORT_CANCELLED;
+    job.error = 'Cancelled by user';
+    job.finishedAt = new Date();
+    await this.jobs.save(job);
+
+    const previous = parsePreviousExport(job.metadata);
+    recording.exportStorageKey = previous.exportStorageKey;
+    recording.exportThumbnailStorageKey = previous.exportThumbnailStorageKey;
+    recording.exportStatus = previous.exportStatus;
+    recording.exportAspectRatio = previous.exportAspectRatio;
+    recording.exportFitMode = previous.exportFitMode;
+    recording.exportBurnSubtitles = previous.exportBurnSubtitles;
+    await this.recordings.save(recording);
+
+    await this.jobAuditLogs.save(
+      this.jobAuditLogs.create({
+        jobId: job.id,
+        step: null,
+        event: 'job_cancelled',
+        message: 'EXPORT_RECORDING cancelled by user',
+        metadata: { restored: previous.exportStatus },
+      }),
+    );
+
+    return {
+      ...toPublicRecording(recording),
+      jobId: job.id,
+    };
+  }
+
+  async getProcessing(id: number, owner: Ownership) {
+    const recording = await this.recordings.findByIdForOwner(id, owner);
     if (!recording) {
       throw new HttpError(404, 'Not found');
     }
 
     const job = await this.jobs.findLatestByRecordingAndType(id, JobType.VideoIngest);
     const steps = job ? await this.jobSteps.listByJobId(job.id) : [];
-    const audit = job ? await this.jobAuditLogs.listByJobId(job.id) : [];
+    const recordingJobs = await this.jobs.find({
+      where: { recordingId: id },
+      select: ['id'],
+      order: { createdAt: 'ASC', id: 'ASC' },
+    });
+    const audit = await this.jobAuditLogs.listByJobIds(recordingJobs.map((row) => row.id));
     const transcript = await this.transcripts.findByRecordingId(id);
     const segments = transcript ? await this.segments.listByRecordingId(id) : [];
     const summary = await this.summaries.findByRecordingId(id);
@@ -379,6 +632,12 @@ export class RecordingsService {
       videoUrl: publicPlaybackUrl(recording.storageKey),
       audioUrl: publicPlaybackUrl(recording.audioStorageKey),
       thumbnailUrl: publicPlaybackUrl(recording.thumbnailStorageKey),
+      exportStatus: recording.exportStatus,
+      exportAspectRatio: recording.exportAspectRatio,
+      exportFitMode: recording.exportFitMode,
+      exportBurnSubtitles: recording.exportBurnSubtitles,
+      exportVideoUrl: publicPlaybackUrl(recording.exportStorageKey),
+      exportThumbnailUrl: publicPlaybackUrl(recording.exportThumbnailStorageKey),
       job: job
         ? {
             id: job.id,
@@ -409,6 +668,7 @@ export class RecordingsService {
         score: hook.score,
       })),
       audit: audit.map((row) => ({
+        jobId: row.jobId,
         event: row.event,
         step: row.step,
         message: row.message,
@@ -417,8 +677,8 @@ export class RecordingsService {
     };
   }
 
-  async remove(id: number, userId: number): Promise<void> {
-    const recording = await this.recordings.findByIdForUser(id, userId);
+  async remove(id: number, owner: Ownership): Promise<void> {
+    const recording = await this.recordings.findByIdForOwner(id, owner);
     if (!recording) {
       throw new HttpError(404, 'Not found');
     }
@@ -446,12 +706,14 @@ export class RecordingsService {
     await this.recordings.softRemove(recording);
   }
 
-  async addToGlobalKnowledgeBase(_id: number, _userId: number): Promise<never> {
+  async addToGlobalKnowledgeBase(_id: number, _owner: Ownership): Promise<never> {
     throw new HttpError(501, 'recordingsService.addToGlobalKnowledgeBase is not implemented');
   }
 
-  async applyVoiceover(id: number, body: ApplyRecordingVoiceoverRequest, userId: number) {
-    const recording = await this.recordings.findByIdForUser(id, userId);
+
+  async applyVoiceover(id: number, body: ApplyRecordingVoiceoverRequest, owner: Ownership) {
+    this.requireExportAuth(owner);
+    const recording = await this.recordings.findByIdForOwner(id, owner);
     if (!recording) {
       throw new HttpError(404, 'Not found');
     }
@@ -517,8 +779,8 @@ export class RecordingsService {
     };
   }
 
-  async getVoiceoverJob(id: number, userId: number) {
-    const recording = await this.recordings.findByIdForUser(id, userId);
+  async getVoiceoverJob(id: number, owner: Ownership) {
+    const recording = await this.recordings.findByIdForOwner(id, owner);
     if (!recording) {
       throw new HttpError(404, 'Not found');
     }
@@ -545,6 +807,13 @@ export class RecordingsService {
       if (job && isInFlightJob(job.status)) {
         throw new HttpError(409, 'VOICEOVER_IN_PROGRESS');
       }
+    }
+  }
+
+  /** Same login gate as clip export — guests preview freely, render after signup. */
+  private requireExportAuth(owner: Ownership): void {
+    if (owner.userId == null) {
+      throw new HttpError(401, 'AUTH_REQUIRED');
     }
   }
 

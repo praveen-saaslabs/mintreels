@@ -26,7 +26,7 @@ import {
   TranscriptSegment,
   TranscriptSegmentRepository,
 } from '@mintreels/db';
-import { AuthModule } from '../auth/auth.module';
+import { GuestModule } from '../guest/guest.module';
 import { RecordingsController } from './recordings.controller';
 import { RecordingsService } from './recordings.service';
 
@@ -46,7 +46,7 @@ import { RecordingsService } from './recordings.service';
       KnowledgeBase,
       KnowledgeDocument,
     ]),
-    AuthModule,
+    GuestModule,
   ],
   controllers: [RecordingsController],
   providers: [

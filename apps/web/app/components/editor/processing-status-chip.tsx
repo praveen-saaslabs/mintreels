@@ -1,4 +1,4 @@
-import { ChevronDown, Loader2 } from 'lucide-react';
+import { ChevronDown, Loader2, ScrollText } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import type { ProjectEditorPhase } from '@/hooks/use-project-editor';
@@ -46,6 +46,14 @@ function statusTone(status: string): string {
   }
 }
 
+function formatAuditTime(value: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return '';
+  }
+  return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+}
+
 type ProcessingStatusChipProps = Readonly<{
   phase: ProjectEditorPhase;
   processing: RecordingProcessingSnapshot | undefined;
@@ -56,11 +64,15 @@ type ProcessingStatusChipProps = Readonly<{
 
 function buildChipSummary(
   failed: boolean,
+  logOnly: boolean,
   currentLabel: string | null,
   progressLabel: string | null,
 ): string {
   if (failed) {
     return 'Ingest failed';
+  }
+  if (logOnly) {
+    return 'Job log';
   }
   if (currentLabel) {
     return currentLabel;
@@ -80,11 +92,17 @@ export function ProcessingStatusChip({
 }: ProcessingStatusChipProps) {
   const [expanded, setExpanded] = useState(false);
 
-  if (phase !== 'processing' && phase !== 'failed') {
+  const steps = processing?.steps ?? [];
+  const audit = processing?.audit ?? [];
+  const exportInFlight =
+    processing?.exportStatus === 'queued' || processing?.exportStatus === 'rendering';
+  const active = phase === 'processing' || phase === 'failed' || exportInFlight;
+  const logOnly = !active && audit.length > 0;
+
+  if (!active && !logOnly) {
     return null;
   }
 
-  const steps = processing?.steps ?? [];
   const doneCount = steps.filter(
     (step) => step.status === 'completed' || step.status === 'skipped',
   ).length;
@@ -92,10 +110,10 @@ export function ProcessingStatusChip({
   const progressLabel = total > 0 ? `${String(doneCount)}/${String(total)} done` : null;
   const currentLabel = friendlyCurrentLabel(processing?.job?.currentStep);
   const failed = phase === 'failed';
-  const summary = buildChipSummary(failed, currentLabel, progressLabel);
+  const summary = buildChipSummary(failed, logOnly, currentLabel, progressLabel);
 
   return (
-    <div className="pointer-events-auto absolute top-3 right-3 z-20 max-w-[min(100%-1.5rem,20rem)]">
+    <div className="pointer-events-auto absolute top-3 right-3 z-20 max-w-[min(100%-1.5rem,22rem)]">
       <div
         className={cn(
           'glass-elevated glass-materialize overflow-hidden rounded-xl',
@@ -110,13 +128,15 @@ export function ProcessingStatusChip({
         >
           {failed ? (
             <span className="size-2 shrink-0 rounded-full bg-(--mr-bad)" aria-hidden />
+          ) : logOnly ? (
+            <ScrollText className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />
           ) : (
             <Loader2 className="size-3.5 shrink-0 animate-spin text-mr-acc" aria-hidden />
           )}
           <span className="min-w-0 flex-1 truncate text-xs font-medium text-foreground">
             {summary}
           </span>
-          {progressLabel && !failed ? (
+          {progressLabel && !failed && !logOnly ? (
             <span className="shrink-0 font-mono text-[10px] text-muted-foreground">
               {progressLabel}
             </span>
@@ -131,11 +151,11 @@ export function ProcessingStatusChip({
         </button>
 
         {expanded ? (
-          <div className="space-y-2 border-t border-(--glass-border-subtle) px-3 py-2.5">
+          <div className="max-h-72 space-y-3 overflow-y-auto border-t border-(--glass-border-subtle) px-3 py-2.5">
             {failed && errorMessage && steps.length === 0 ? (
               <p className="text-xs text-(--mr-bad)">{errorMessage}</p>
             ) : null}
-            {steps.length > 0 ? (
+            {!logOnly && steps.length > 0 ? (
               <ul className="space-y-1.5">
                 {steps.map((step) => (
                   <li
@@ -149,9 +169,35 @@ export function ProcessingStatusChip({
                   </li>
                 ))}
               </ul>
-            ) : (
+            ) : null}
+            {!logOnly && steps.length === 0 && active ? (
               <p className="text-xs text-muted-foreground">Waiting for pipeline steps…</p>
-            )}
+            ) : null}
+
+            {audit.length > 0 ? (
+              <div className="space-y-1.5">
+                <p className="text-[10px] font-medium tracking-[0.02em] text-muted-foreground">
+                  Job log
+                </p>
+                <ul className="space-y-1.5 font-mono text-[10px] leading-snug text-muted-foreground">
+                  {audit.map((entry, index) => (
+                    <li
+                      key={`${String(entry.jobId)}-${entry.event}-${entry.createdAt}-${String(index)}`}
+                      className="flex gap-2"
+                    >
+                      <span className="shrink-0 text-muted-foreground/70">
+                        {formatAuditTime(entry.createdAt)}
+                      </span>
+                      <span className="min-w-0 break-words text-foreground/80">
+                        {entry.message?.trim() || entry.event}
+                        {entry.step ? ` · ${entry.step}` : ''}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+
             {failed && onRetry ? (
               <div className="flex justify-end pt-1">
                 <Button

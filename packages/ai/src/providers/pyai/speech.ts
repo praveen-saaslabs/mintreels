@@ -9,7 +9,7 @@ import type {
 import type { SpeechProvider } from '../../speech-provider';
 import { ProviderError } from '../../provider-error';
 import type { PyAIClient } from './client';
-import { mapPyAIError } from './errors';
+import { isRetryableTranscriptionJobError, mapPyAIError } from './errors';
 import { jobResultUrl, mapJobToSubmission, mapResultToCanonical, type PyAITranscriptionJobLike } from './mapper';
 
 const POLL_INTERVAL_MS = 5_000;
@@ -160,11 +160,12 @@ export class PyAISpeechProvider implements SpeechProvider {
       status = await this.getTranscriptionStatus(status.providerJobId);
     }
     if (status.status !== 'completed') {
+      const message = status.error ?? `Transcription ${status.status}`;
       throw new ProviderError({
         provider: 'pyai',
         code: 'transcription_failed',
-        message: status.error ?? `Transcription ${status.status}`,
-        retryable: false,
+        message,
+        retryable: isRetryableTranscriptionJobError(status.error),
       });
     }
     const canonical = await this.getTranscriptionResult(status.providerJobId);

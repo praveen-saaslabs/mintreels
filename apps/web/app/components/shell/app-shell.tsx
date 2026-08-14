@@ -12,6 +12,7 @@ import {
   SidebarTrigger,
 } from '@/components/ui/sidebar';
 import { TooltipProvider } from '@/components/ui/tooltip';
+import { AppHeader } from './app-header';
 import { ProjectListNav } from './project-list-nav';
 import { SidebarNav } from './sidebar-nav';
 import { UserFooter } from './user-footer';
@@ -45,16 +46,13 @@ export function AppShell() {
           </SidebarContent>
 
           <SidebarFooter className="border-t border-[var(--glass-border-subtle)]">
-            <UserFooter />
+            <UserFooter showThemeToggle={false} />
           </SidebarFooter>
           <SidebarRail />
         </Sidebar>
 
         <SidebarInset className="min-h-svh overflow-hidden bg-transparent">
-          <div className="flex items-center gap-2 border-b border-[var(--glass-border-subtle)] px-3 py-2 md:hidden">
-            <SidebarTrigger />
-            <span className="text-sm font-medium">MintReels</span>
-          </div>
+          <AppHeader />
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
             <Outlet />
           </div>

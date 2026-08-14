@@ -37,6 +37,18 @@ export class BullMQQueueProvider implements QueueProvider {
       },
     });
   }
+
+  async remove(jobId: string): Promise<void> {
+    const id = jobId.trim();
+    if (id === '') {
+      return;
+    }
+    try {
+      await this.queue.remove(id);
+    } catch {
+      // Job already finished, missing, or active — cancel is cooperative via DB.
+    }
+  }
 }
 
 export function startWorker(options: {

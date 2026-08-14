@@ -38,10 +38,13 @@ Placeholder routes:
 - `GET /api/recordings/:id/hooks`
 - `POST /api/recordings/:id/hooks/generate`
 - `POST /api/recordings/:id/hooks/:hookId/export`
+- `POST /api/recordings/:id/export`
+- `POST /api/recordings/:id/export/cancel`
 - `POST /api/recordings/:id/moments/search`
 - `POST /api/recordings/:id/moments/ask`
 - `GET/POST /api/knowledge-bases`
 - `POST /api/clips`
+- `POST /api/clips/:id/social-copy`
 - `GET /api/clips`
 - `GET /api/clips/filters`
 - `GET /api/clips/:id`
@@ -63,6 +66,7 @@ Jobs in `apps/worker/src/jobs`:
 - `generate-hooks`
 - `sync-knowledge-base`
 - `render-clip`
+- `export-recording`
 
 Each job is `queued`, `running`, then `success` or `failed`, with bounded retries.
 
@@ -96,4 +100,4 @@ Video Upload → Object Storage → Recording
   → VTT + Summary → Recording KB → Hooks → Ready
 ```
 
-Ingest also generates a recording poster (`recordings.thumbnail_storage_key` → public `thumbnailUrl` on recording/processing/project GETs). Clip pipeline (MVP): selected hook → `POST .../hooks/:hookId/export` → `render-clip` → FFmpeg trim + encode → Filestack video + thumbnail → `clips.storageKey` / `clips.thumbnail_storage_key` (public `videoUrl` / `thumbnailUrl`). Crop, subtitles, and signed download are not implemented yet.
+Ingest also generates a recording poster (`recordings.thumbnail_storage_key` → public `thumbnailUrl` on recording/processing/project GETs). Clip pipeline (P0): selected hook / ask moment → export or `POST /api/clips` with `aspectRatio` + `fitMode` + `burnSubtitles` → `render-clip` → FFmpeg trim + Fit/blur (default) or Fill/crop (opt-in) + optional burned VTT captions → Filestack video + thumbnail → `clips.storageKey` / `clips.thumbnail_storage_key` (public `videoUrl` / `thumbnailUrl`). Full recording export: `POST /api/recordings/:id/export` → `export-recording` → same FFmpeg framing/burn path for `0…duration` → `recordings.export_*` (public `exportVideoUrl` / `exportThumbnailUrl`). Cancel in-flight with `POST /api/recordings/:id/export/cancel` (restores snapshotted `export_*`). Signed download is not implemented yet.

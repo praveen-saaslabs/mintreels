@@ -1,13 +1,17 @@
-import { ArrowLeft, Mic2, Trash2 } from 'lucide-react';
+import { ArrowLeft, Download, FileDown, Loader2, Mic2, Trash2, X } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ClipVoiceoverDialog } from '@/components/clips/clip-voiceover-dialog';
+import { ThemeToggle } from '@/components/shell/theme-toggle';
+import { CutClipConfirmDialog } from '@/components/summary/cut-clip-confirm-dialog';
 import { ConfirmDeleteDialog } from '@/components/ui/confirm-delete-dialog';
 import { buttonVariants } from '@/components/ui/button';
 import { useDeleteProject } from '@/hooks/use-delete-project';
+import { useRecordingExport } from '@/hooks/use-recording-export';
 import { useRecordingVoiceover } from '@/hooks/use-recording-voiceover';
 import type { ClipVoiceover } from '@/lib/data/types';
 import { cn } from '@/lib/utils';
+import { useEditorStore } from '@/stores/editor-store';
 
 export function EditorHeader({
   title,
@@ -22,22 +26,42 @@ export function EditorHeader({
 }>) {
   const navigate = useNavigate();
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [exportOpen, setExportOpen] = useState(false);
   const [voiceoverOpen, setVoiceoverOpen] = useState(false);
+  const playerAspect = useEditorStore((state) => state.playerAspect);
+  const playerCaptionsOn = useEditorStore((state) => state.playerCaptionsOn);
+  const setPlayerAspect = useEditorStore((state) => state.setPlayerAspect);
+  const setPlayerCaptionsOn = useEditorStore((state) => state.setPlayerCaptionsOn);
+
   const { deleteProject, isDeleting, errorMessage, reset } = useDeleteProject({
     onSuccess: () => {
       navigate('/');
     },
   });
+
+  const {
+    canDownload,
+    canCancel,
+    isExporting,
+    isCancelling,
+    isDownloading,
+    isFailed,
+    startExport,
+    cancelExport,
+    downloadExport,
+    errorMessage: exportError,
+  } = useRecordingExport(recordingId, title);
+
   const {
     applyVoiceover,
     isApplying,
-    inFlight,
-    status,
+    inFlight: voiceoverInFlight,
+    status: voiceoverStatus,
     error: voiceoverError,
     applyError,
   } = useRecordingVoiceover(recordingId);
 
-  const voiceoverBusy = isApplying || inFlight;
+  const voiceoverBusy = isApplying || voiceoverInFlight;
   const canAddVoiceover = recordingId != null && !voiceoverBusy;
 
   async function onConfirmVoiceover(voiceover: ClipVoiceover | null) {
@@ -52,6 +76,16 @@ export function EditorHeader({
       // Error surfaced via applyError / status poll.
     }
   }
+
+  const exportAriaLabel = isExporting
+    ? 'Export in progress'
+    : isFailed
+      ? 'Export failed — try again'
+      : `Export video ${title}`;
+
+  const dialogError =
+    exportError ??
+    (isFailed ? 'Last export failed. Adjust options and try again.' : undefined);
 
   return (
     <header className="flex h-[52px] shrink-0 items-center gap-3 px-4 border border-b-[var(--glass-border-subtle)]">
@@ -69,33 +103,123 @@ export function EditorHeader({
         {title}
       </h1>
       {recordingId != null ? (
-        <div className="flex shrink-0 items-center gap-1.5">
-          {voiceoverBusy ? (
-            <span className="hidden text-[10px] text-muted-foreground sm:inline">
-              {status === 'running' || isApplying ? 'Applying voiceover…' : 'Voiceover queued…'}
-            </span>
-          ) : null}
-          {status === 'failed' && (voiceoverError || applyError) ? (
-            <span className="hidden max-w-[10rem] truncate text-[10px] text-[var(--mr-bad)] sm:inline">
-              {applyError ?? voiceoverError}
-            </span>
-          ) : null}
+        <>
+          <div className="flex shrink-0 items-center gap-1.5">
+            {voiceoverBusy ? (
+              <span className="hidden text-[10px] text-muted-foreground sm:inline">
+                {voiceoverStatus === 'running' || isApplying
+                  ? 'Applying voiceover…'
+                  : 'Voiceover queued…'}
+              </span>
+            ) : null}
+            {voiceoverStatus === 'failed' && (voiceoverError || applyError) ? (
+              <span className="hidden max-w-[10rem] truncate text-[10px] text-[var(--mr-bad)] sm:inline">
+                {applyError ?? voiceoverError}
+              </span>
+            ) : null}
+            <button
+              type="button"
+              aria-label="Add AI voiceover"
+              disabled={!canAddVoiceover}
+              onClick={() => setVoiceoverOpen(true)}
+              className={cn(
+                buttonVariants({ variant: 'outline', size: 'sm' }),
+                'shrink-0 gap-1.5',
+                canAddVoiceover ? '' : 'opacity-50',
+              )}
+            >
+              <Mic2 className="size-3.5" aria-hidden />
+              <span className="hidden sm:inline">AI voiceover</span>
+            </button>
+          </div>
           <button
             type="button"
-            aria-label="Add AI voiceover"
-            disabled={!canAddVoiceover}
-            onClick={() => setVoiceoverOpen(true)}
+            aria-label={exportAriaLabel}
+            disabled={isExporting}
+            onClick={() => {
+              setExportOpen(true);
+            }}
             className={cn(
-              buttonVariants({ variant: 'outline', size: 'sm' }),
-              'shrink-0 gap-1.5',
-              canAddVoiceover ? '' : 'opacity-50',
+              buttonVariants({ variant: 'ghost', size: 'icon-sm' }),
+              'shrink-0',
+              isFailed
+                ? 'text-[var(--mr-bad)] hover:text-[var(--mr-bad)]'
+                : 'text-muted-foreground hover:text-foreground',
             )}
           >
-            <Mic2 className="size-3.5" aria-hidden />
-            <span className="hidden sm:inline">AI voiceover</span>
+            {isExporting ? (
+              <Loader2 className="animate-spin" aria-hidden />
+            ) : (
+              <FileDown aria-hidden />
+            )}
           </button>
-        </div>
+          {canCancel ? (
+            <button
+              type="button"
+              aria-label="Cancel export"
+              disabled={isCancelling}
+              onClick={() => {
+                cancelExport({
+                  onSuccess: () => {
+                    setExportOpen(false);
+                  },
+                });
+              }}
+              className={cn(
+                buttonVariants({ variant: 'ghost', size: 'icon-sm' }),
+                'shrink-0 text-muted-foreground hover:text-[var(--mr-bad)]',
+              )}
+            >
+              {isCancelling ? (
+                <Loader2 className="animate-spin" aria-hidden />
+              ) : (
+                <X aria-hidden />
+              )}
+            </button>
+          ) : null}
+          {canDownload ? (
+            <button
+              type="button"
+              aria-label={`Download exported video ${title}`}
+              disabled={isDownloading}
+              onClick={() => {
+                void downloadExport();
+              }}
+              className={cn(
+                buttonVariants({ variant: 'ghost', size: 'icon-sm' }),
+                'shrink-0 text-muted-foreground hover:text-foreground',
+              )}
+            >
+              {isDownloading ? (
+                <Loader2 className="animate-spin" aria-hidden />
+              ) : (
+                <Download aria-hidden />
+              )}
+            </button>
+          ) : null}
+          <CutClipConfirmDialog
+            open={exportOpen}
+            onOpenChange={setExportOpen}
+            title="Export video"
+            description="Export this video with aspect framing and optional burned-in captions."
+            confirmLabel="Export"
+            pending={isExporting}
+            errorMessage={dialogError}
+            initialAspect={playerAspect}
+            initialBurnSubtitles={playerCaptionsOn}
+            onAspectChange={setPlayerAspect}
+            onBurnSubtitlesChange={setPlayerCaptionsOn}
+            onConfirm={async ({ aspectRatio, burnSubtitles }) => {
+              startExport(aspectRatio, burnSubtitles, {
+                onSuccess: () => {
+                  setExportOpen(false);
+                },
+              });
+            }}
+          />
+        </>
       ) : null}
+      <ThemeToggle />
       {projectId != null ? (
         <>
           <button
@@ -125,7 +249,7 @@ export function EditorHeader({
           />
         </>
       ) : null}
-
+    
       <ClipVoiceoverDialog
         open={voiceoverOpen}
         onOpenChange={setVoiceoverOpen}
@@ -136,6 +260,6 @@ export function EditorHeader({
           void onConfirmVoiceover(voiceover);
         }}
       />
-    </header>
+</header>
   );
 }

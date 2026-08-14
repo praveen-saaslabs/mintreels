@@ -4,10 +4,11 @@ import {
   Get,
   HttpCode,
   Post,
+  Req,
   Res,
   UseGuards,
 } from '@nestjs/common';
-import type { Response } from 'express';
+import type { Request, Response } from 'express';
 import {
   ApiBadRequestResponse,
   ApiBody,
@@ -23,7 +24,9 @@ import {
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 import { AUTH_COOKIE_NAME, authCookieOptions } from '../common/auth.config';
+import { GUEST_COOKIE_NAME, guestCookieOptions } from '../common/guest.config';
 import { ZodValidationPipe } from '../common/zod-validation.pipe';
+import { GuestClaimService } from '../guest/guest-claim.service';
 import { AuthGuard } from './auth.guard';
 import { AuthService } from './auth.service';
 import type { RequestUser } from './auth.types';
@@ -48,7 +51,24 @@ const publicUserExample = {
 @ApiTags('Auth')
 @Controller('api/auth')
 export class AuthController {
-  constructor(private readonly auth: AuthService) {}
+  constructor(
+    private readonly auth: AuthService,
+    private readonly guestClaim: GuestClaimService,
+  ) {}
+
+  /**
+   * After a session starts, adopt any guest data the browser was carrying and
+   * drop the now-defunct guest cookie. Idempotent + best-effort (never blocks login).
+   */
+  private async claimGuest(req: Request, res: Response, userId: number): Promise<void> {
+    const guestToken = req.cookies?.[GUEST_COOKIE_NAME] as string | undefined;
+    const claimed = await this.guestClaim.claim(guestToken, userId);
+    if (guestToken) {
+      const { httpOnly, secure, sameSite, path } = guestCookieOptions(0);
+      res.clearCookie(GUEST_COOKIE_NAME, { httpOnly, secure, sameSite, path });
+    }
+    void claimed;
+  }
 
   @Post('signup')
   @HttpCode(201)
@@ -78,10 +98,12 @@ export class AuthController {
   })
   async verifyEmail(
     @Body(new ZodValidationPipe(verifyEmailRequestSchema)) body: VerifyEmailRequest,
+    @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ) {
     const { user, token } = await this.auth.verifyEmail(body);
     res.cookie(AUTH_COOKIE_NAME, token, authCookieOptions());
+    await this.claimGuest(req, res, user.id);
     return user;
   }
 
@@ -113,10 +135,12 @@ export class AuthController {
   @ApiForbiddenResponse({ description: 'EMAIL_NOT_VERIFIED' })
   async login(
     @Body(new ZodValidationPipe(loginRequestSchema)) body: LoginRequest,
+    @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ) {
     const { user, token } = await this.auth.login(body);
     res.cookie(AUTH_COOKIE_NAME, token, authCookieOptions());
+    await this.claimGuest(req, res, user.id);
     return user;
   }
 

@@ -1,4 +1,6 @@
+export { type OwnerFilter, ownerWhere } from './ownership';
 export { UserRepository } from './user.repository';
+export { GuestSessionRepository } from './guest-session.repository';
 export { ProjectRepository } from './project.repository';
 export { RecordingRepository } from './recording.repository';
 export { TranscriptRepository } from './transcript.repository';

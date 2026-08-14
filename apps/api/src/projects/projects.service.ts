@@ -10,6 +10,7 @@ import {
 } from '@mintreels/db';
 import { JobActivityStatus, JobStatus, SidebarAccent } from '@mintreels/schema';
 import type { KnowledgeBaseScope } from '@mintreels/schema';
+import type { Ownership } from '../auth/auth.types';
 import { HttpError } from '../common/http-error';
 import { publicPlaybackUrl } from '../common/playback-url';
 import { RecordingsService } from '../recordings/recordings.service';
@@ -102,13 +103,13 @@ export class ProjectsService {
     private readonly recordingsService: RecordingsService,
   ) {}
 
-  async list(userId: number) {
-    const rows = await this.listSummaries(userId);
+  async list(owner: Ownership) {
+    const rows = await this.listSummaries(owner);
     return rows.map(toProjectSummary);
   }
 
-  async listSidebar(userId: number) {
-    const rows = await this.listSummaries(userId);
+  async listSidebar(owner: Ownership) {
+    const rows = await this.listSummaries(owner);
     return rows.map((row) => ({
       id: row.id,
       name: row.name,
@@ -117,15 +118,15 @@ export class ProjectsService {
     }));
   }
 
-  async remove(id: number, userId: number): Promise<void> {
-    const project = await this.projects.findByIdForUser(id, userId);
+  async remove(id: number, owner: Ownership): Promise<void> {
+    const project = await this.projects.findByIdForOwner(id, owner);
     if (!project) {
       throw new HttpError(404, 'Not found');
     }
 
     const recordings = await this.recordings.listByProjectIds([project.id]);
     for (const recording of recordings) {
-      await this.recordingsService.remove(recording.id, userId);
+      await this.recordingsService.remove(recording.id, owner);
     }
 
     const knowledgeBases = await this.knowledgeBases.find({ where: { projectId: project.id } });
@@ -136,8 +137,8 @@ export class ProjectsService {
     await this.projects.softRemove(project);
   }
 
-  private async listSummaries(userId: number): Promise<ProjectSummaryRow[]> {
-    const projects = await this.projects.listForUser(userId);
+  private async listSummaries(owner: Ownership): Promise<ProjectSummaryRow[]> {
+    const projects = await this.projects.listForOwner(owner);
     if (projects.length === 0) {
       return [];
     }

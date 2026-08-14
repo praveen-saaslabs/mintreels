@@ -2,7 +2,15 @@ import type { Summary, Transcript } from '@mintreels/domain';
 import OpenAI from 'openai';
 import { generateExtractiveHooks } from '../../extractive-hooks';
 import { mapHookCandidates, type HookCandidate } from '../../hook-candidates';
-import type { ActionItem, HookGenerationOptions, LLMProvider } from '../../llm-provider';
+import type { ActionItem, HookGenerationOptions, LLMProvider, SocialCopyResult } from '../../llm-provider';
+import {
+  buildSocialCopyUserPrompt,
+  heuristicSocialCopy,
+  parseSocialCopyResponse,
+  SOCIAL_COPY_JSON_SCHEMA,
+  SOCIAL_COPY_SYSTEM_PROMPT,
+  type SocialCopyContext,
+} from '../../prompts/social-copy.prompt';
 import {
   heuristicTranscriptAsk,
   parseTranscriptAskResponse,
@@ -131,6 +139,25 @@ export class OpenAICompatibleLLMProvider implements LLMProvider {
         }`,
       );
       return heuristicTranscriptAsk(transcript, question);
+    }
+  }
+
+  async generateSocialCopy(context: SocialCopyContext): Promise<SocialCopyResult> {
+    try {
+      return await this.completeJson({
+        system: SOCIAL_COPY_SYSTEM_PROMPT,
+        user: buildSocialCopyUserPrompt(context),
+        schemaName: 'social_copy',
+        jsonSchema: SOCIAL_COPY_JSON_SCHEMA,
+        parse: parseSocialCopyResponse,
+      });
+    } catch (error) {
+      console.warn(
+        `[${this.config.provider}] social copy failed, using heuristic: ${
+          error instanceof Error ? error.message : 'unknown error'
+        }`,
+      );
+      return heuristicSocialCopy(context);
     }
   }
 

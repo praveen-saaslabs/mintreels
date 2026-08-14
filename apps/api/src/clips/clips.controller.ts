@@ -23,17 +23,26 @@ import {
   ApiTags,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
-import { AuthGuard } from '../auth/auth.guard';
-import { CurrentUser } from '../auth/current-user.decorator';
-import type { RequestUser } from '../auth/auth.types';
+import { IdentityGuard } from '../guest/identity.guard';
+import { GuestRateLimitGuard } from '../guest/guest-rate-limit.guard';
+import { CurrentActor } from '../guest/current-actor.decorator';
+import { ownership, type RequestActor } from '../auth/auth.types';
 import { ZodValidationPipe } from '../common/zod-validation.pipe';
-import { CLIP_FILTER_LABELS, ClipFilterId, ClipRatio, ClipStatus } from '@mintreels/schema';
+import {
+  CLIP_FILTER_LABELS,
+  ClipFilterId,
+  ClipFitMode,
+  ClipRatio,
+  ClipStatus,
+} from '@mintreels/schema';
 import { createClipRequestSchema, type CreateClipRequest } from './clips.dto';
 import { ClipsService } from './clips.service';
 
 const clipExample = {
   id: 1,
   title: 'The roadmap was never a plan',
+  socialTitle: 'The roadmap was never a plan',
+  socialDescription: 'A sharp take on why roadmaps fail — and what to do instead.',
   recordingId: 10,
   hookId: 4,
   projectId: 2,
@@ -42,6 +51,9 @@ const clipExample = {
   startMs: 252000,
   endMs: 293000,
   status: ClipStatus.Ready,
+  aspectRatio: ClipRatio.Vertical,
+  fitMode: ClipFitMode.Fit,
+  burnSubtitles: true,
   subtitleStyle: 'bold_mint',
   videoUrl: 'https://cdn.filestackcontent.com/HANDLE',
   thumbnailUrl: 'https://cdn.filestackcontent.com/THUMB',
@@ -51,7 +63,7 @@ const clipExample = {
 @ApiTags('Clips')
 @ApiCookieAuth('auth_token')
 @ApiUnauthorizedResponse({ description: 'UNAUTHORIZED' })
-@UseGuards(AuthGuard)
+@UseGuards(IdentityGuard, GuestRateLimitGuard)
 @Controller('api/clips')
 export class ClipsController {
   constructor(private readonly clipsService: ClipsService) {}
@@ -66,10 +78,10 @@ export class ClipsController {
   @ApiNotFoundResponse({ description: 'Recording not found' })
   @Post()
   create(
-    @CurrentUser() user: RequestUser,
+    @CurrentActor() actor: RequestActor,
     @Body(new ZodValidationPipe(createClipRequestSchema)) body: CreateClipRequest,
   ) {
-    return this.clipsService.create(body, user.id);
+    return this.clipsService.create(body, ownership(actor));
   }
 
   @ApiOperation({ summary: 'List clip filter counts for the current user' })
@@ -86,8 +98,8 @@ export class ClipsController {
     },
   })
   @Get('filters')
-  listFilters(@CurrentUser() user: RequestUser) {
-    return this.clipsService.listFilters(user.id);
+  listFilters(@CurrentActor() actor: RequestActor) {
+    return this.clipsService.listFilters(ownership(actor));
   }
 
   @ApiOperation({ summary: 'List clips for the current user' })
@@ -96,8 +108,8 @@ export class ClipsController {
     schema: { example: [clipExample] },
   })
   @Get()
-  list(@CurrentUser() user: RequestUser) {
-    return this.clipsService.list(user.id);
+  list(@CurrentActor() actor: RequestActor) {
+    return this.clipsService.list(ownership(actor));
   }
 
   @ApiOperation({ summary: 'Get a clip by ID' })
@@ -108,8 +120,21 @@ export class ClipsController {
   })
   @ApiNotFoundResponse({ description: 'Clip not found' })
   @Get(':id')
-  getById(@CurrentUser() user: RequestUser, @Param('id', ParseIntPipe) id: number) {
-    return this.clipsService.getById(id, user.id);
+  getById(@CurrentActor() actor: RequestActor, @Param('id', ParseIntPipe) id: number) {
+    return this.clipsService.getById(id, ownership(actor));
+  }
+
+  @ApiOperation({ summary: 'Generate social title and description for a ready clip' })
+  @ApiParam({ name: 'id', type: Number })
+  @ApiOkResponse({
+    description: 'Clip with socialTitle and socialDescription persisted',
+    schema: { example: clipExample },
+  })
+  @ApiNotFoundResponse({ description: 'Clip not found' })
+  @ApiConflictResponse({ description: 'CLIP_NOT_READY or TRANSCRIPT_REQUIRED' })
+  @Post(':id/social-copy')
+  generateSocialCopy(@CurrentUser() user: RequestUser, @Param('id', ParseIntPipe) id: number) {
+    return this.clipsService.generateSocialCopy(id, user.id);
   }
 
   @ApiOperation({ summary: 'Soft-delete a clip' })
@@ -118,7 +143,7 @@ export class ClipsController {
   @ApiNotFoundResponse({ description: 'Clip not found' })
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  remove(@CurrentUser() user: RequestUser, @Param('id', ParseIntPipe) id: number) {
-    return this.clipsService.remove(id, user.id);
+  remove(@CurrentActor() actor: RequestActor, @Param('id', ParseIntPipe) id: number) {
+    return this.clipsService.remove(id, ownership(actor));
   }
 }

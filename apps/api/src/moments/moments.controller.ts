@@ -8,11 +8,13 @@ import {
   ApiOperation,
   ApiParam,
   ApiTags,
+  ApiTooManyRequestsResponse,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
-import { AuthGuard } from '../auth/auth.guard';
-import { CurrentUser } from '../auth/current-user.decorator';
-import type { RequestUser } from '../auth/auth.types';
+import { IdentityGuard } from '../guest/identity.guard';
+import { GuestRateLimitGuard, RateLimit } from '../guest/guest-rate-limit.guard';
+import { CurrentActor } from '../guest/current-actor.decorator';
+import { ownership, type RequestActor } from '../auth/auth.types';
 import { ZodValidationPipe } from '../common/zod-validation.pipe';
 import {
   askMomentsRequestSchema,
@@ -25,7 +27,9 @@ import { MomentsService } from './moments.service';
 @ApiTags('Moments')
 @ApiCookieAuth('auth_token')
 @ApiUnauthorizedResponse({ description: 'UNAUTHORIZED' })
-@UseGuards(AuthGuard)
+@ApiTooManyRequestsResponse({ description: 'RATE_LIMITED' })
+@UseGuards(IdentityGuard, GuestRateLimitGuard)
+@RateLimit('ai-generations')
 @Controller('api/recordings/:id/moments')
 export class MomentsController {
   constructor(private readonly momentsService: MomentsService) {}
@@ -55,11 +59,11 @@ export class MomentsController {
   @ApiNotFoundResponse({ description: 'Recording not found' })
   @Post('search')
   search(
-    @CurrentUser() user: RequestUser,
+    @CurrentActor() actor: RequestActor,
     @Param('id', ParseIntPipe) id: number,
     @Body(new ZodValidationPipe(searchMomentsRequestSchema)) body: SearchMomentsRequest,
   ) {
-    return this.momentsService.search(id, user.id, body);
+    return this.momentsService.search(id, ownership(actor), body);
   }
 
   @ApiOperation({
@@ -77,10 +81,10 @@ export class MomentsController {
   @ApiNotFoundResponse({ description: 'Recording not found' })
   @Post('ask')
   ask(
-    @CurrentUser() user: RequestUser,
+    @CurrentActor() actor: RequestActor,
     @Param('id', ParseIntPipe) id: number,
     @Body(new ZodValidationPipe(askMomentsRequestSchema)) body: AskMomentsRequest,
   ) {
-    return this.momentsService.ask(id, user.id, body);
+    return this.momentsService.ask(id, ownership(actor), body);
   }
 }

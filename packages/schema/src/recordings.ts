@@ -1,11 +1,13 @@
 import { z } from 'zod';
 import { deletedAtSchema, idSchema, timestampsSchema } from './common';
 import { RecordingStatus } from './enums';
+import { clipFitModeSchema, clipRatioSchema, clipStatusSchema } from './clips';
 
 /**
  * recordings — docs/architecture.md §16
  *
  * status: uploaded | processing | ready | failed
+ * exportStatus: queued | rendering | ready | failed (null = never exported)
  */
 export const recordingStatusSchema = z.enum([
   RecordingStatus.Uploaded,
@@ -27,6 +29,12 @@ export const recordingRowSchema = z
     width: z.number().int().positive().nullable(),
     height: z.number().int().positive().nullable(),
     status: recordingStatusSchema,
+    exportStorageKey: z.string().nullable(),
+    exportThumbnailStorageKey: z.string().nullable(),
+    exportStatus: clipStatusSchema.nullable(),
+    exportAspectRatio: clipRatioSchema.nullable(),
+    exportFitMode: clipFitModeSchema.nullable(),
+    exportBurnSubtitles: z.boolean().nullable(),
   })
   .merge(timestampsSchema)
   .merge(deletedAtSchema);
@@ -38,11 +46,17 @@ export const recordingInsertSchema = recordingRowSchema.partial({
   durationMs: true,
   width: true,
   height: true,
+  exportStorageKey: true,
+  exportThumbnailStorageKey: true,
+  exportStatus: true,
+  exportAspectRatio: true,
+  exportFitMode: true,
+  exportBurnSubtitles: true,
   createdAt: true,
   updatedAt: true,
   deletedAt: true,
 });
 
-export { RecordingStatus } from './enums';
+export { ClipFitMode, ClipRatio, ClipStatus, RecordingStatus } from './enums';
 export type RecordingRow = z.infer<typeof recordingRowSchema>;
 export type RecordingInsert = z.infer<typeof recordingInsertSchema>;

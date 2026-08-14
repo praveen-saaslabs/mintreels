@@ -11,6 +11,7 @@ import {
 import { DEFAULT_MAX_ATTEMPTS } from '@mintreels/domain';
 import type { QueueProvider } from '@mintreels/queue';
 import { JobStatus, JobType } from '@mintreels/schema';
+import type { Ownership } from '../auth/auth.types';
 import { HttpError } from '../common/http-error';
 import { QUEUE_PROVIDER } from '../providers/provider-tokens';
 import { toPublicTranscript } from './public-transcript';
@@ -53,13 +54,13 @@ export class TranscriptsService {
     @Inject(QUEUE_PROVIDER) private readonly queue: QueueProvider,
   ) {}
 
-  async getByRecordingId(recordingId: number, userId: number) {
-    const loaded = await this.loadForUser(recordingId, userId);
+  async getByRecordingId(recordingId: number, owner: Ownership) {
+    const loaded = await this.loadForOwner(recordingId, owner);
     return toPublicTranscript(loaded, loaded.segments);
   }
 
-  async getVttByRecordingId(recordingId: number, userId: number): Promise<string> {
-    const transcript = await this.loadForUser(recordingId, userId);
+  async getVttByRecordingId(recordingId: number, owner: Ownership): Promise<string> {
+    const transcript = await this.loadForOwner(recordingId, owner);
     return toWebVtt(transcript);
   }
 
@@ -67,9 +68,9 @@ export class TranscriptsService {
     recordingId: number,
     segmentSequence: number,
     body: PatchTranscriptSegmentRequest,
-    userId: number,
+    owner: Ownership,
   ) {
-    const recording = await this.recordings.findByIdForUser(recordingId, userId);
+    const recording = await this.recordings.findByIdForOwner(recordingId, owner);
     if (!recording) {
       throw new HttpError(404, 'Not found');
     }
@@ -96,9 +97,10 @@ export class TranscriptsService {
     recordingId: number,
     segmentSequence: number,
     body: ApplyOverdubRequest,
-    userId: number,
+    owner: Ownership,
   ) {
-    const recording = await this.recordings.findByIdForUser(recordingId, userId);
+    this.requireExportAuth(owner);
+    const recording = await this.recordings.findByIdForOwner(recordingId, owner);
     if (!recording) {
       throw new HttpError(404, 'Not found');
     }
@@ -190,8 +192,8 @@ export class TranscriptsService {
     };
   }
 
-  async getOverdubJob(recordingId: number, userId: number) {
-    const recording = await this.recordings.findByIdForUser(recordingId, userId);
+  async getOverdubJob(recordingId: number, owner: Ownership) {
+    const recording = await this.recordings.findByIdForOwner(recordingId, owner);
     if (!recording) {
       throw new HttpError(404, 'Not found');
     }
@@ -210,8 +212,14 @@ export class TranscriptsService {
     };
   }
 
-  private async loadForUser(recordingId: number, userId: number): Promise<TranscriptWithSegments> {
-    const recording = await this.recordings.findByIdForUser(recordingId, userId);
+  private requireExportAuth(owner: Ownership): void {
+    if (owner.userId == null) {
+      throw new HttpError(401, 'AUTH_REQUIRED');
+    }
+  }
+
+  private async loadForOwner(recordingId: number, owner: Ownership): Promise<TranscriptWithSegments> {
+    const recording = await this.recordings.findByIdForOwner(recordingId, owner);
     if (!recording) {
       throw new HttpError(404, 'Not found');
     }

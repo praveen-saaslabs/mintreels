@@ -54,6 +54,8 @@ export type ClipVoiceover = {
 export type ClipSummary = {
   id: number;
   title: string;
+  socialTitle?: string | null;
+  socialDescription?: string | null;
   recordingId: number;
   hookId: number | null;
   projectId: number;
@@ -62,10 +64,14 @@ export type ClipSummary = {
   startMs: number;
   endMs: number;
   status: ClipRenderStatus;
+  aspectRatio?: '9:16' | '1:1' | '16:9';
+  fitMode?: 'fit' | 'fill';
+  burnSubtitles?: boolean;
   subtitleStyle: string | null;
   voiceover?: ClipVoiceover | null;
   videoUrl: string | null;
   thumbnailUrl: string | null;
+  /** Export target aspect (alias of aspectRatio). */
   ratio?: '9:16' | '1:1' | '16:9';
 };
 

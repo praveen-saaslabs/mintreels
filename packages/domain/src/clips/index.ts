@@ -1,1 +1,1 @@
-export type { Clip, ClipStatus, CreateClipInput } from './types';
+export type { Clip, ClipAspectRatio, ClipFitMode, ClipStatus, CreateClipInput } from './types';

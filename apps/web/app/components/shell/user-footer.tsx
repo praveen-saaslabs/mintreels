@@ -1,21 +1,23 @@
 import { Button } from '@/components/ui/button';
 import { useWorkspaceUserQuery } from '@/hooks/use-home-queries';
-import { playThemeSwitchSound } from '@/lib/theme-switch-sound';
 import { useAuth } from '@/providers/auth-provider';
-import { useTheme } from '@/providers/theme-provider';
-import { LogOut, Moon, Settings, Sun } from 'lucide-react';
+import { LogOut, Settings } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { ThemeToggle } from './theme-toggle';
 
 function initialsFromEmail(email: string) {
   const local = email.split('@')[0] ?? email;
   return local.slice(0, 2).toUpperCase();
 }
 
-export function UserFooter() {
+export function UserFooter({
+  showThemeToggle = true,
+}: Readonly<{
+  showThemeToggle?: boolean;
+}>) {
   const { data: workspaceUser } = useWorkspaceUserQuery();
   const { user: authUser, logout } = useAuth();
-  const { theme, toggleTheme } = useTheme();
   const location = useLocation();
   const navigate = useNavigate();
   const [isSigningOut, setIsSigningOut] = useState(false);
@@ -23,12 +25,6 @@ export function UserFooter() {
 
   const displayName = workspaceUser?.displayName ?? authUser?.email ?? 'Loading…';
   const initials = workspaceUser?.initials ?? (authUser ? initialsFromEmail(authUser.email) : '—');
-
-  function handleThemeToggle() {
-    const nextTheme = theme === 'dark' ? 'light' : 'dark';
-    playThemeSwitchSound(nextTheme);
-    toggleTheme();
-  }
 
   async function handleSignOut() {
     setIsSigningOut(true);
@@ -63,16 +59,7 @@ export function UserFooter() {
         <Settings />
       </Button>
 
-      <Button
-        variant="ghost"
-        size="icon-sm"
-        onClick={handleThemeToggle}
-        aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-        title={theme === 'dark' ? 'Light mode' : 'Dark mode'}
-        className="shrink-0 text-muted-foreground"
-      >
-        {theme === 'dark' ? <Sun /> : <Moon />}
-      </Button>
+      {showThemeToggle ? <ThemeToggle /> : null}
 
       <Button
         variant="ghost"

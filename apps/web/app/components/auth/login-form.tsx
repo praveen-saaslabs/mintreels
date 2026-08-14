@@ -9,7 +9,21 @@ import { authErrorMessage } from '@/lib/auth-errors';
 import { useAuth } from '@/providers/auth-provider';
 import { AuthLayout } from './auth-layout';
 
-export function LoginForm() {
+export function LoginForm({
+  embedded = false,
+  onSuccess,
+  onNeedsVerification,
+}: {
+  /** Render only the form (no page layout) for use inside a dialog. */
+  embedded?: boolean;
+  /** Called after a successful login instead of navigating home. */
+  onSuccess?: () => void;
+  /**
+   * Called (instead of navigating to /verify-email) when the account exists but
+   * its email is unverified — lets an embedded host switch to a verify step.
+   */
+  onNeedsVerification?: (email: string) => void;
+} = {}) {
   const { login } = useAuth();
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
@@ -30,12 +44,20 @@ export function LoginForm() {
     setIsSubmitting(true);
     try {
       await login(parsed.data);
-      navigate('/', { replace: true });
+      if (onSuccess) {
+        onSuccess();
+      } else {
+        navigate('/', { replace: true });
+      }
     } catch (err) {
       if (err instanceof ApiError && err.code === 'EMAIL_NOT_VERIFIED') {
-        navigate(`/verify-email?email=${encodeURIComponent(parsed.data.email)}`, {
-          replace: true,
-        });
+        if (onNeedsVerification) {
+          onNeedsVerification(parsed.data.email);
+        } else {
+          navigate(`/verify-email?email=${encodeURIComponent(parsed.data.email)}`, {
+            replace: true,
+          });
+        }
         return;
       }
       setError(authErrorMessage(err));
@@ -44,20 +66,8 @@ export function LoginForm() {
     }
   }
 
-  return (
-    <AuthLayout
-      title="Sign in"
-      description="Use your email and password to continue."
-      footer={
-        <>
-          Don&apos;t have an account?{' '}
-          <Link to="/signup" className="font-medium text-foreground underline-offset-4 hover:underline">
-            Sign up
-          </Link>
-        </>
-      }
-    >
-      <form className="space-y-4" onSubmit={onSubmit} noValidate>
+  const form = (
+    <form className="space-y-4" onSubmit={onSubmit} noValidate>
         <div className="space-y-2">
           <Label htmlFor="login-email">Email</Label>
           <Input
@@ -93,6 +103,26 @@ export function LoginForm() {
           {isSubmitting ? 'Signing in…' : 'Sign in'}
         </Button>
       </form>
+  );
+
+  if (embedded) {
+    return form;
+  }
+
+  return (
+    <AuthLayout
+      title="Sign in"
+      description="Use your email and password to continue."
+      footer={
+        <>
+          Don&apos;t have an account?{' '}
+          <Link to="/signup" className="font-medium text-foreground underline-offset-4 hover:underline">
+            Sign up
+          </Link>
+        </>
+      }
+    >
+      {form}
     </AuthLayout>
   );
 }

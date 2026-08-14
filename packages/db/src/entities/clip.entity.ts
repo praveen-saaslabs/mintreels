@@ -7,7 +7,13 @@ import {
   ManyToOne,
   PrimaryGeneratedColumn,
 } from 'typeorm';
-import { ClipStatus, type ClipRow, type ClipVoiceover } from '@mintreels/schema';
+import {
+  ClipFitMode,
+  ClipRatio,
+  ClipStatus,
+  type ClipRow,
+  type ClipVoiceover,
+} from '@mintreels/schema';
 import { Recording } from './recording.entity';
 
 @Entity({ name: 'clips' })
@@ -28,11 +34,26 @@ export class Clip implements ClipRow {
   @Column({ type: 'text' })
   title!: string;
 
+  @Column({ type: 'varchar', length: 120, name: 'social_title', nullable: true })
+  socialTitle!: string | null;
+
+  @Column({ type: 'text', name: 'social_description', nullable: true })
+  socialDescription!: string | null;
+
   @Column({ type: 'int', name: 'start_ms' })
   startMs!: number;
 
   @Column({ type: 'int', name: 'end_ms' })
   endMs!: number;
+
+  @Column({ type: 'varchar', length: 16, name: 'aspect_ratio', default: ClipRatio.Vertical })
+  aspectRatio!: ClipRatio;
+
+  @Column({ type: 'varchar', length: 16, name: 'fit_mode', default: ClipFitMode.Fit })
+  fitMode!: ClipFitMode;
+
+  @Column({ type: 'boolean', name: 'burn_subtitles', default: true })
+  burnSubtitles!: boolean;
 
   @Column({ type: 'text', name: 'subtitle_style', nullable: true })
   subtitleStyle!: string | null;

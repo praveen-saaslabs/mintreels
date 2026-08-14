@@ -24,9 +24,10 @@ import {
   ApiTags,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
-import { AuthGuard } from '../auth/auth.guard';
-import { CurrentUser } from '../auth/current-user.decorator';
-import type { RequestUser } from '../auth/auth.types';
+import { IdentityGuard } from '../guest/identity.guard';
+import { GuestRateLimitGuard } from '../guest/guest-rate-limit.guard';
+import { CurrentActor } from '../guest/current-actor.decorator';
+import { ownership, type RequestActor } from '../auth/auth.types';
 import { ZodValidationPipe } from '../common/zod-validation.pipe';
 import {
   applyOverdubRequestSchema,
@@ -39,7 +40,7 @@ import { TranscriptsService } from './transcripts.service';
 @ApiTags('Transcripts')
 @ApiCookieAuth('auth_token')
 @ApiUnauthorizedResponse({ description: 'UNAUTHORIZED' })
-@UseGuards(AuthGuard)
+@UseGuards(IdentityGuard, GuestRateLimitGuard)
 @Controller('api/recordings')
 export class TranscriptsController {
   constructor(private readonly transcriptsService: TranscriptsService) {}
@@ -67,8 +68,8 @@ export class TranscriptsController {
   })
   @ApiNotFoundResponse({ description: 'Recording or transcript not found' })
   @Get(':id/transcript')
-  getByRecordingId(@CurrentUser() user: RequestUser, @Param('id', ParseIntPipe) id: number) {
-    return this.transcriptsService.getByRecordingId(id, user.id);
+  getByRecordingId(@CurrentActor() actor: RequestActor, @Param('id', ParseIntPipe) id: number) {
+    return this.transcriptsService.getByRecordingId(id, ownership(actor));
   }
 
   @ApiOperation({ summary: 'Get the WebVTT transcript for a recording' })
@@ -78,8 +79,8 @@ export class TranscriptsController {
   @ApiNotFoundResponse({ description: 'Recording or transcript not found' })
   @Header('Content-Type', 'text/vtt; charset=utf-8')
   @Get(':id/transcript.vtt')
-  getVttByRecordingId(@CurrentUser() user: RequestUser, @Param('id', ParseIntPipe) id: number) {
-    return this.transcriptsService.getVttByRecordingId(id, user.id);
+  getVttByRecordingId(@CurrentActor() actor: RequestActor, @Param('id', ParseIntPipe) id: number) {
+    return this.transcriptsService.getVttByRecordingId(id, ownership(actor));
   }
 
   @ApiOperation({ summary: 'Update transcript segment text (public segment id = sequence)' })
@@ -104,13 +105,13 @@ export class TranscriptsController {
   @ApiNotFoundResponse({ description: 'Recording or segment not found' })
   @Patch(':id/transcript/segments/:segmentId')
   patchSegment(
-    @CurrentUser() user: RequestUser,
+    @CurrentActor() actor: RequestActor,
     @Param('id', ParseIntPipe) id: number,
     @Param('segmentId', ParseIntPipe) segmentId: number,
     @Body(new ZodValidationPipe(patchTranscriptSegmentRequestSchema))
     body: PatchTranscriptSegmentRequest,
   ) {
-    return this.transcriptsService.patchSegment(id, segmentId, body, user.id);
+    return this.transcriptsService.patchSegment(id, segmentId, body, ownership(actor));
   }
 
   @ApiOperation({ summary: 'Synthesize segment text and replace audio in the source recording' })
@@ -136,12 +137,12 @@ export class TranscriptsController {
   @HttpCode(202)
   @Post(':id/transcript/segments/:segmentId/overdub')
   applyOverdub(
-    @CurrentUser() user: RequestUser,
+    @CurrentActor() actor: RequestActor,
     @Param('id', ParseIntPipe) id: number,
     @Param('segmentId', ParseIntPipe) segmentId: number,
     @Body(new ZodValidationPipe(applyOverdubRequestSchema)) body: ApplyOverdubRequest,
   ) {
-    return this.transcriptsService.applyOverdub(id, segmentId, body, user.id);
+    return this.transcriptsService.applyOverdub(id, segmentId, body, ownership(actor));
   }
 
   @ApiOperation({ summary: 'Get the latest apply-overdub job status for a recording' })
@@ -154,7 +155,7 @@ export class TranscriptsController {
   })
   @ApiNotFoundResponse({ description: 'Recording not found' })
   @Get(':id/transcript/overdub')
-  getOverdubJob(@CurrentUser() user: RequestUser, @Param('id', ParseIntPipe) id: number) {
-    return this.transcriptsService.getOverdubJob(id, user.id);
+  getOverdubJob(@CurrentActor() actor: RequestActor, @Param('id', ParseIntPipe) id: number) {
+    return this.transcriptsService.getOverdubJob(id, ownership(actor));
   }
 }

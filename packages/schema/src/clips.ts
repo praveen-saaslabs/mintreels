@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { deletedAtSchema, idSchema } from './common';
-import { ClipStatus } from './enums';
+import { ClipFitMode, ClipRatio, ClipStatus } from './enums';
 
 /**
  * clips — docs/architecture.md §23
@@ -13,6 +13,14 @@ export const clipStatusSchema = z.enum([
   ClipStatus.Ready,
   ClipStatus.Failed,
 ]);
+
+export const clipRatioSchema = z.enum([
+  ClipRatio.Vertical,
+  ClipRatio.Square,
+  ClipRatio.Widescreen,
+]);
+
+export const clipFitModeSchema = z.enum([ClipFitMode.Fit, ClipFitMode.Fill]);
 
 export const clipVoiceoverPlacementSchema = z.enum(['pre', 'duck']);
 
@@ -30,8 +38,13 @@ export const clipRowSchema = z
     recordingId: idSchema,
     hookId: idSchema.nullable(),
     title: z.string().min(1),
+    socialTitle: z.string().nullable(),
+    socialDescription: z.string().nullable(),
     startMs: z.number().int().nonnegative(),
     endMs: z.number().int().nonnegative(),
+    aspectRatio: clipRatioSchema,
+    fitMode: clipFitModeSchema,
+    burnSubtitles: z.boolean(),
     subtitleStyle: z.string().nullable(),
     storageKey: z.string().nullable(),
     thumbnailStorageKey: z.string().nullable(),
@@ -44,6 +57,11 @@ export const clipRowSchema = z
 export const clipInsertSchema = clipRowSchema.partial({
   id: true,
   hookId: true,
+  socialTitle: true,
+  socialDescription: true,
+  aspectRatio: true,
+  fitMode: true,
+  burnSubtitles: true,
   subtitleStyle: true,
   storageKey: true,
   thumbnailStorageKey: true,
@@ -52,7 +70,7 @@ export const clipInsertSchema = clipRowSchema.partial({
   deletedAt: true,
 });
 
-export { ClipStatus } from './enums';
+export { ClipFitMode, ClipStatus } from './enums';
 export type ClipVoiceover = z.infer<typeof clipVoiceoverSchema>;
 export type ClipVoiceoverPlacement = z.infer<typeof clipVoiceoverPlacementSchema>;
 export type ClipRow = z.infer<typeof clipRowSchema>;

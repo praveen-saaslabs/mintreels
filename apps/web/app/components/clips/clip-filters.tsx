@@ -32,7 +32,6 @@ export function ClipFilters({
           </button>
         );
       })}
-      <span className="ml-auto font-mono text-[11px] text-[var(--mr-mfg)]">sort: newest</span>
     </div>
   );
 }

@@ -95,6 +95,8 @@ export type CreateRecordingResponse = {
 
 export type RecordingStatus = 'uploaded' | 'processing' | 'ready' | 'failed';
 
+export type RecordingExportStatus = 'queued' | 'rendering' | 'ready' | 'failed';
+
 export type RecordingSummary = {
   id: number;
   projectId: number;
@@ -110,6 +112,14 @@ export type RecordingSummary = {
   audioUrl: string | null;
   /** HTTPS Filestack CDN poster; null until ingest thumbnail finishes. */
   thumbnailUrl: string | null;
+  /** Latest full-video export status; null if never exported. */
+  exportStatus: RecordingExportStatus | null;
+  exportAspectRatio: '9:16' | '1:1' | '16:9' | null;
+  exportFitMode: 'fit' | 'fill' | null;
+  exportBurnSubtitles: boolean | null;
+  /** HTTPS Filestack CDN URL for the exported MP4; never a storageKey. */
+  exportVideoUrl: string | null;
+  exportThumbnailUrl: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -151,6 +161,12 @@ export type RecordingProcessingSnapshot = {
   videoUrl: string | null;
   audioUrl: string | null;
   thumbnailUrl: string | null;
+  exportStatus: RecordingExportStatus | null;
+  exportAspectRatio: '9:16' | '1:1' | '16:9' | null;
+  exportFitMode: 'fit' | 'fill' | null;
+  exportBurnSubtitles: boolean | null;
+  exportVideoUrl: string | null;
+  exportThumbnailUrl: string | null;
   job: {
     id: number;
     status: ProcessingJobStatus;
@@ -177,6 +193,14 @@ export type RecordingProcessingSnapshot = {
     startMs: number;
     endMs: number;
     score: number | null;
+  }>;
+  /** Chronological job audit trail for all jobs on this recording (ingest, export, hooks, …). */
+  audit: Array<{
+    jobId: number;
+    event: string;
+    step: string | null;
+    message: string | null;
+    createdAt: string;
   }>;
 };
 
@@ -226,19 +250,42 @@ export type AskMomentsResponse =
   | { kind: 'moments'; moments: MomentCandidate[] }
   | { kind: 'reject'; text: string };
 
+export type ClipAspectRatio = '9:16' | '1:1' | '16:9';
+
+export type ClipFitMode = 'fit' | 'fill';
+
 export type CreateClipRequest = {
   recordingId: number;
   title: string;
   startMs: number;
   endMs: number;
   hookId?: number | null;
+  aspectRatio?: ClipAspectRatio;
+  fitMode?: ClipFitMode;
+  burnSubtitles?: boolean;
   subtitleStyle?: string | null;
   voiceover?: ClipVoiceover | null;
 };
 
 export type ExportHookClipRequest = {
+  aspectRatio?: ClipAspectRatio;
+  fitMode?: ClipFitMode;
+  burnSubtitles?: boolean;
+  subtitleStyle?: string | null;
   voiceover?: ClipVoiceover | null;
 };
+
+export type ExportRecordingRequest = {
+  aspectRatio?: ClipAspectRatio;
+  fitMode?: ClipFitMode;
+  burnSubtitles?: boolean;
+  force?: boolean;
+};
+
+export type ExportRecordingResponse = RecordingSummary & {
+  jobId: number | null;
+};
+
 
 export type VoiceOption = {
   id: string;
@@ -287,6 +334,15 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(body),
     }),
+  exportRecording: (id: number, body?: ExportRecordingRequest) =>
+    request<ExportRecordingResponse>(`/recordings/${encodeURIComponent(id)}/export`, {
+      method: 'POST',
+      body: JSON.stringify(body ?? {}),
+    }),
+  cancelRecordingExport: (id: number) =>
+    request<ExportRecordingResponse>(`/recordings/${encodeURIComponent(id)}/export/cancel`, {
+      method: 'POST',
+    }),
   getRecordingProcessing: (id: number) =>
     request<RecordingProcessingSnapshot>(`/recordings/${encodeURIComponent(id)}/processing`),
   retryRecording: (id: number) =>
@@ -323,7 +379,7 @@ export const api = {
       `/recordings/${encodeURIComponent(recordingId)}/hooks/${encodeURIComponent(hookId)}/export`,
       {
         method: 'POST',
-        ...(body ? { body: JSON.stringify(body) } : {}),
+        body: JSON.stringify(body ?? {}),
       },
     ),
   createClip: (body: CreateClipRequest) =>
@@ -356,6 +412,10 @@ export const api = {
     ),
   getKnowledgeBases: () => request<unknown>('/knowledge-bases'),
   getClip: (id: number) => request<ClipSummary>(`/clips/${encodeURIComponent(id)}`),
+  generateClipSocialCopy: (id: number) =>
+    request<ClipSummary>(`/clips/${encodeURIComponent(id)}/social-copy`, {
+      method: 'POST',
+    }),
   deleteClip: (id: number) =>
     request<void>(`/clips/${encodeURIComponent(id)}`, { method: 'DELETE' }),
 

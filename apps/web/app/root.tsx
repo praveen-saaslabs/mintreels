@@ -1,4 +1,5 @@
-import { createBrowserRouter, RouterProvider } from 'react-router-dom';
+import { createBrowserRouter, Outlet, RouterProvider } from 'react-router-dom';
+import { LoginDialog } from '@/components/auth/login-dialog';
 import { ProtectedRoute } from '@/components/auth/protected-route';
 import { PublicOnlyRoute } from '@/components/auth/public-only-route';
 import { AppShell } from '@/components/shell/app-shell';
@@ -11,26 +12,40 @@ import { SignupPage } from './routes/signup';
 import { VerifyEmailPage } from './routes/verify-email';
 import { IndexPage } from './routes/_index';
 
+function RootLayout() {
+  return (
+    <>
+      <Outlet />
+      <LoginDialog />
+    </>
+  );
+}
+
 const router = createBrowserRouter([
   {
-    element: <PublicOnlyRoute />,
-    children: [
-      { path: '/login', element: <LoginPage /> },
-      { path: '/signup', element: <SignupPage /> },
-      { path: '/verify-email', element: <VerifyEmailPage /> },
-    ],
-  },
-  {
-    element: <ProtectedRoute />,
+    element: <RootLayout />,
     children: [
       {
+        element: <PublicOnlyRoute />,
+        children: [
+          { path: '/login', element: <LoginPage /> },
+          { path: '/signup', element: <SignupPage /> },
+          { path: '/verify-email', element: <VerifyEmailPage /> },
+        ],
+      },
+      {
+        // Guests can use the app anonymously (upload/editor/preview/moments/clips).
         path: '/',
         element: <AppShell />,
         children: [
           { index: true, element: <IndexPage /> },
           { path: 'clips', element: <ClipsPage /> },
-          { path: 'settings', element: <SettingsPage /> },
           { path: 'knowledge', element: <KnowledgePage /> },
+          {
+            // User-only areas stay behind login.
+            element: <ProtectedRoute />,
+            children: [{ path: 'settings', element: <SettingsPage /> }],
+          },
         ],
       },
       {

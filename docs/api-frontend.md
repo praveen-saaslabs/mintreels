@@ -62,19 +62,24 @@ All paths are under `/api`. All GETs below are implemented and cookie-scoped to 
 | `createRecording(body)` | POST | `/recordings` |
 | `retryRecording(id)` | POST | `/recordings/:id/retry` |
 | `getTranscript(id)` | GET | `/recordings/:id/transcript` |
-| — | GET | `/recordings/:id/transcript.vtt` (`text/vtt`) |
 | `patchTranscriptSegment(id, segmentId, body)` | PATCH | `/recordings/:id/transcript/segments/:segmentId` |
 | `applyTranscriptOverdub(id, segmentId, body)` | POST | `/recordings/:id/transcript/segments/:segmentId/overdub` |
 | `getTranscriptOverdub(id)` | GET | `/recordings/:id/transcript/overdub` |
+| `applyRecordingVoiceover(id, body)` | POST | `/recordings/:id/voiceover` |
+| `getRecordingVoiceover(id)` | GET | `/recordings/:id/voiceover` |
+| `getVoices()` | GET | `/voices` |
+| — | GET | `/recordings/:id/transcript.vtt` (`text/vtt`) |
 | `getSummary(id)` | GET | `/recordings/:id/summary` |
 | `getHooks(id)` | GET | `/recordings/:id/hooks` |
 | `searchMoments(id, { query })` | POST | `/recordings/:id/moments/search` |
 | `askMoments(id, { query })` | POST | `/recordings/:id/moments/ask` |
-| `exportHookClip(recordingId, hookId, body?)` | POST | `/recordings/:id/hooks/:hookId/export` |
+| `exportHookClip(recordingId, hookId)` | POST | `/recordings/:id/hooks/:hookId/export` |
+| `exportRecording(id, body?)` | POST | `/recordings/:id/export` |
+| `cancelRecordingExport(id)` | POST | `/recordings/:id/export/cancel` |
 | `createClip(body)` | POST | `/clips` |
-| `getVoices()` | GET | `/voices` |
 | `getKnowledgeBases()` | GET | `/knowledge-bases` |
 | `getClip(id)` | GET | `/clips/:id` |
+| `generateClipSocialCopy(id)` | POST | `/clips/:id/social-copy` |
 | `deleteClip(id)` | DELETE | `/clips/:id` (**204**) |
 | `getClips()` | GET | `/clips` |
 | `getClipFilters()` | GET | `/clips/filters` |
@@ -95,6 +100,8 @@ All paths are under `/api`. All GETs below are implemented and cookie-scoped to 
 
 **No `storageKey`.** Playback URLs are `videoUrl` / `audioUrl` (`audioUrl` is `null` until extraction finishes). Poster is `thumbnailUrl` (`null` until ingest thumbnail finishes). Status: `uploaded` \| `processing` \| `ready` \| `failed`.
 
+Latest full-video export (if any): `exportStatus` (`queued` \| `rendering` \| `ready` \| `failed`, or `null` if never exported), `exportAspectRatio`, `exportFitMode`, `exportBurnSubtitles`, `exportVideoUrl`, `exportThumbnailUrl`. Never `exportStorageKey`.
+
 ```json
 {
   "id": 10,
@@ -108,6 +115,12 @@ All paths are under `/api`. All GETs below are implemented and cookie-scoped to 
   "videoUrl": "https://cdn.filestackcontent.com/HANDLE",
   "audioUrl": "https://cdn.filestackcontent.com/AUDIO",
   "thumbnailUrl": "https://cdn.filestackcontent.com/THUMB",
+  "exportStatus": null,
+  "exportAspectRatio": null,
+  "exportFitMode": null,
+  "exportBurnSubtitles": null,
+  "exportVideoUrl": null,
+  "exportThumbnailUrl": null,
   "createdAt": "2026-08-13T08:00:00.000Z",
   "updatedAt": "2026-08-13T08:00:00.000Z"
 }
@@ -301,9 +314,11 @@ Discriminated **200** responses:
 
 ### Hook export — `POST /api/recordings/:id/hooks/:hookId/export`
 
-Creates a `clips` row (`queued`) and enqueues `render-clip`. **202** with the public clip DTO. Poll `GET /api/clips/:id` while `status` is `queued` or `rendering`.
+Optional body: `{ aspectRatio?: "9:16"|"1:1"|"16:9", fitMode?: "fit"|"fill", burnSubtitles?: boolean, voiceover?: { enabled, voiceId, titleText?, ctaText?, placement: "pre"|"duck" } }` (defaults `9:16` / `fit` / `true`). Creates a `clips` row (`queued`) and enqueues `render-clip`. Optional `voiceover` mixes AI Speak audio onto the render. **202** with the public clip DTO. Poll `GET /api/clips/:id` while `status` is `queued` or `rendering`.
 
-Idempotent: in-flight (`queued`/`rendering`) or `ready` returns the existing clip; `failed` resets that row and re-enqueues.
+`fitMode`: **`fit`** (default) = full frame + blurred pad; **`fill`** = center crop (opt-in). Layout-agnostic — Fit preserves the whole source regardless of hosts/grid/PiP.
+
+Idempotent when aspect + fit + burn + voiceover match: in-flight (`queued`/`rendering`) or `ready` returns the existing clip; `failed` or different options resets that row and re-enqueues.
 
 Errors: `404` recording/hook, `400 INVALID_HOOK_RANGE`, `409 VIDEO_NOT_AVAILABLE`. Never returns `storageKey`.
 
@@ -319,9 +334,52 @@ Errors: `404` recording/hook, `400 INVALID_HOOK_RANGE`, `409 VIDEO_NOT_AVAILABLE
   "startMs": 252000,
   "endMs": 293000,
   "status": "queued",
+  "aspectRatio": "9:16",
+  "fitMode": "fit",
+  "burnSubtitles": true,
   "subtitleStyle": null,
   "videoUrl": null,
-  "thumbnailUrl": null
+  "thumbnailUrl": null,
+  "ratio": "9:16"
+}
+```
+
+### Full recording export — `POST /api/recordings/:id/export`
+
+Optional body: `{ aspectRatio?: "9:16"|"1:1"|"16:9", fitMode?: "fit"|"fill", burnSubtitles?: boolean, force?: boolean }` (defaults `9:16` / `fit` / `true` / `force` false). Sets `recordings.export_*` to `queued` and enqueues `export-recording` (previous `export_*` snapshotted in job metadata). **202** with the public recording export fields plus `jobId`. Poll `GET /api/recordings/:id` while `exportStatus` is `queued` or `rendering` (or `ready` without `exportVideoUrl`).
+
+Idempotent when aspect + fit + burn match and `force` is omitted/false: in-flight (`queued`/`rendering`) or `ready` returns the current export fields (no re-enqueue). `failed`, different options, or `force: true` reset export keys/status and re-enqueue. Latest export only (overwrite). Only the latest `EXPORT_RECORDING` job may write `export_*`.
+
+### Cancel export — `POST /api/recordings/:id/export/cancel`
+
+Cancels an in-flight export (`exportStatus` `queued` or `rendering`). Best-effort BullMQ remove, marks the job `failed` with `EXPORT_CANCELLED`, restores `export_*` from the enqueue snapshot (or all `null`). **200** with public recording + `jobId`. **409 `EXPORT_NOT_IN_PROGRESS`** when nothing to cancel. Worker treats cancel like supersession (no further `export_*` writes).
+
+Errors: `404`, `409 VIDEO_NOT_AVAILABLE` (no source video), `409 TRANSCRIPT_REQUIRED` when `burnSubtitles: true` and there are no transcript segments. Never returns `exportStorageKey`.
+
+Editor header: **Export** (confirm dialog sends `force: true`) → poll → **Cancel** while in flight → **Download** when `exportStatus === ready` and `exportVideoUrl` is a valid HTTPS Filestack URL. Failed exports show a destructive Export control and dialog message. Download uses the client Filestack helper (same as clips).
+
+```json
+{
+  "id": 10,
+  "projectId": 2,
+  "title": "Ep. 14",
+  "originalFilename": "ep14.mp4",
+  "durationMs": 3600000,
+  "width": 1920,
+  "height": 1080,
+  "status": "ready",
+  "videoUrl": "https://cdn.filestackcontent.com/HANDLE",
+  "audioUrl": "https://cdn.filestackcontent.com/AUDIO",
+  "thumbnailUrl": "https://cdn.filestackcontent.com/THUMB",
+  "exportStatus": "queued",
+  "exportAspectRatio": "9:16",
+  "exportFitMode": "fit",
+  "exportBurnSubtitles": true,
+  "exportVideoUrl": null,
+  "exportThumbnailUrl": null,
+  "jobId": 42,
+  "createdAt": "2026-08-13T08:00:00.000Z",
+  "updatedAt": "2026-08-13T08:00:00.000Z"
 }
 ```
 
@@ -347,14 +405,18 @@ Errors: `404` recording/hook, `400 INVALID_HOOK_RANGE`, `409 VIDEO_NOT_AVAILABLE
 
 ### Clips — `GET /api/clips`, `GET /api/clips/:id`
 
-**No `storageKey`, no signed URL, no `caption`.** Playback URL is `videoUrl` (`null` until render finishes). Poster is `thumbnailUrl` (`null` until Filestack/FFmpeg thumb is stored). `hookId` is `null` when the clip was not created from a hook. `ratio` is derived (`9:16` \| `1:1` \| `16:9`) and **omitted** if recording width/height are null. Status: `queued` \| `rendering` \| `ready` \| `failed`.
+**No `storageKey`, no signed URL, no `caption`.** Playback URL is `videoUrl` (`null` until render finishes). Poster is `thumbnailUrl` (`null` until Filestack/FFmpeg thumb is stored). `hookId` is `null` when the clip was not created from a hook. `aspectRatio` / `ratio` is the **export target** (`9:16` \| `1:1` \| `16:9`). `fitMode` is `fit` (full frame + blur pad, default) or `fill` (center crop). `burnSubtitles` is whether captions were burned in. Status: `queued` \| `rendering` \| `ready` \| `failed`. Optional `socialTitle` / `socialDescription` are AI share copy (null until generated).
 
-`POST /api/clips` creates a clip from an owned recording time range (prompt search uses padded `clipStartMs` / `clipEndMs`, `hookId` omitted). Hook export remains `POST /recordings/:id/hooks/:hookId/export`. Optional `voiceover: { enabled, voiceId, titleText?, ctaText?, placement: "pre"|"duck" }` on create/export mixes AI Speak audio onto the render. Stock voices: `GET /api/voices`.
+`POST /api/clips` creates a clip from an owned recording time range (prompt search uses padded `clipStartMs` / `clipEndMs`, `hookId` omitted). Optional `aspectRatio` (default `9:16`), `fitMode` (default `fit`), `burnSubtitles` (default `true`), and `voiceover: { enabled, voiceId, titleText?, ctaText?, placement: "pre"|"duck" }`. Hook export remains `POST /recordings/:id/hooks/:hookId/export`. Stock voices: `GET /api/voices`.
+
+`POST /api/clips/:id/social-copy` (ready clips only) generates and persists `socialTitle` + `socialDescription` for human-initiated sharing. **409** `CLIP_NOT_READY` or `TRANSCRIPT_REQUIRED`. Share UI edits the copy then copies title + description + HTTPS `videoUrl` (not auto-posting).
 
 ```json
 {
   "id": 1,
   "title": "The roadmap was never a plan",
+  "socialTitle": "The roadmap was never a plan",
+  "socialDescription": "A sharp take on why roadmaps fail — and what to do instead.",
   "recordingId": 10,
   "hookId": 4,
   "projectId": 2,
@@ -363,6 +425,9 @@ Errors: `404` recording/hook, `400 INVALID_HOOK_RANGE`, `409 VIDEO_NOT_AVAILABLE
   "startMs": 252000,
   "endMs": 293000,
   "status": "ready",
+  "aspectRatio": "9:16",
+  "fitMode": "fit",
+  "burnSubtitles": true,
   "subtitleStyle": "bold_mint",
   "videoUrl": "https://cdn.filestackcontent.com/HANDLE",
   "thumbnailUrl": "https://cdn.filestackcontent.com/THUMB",
@@ -374,9 +439,14 @@ Map to mock `ClipSummary` in the UI: `projectLabel` ← `projectName` + `recordi
 
 ### Editor + clips UI
 
-- Editor hook card: **Cut clip** opens an optional AI voiceover dialog, then export; poll `GET /clips/:id` while `queued` / `rendering`. When `status === ready` and `videoUrl` is set, show the **download icon** only.
+
+- Editor hook/moment **Cut clip**: confirm aspect + burn, then optional AI voiceover dialog; export with both. Poll `GET /clips/:id` while `queued` / `rendering`.
 - Transcript: **Edit** a segment → save text (`PATCH …/segments/:segmentId`) and/or **Apply voice** (`POST …/overdub` + poll `GET …/transcript/overdub`). On success, reload recording `videoUrl` (source audio was replaced).
-- Clips page: list/filter via `GET /clips` + `GET /clips/filters`. Cards use a **4:3** poster (`thumbnailUrl` when present); **Download** when `ready` + `videoUrl`. **Delete** (confirm dialog) calls `DELETE /clips/:id` for any status.
+- Editor header: **AI voiceover** applies Speak mix to the full source recording (`POST /recordings/:id/voiceover`); **Export** remains full-recording aspect/burn export.
+
+- Player aspect chips (`9:16` default, `1:1`, `16:9`) frame preview: **Fit** = `object-contain` + blurred backdrop; **Fill** = `object-cover`. Default Fit for vertical/square. **Cut clip** opens a confirm with aspect chips plus **Fit (blur)** / **Fill (crop)** (“Keep full frame” vs “Zoom / crop”), then calls export/`createClip` with `aspectRatio` + `fitMode` + `burnSubtitles: true`.
+- Editor hook card: **Cut clip** until the hook has no ready `videoUrl`; poll `GET /clips/:id` while `queued` / `rendering`. When `status === ready` and `videoUrl` is set, show the **download icon** only.
+- Clips page: list/filter via `GET /clips` + `GET /clips/filters`. Cards use a **4:3** poster (`thumbnailUrl` when present); **Download** when `ready` + `videoUrl`. **Share** opens the share modal (Generate/Regenerate social title + description via `POST /clips/:id/social-copy`, then copy/share). **Delete** (confirm dialog) calls `DELETE /clips/:id` for any status.
 - Download fetches `videoUrl` in the browser (HTTPS Filestack CDN only, `credentials: 'omit'`). Show a loading state while the file is saving. Signed `GET /clips/:id/download` is still unimplemented.
 
 ### Delete — `DELETE /api/projects/:id`, `/api/clips/:id`, `/api/recordings/:id`

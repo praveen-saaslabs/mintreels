@@ -1,13 +1,4 @@
-import {
-  Body,
-  Controller,
-  Get,
-  HttpCode,
-  Param,
-  ParseIntPipe,
-  Post,
-  UseGuards,
-} from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, Param, ParseIntPipe, Post, UseGuards } from '@nestjs/common';
 import {
   ApiAcceptedResponse,
   ApiBadRequestResponse,
@@ -19,24 +10,26 @@ import {
   ApiOperation,
   ApiParam,
   ApiTags,
+  ApiTooManyRequestsResponse,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
-import { ClipStatus } from '@mintreels/schema';
-import { AuthGuard } from '../auth/auth.guard';
-import { CurrentUser } from '../auth/current-user.decorator';
-import type { RequestUser } from '../auth/auth.types';
-import { ZodValidationPipe } from '../common/zod-validation.pipe';
-import { ClipsService } from '../clips/clips.service';
+import { ClipFitMode, ClipRatio, ClipStatus } from '@mintreels/schema';
+import { IdentityGuard } from '../guest/identity.guard';
+import { GuestRateLimitGuard, RateLimit } from '../guest/guest-rate-limit.guard';
+import { CurrentActor } from '../guest/current-actor.decorator';
+import { ownership, type RequestActor } from '../auth/auth.types';
 import {
   exportHookClipRequestSchema,
   type ExportHookClipRequest,
 } from '../clips/clips.dto';
+import { ClipsService } from '../clips/clips.service';
+import { ZodValidationPipe } from '../common/zod-validation.pipe';
 import { HooksService } from './hooks.service';
 
 @ApiTags('Hooks')
 @ApiCookieAuth('auth_token')
 @ApiUnauthorizedResponse({ description: 'UNAUTHORIZED' })
-@UseGuards(AuthGuard)
+@UseGuards(IdentityGuard, GuestRateLimitGuard)
 @Controller('api/recordings')
 export class HooksController {
   constructor(
@@ -72,22 +65,41 @@ export class HooksController {
   })
   @ApiNotFoundResponse({ description: 'Recording not found' })
   @Get(':id/hooks')
-  listByRecordingId(@CurrentUser() user: RequestUser, @Param('id', ParseIntPipe) id: number) {
-    return this.hooksService.listByRecordingId(id, user.id);
+  listByRecordingId(@CurrentActor() actor: RequestActor, @Param('id', ParseIntPipe) id: number) {
+    return this.hooksService.listByRecordingId(id, ownership(actor));
   }
 
   @ApiOperation({ summary: 'Trigger AI hook generation for a recording' })
   @ApiParam({ name: 'id', type: Number })
   @ApiAcceptedResponse({ description: 'Hook generation job enqueued' })
+  @ApiTooManyRequestsResponse({ description: 'RATE_LIMITED' })
   @ApiNotFoundResponse({ description: 'Recording not found' })
+  @RateLimit('ai-generations')
   @Post(':id/hooks/generate')
-  generate(@CurrentUser() user: RequestUser, @Param('id', ParseIntPipe) id: number) {
-    return this.hooksService.generate(id, user.id);
+  generate(@CurrentActor() actor: RequestActor, @Param('id', ParseIntPipe) id: number) {
+    return this.hooksService.generate(id, ownership(actor));
   }
 
   @ApiOperation({ summary: 'Export a clip from a hook time range' })
   @ApiParam({ name: 'id', type: Number })
   @ApiParam({ name: 'hookId', type: Number })
+  @ApiBody({
+    required: false,
+    schema: {
+      example: {
+        aspectRatio: ClipRatio.Vertical,
+        fitMode: ClipFitMode.Fit,
+        burnSubtitles: true,
+        voiceover: {
+          enabled: true,
+          voiceId: 'stock_dorit_en_us',
+          titleText: 'The roadmap was never a plan',
+          ctaText: 'Follow for more product stories',
+          placement: 'duck',
+        },
+      },
+    },
+  })
   @ApiAcceptedResponse({
     description: 'Clip row created or reused; render job enqueued when needed',
     schema: {
@@ -102,37 +114,28 @@ export class HooksController {
         startMs: 252000,
         endMs: 293000,
         status: ClipStatus.Queued,
+        aspectRatio: ClipRatio.Vertical,
+        fitMode: ClipFitMode.Fit,
+        burnSubtitles: true,
         subtitleStyle: null,
+        voiceover: null,
         videoUrl: null,
         thumbnailUrl: null,
+        ratio: ClipRatio.Vertical,
       },
     },
   })
   @ApiBadRequestResponse({ description: 'INVALID_HOOK_RANGE' })
   @ApiConflictResponse({ description: 'VIDEO_NOT_AVAILABLE' })
   @ApiNotFoundResponse({ description: 'Recording or hook not found' })
-  @ApiBody({
-    required: false,
-    schema: {
-      example: {
-        voiceover: {
-          enabled: true,
-          voiceId: 'stock_dorit_en_us',
-          titleText: 'The roadmap was never a plan',
-          ctaText: 'Follow for more product stories',
-          placement: 'duck',
-        },
-      },
-    },
-  })
   @HttpCode(202)
   @Post(':id/hooks/:hookId/export')
   exportFromHook(
-    @CurrentUser() user: RequestUser,
+    @CurrentActor() actor: RequestActor,
     @Param('id', ParseIntPipe) id: number,
     @Param('hookId', ParseIntPipe) hookId: number,
     @Body(new ZodValidationPipe(exportHookClipRequestSchema)) body: ExportHookClipRequest,
   ) {
-    return this.clipsService.exportFromHook(id, hookId, user.id, body);
+    return this.clipsService.exportFromHook(id, hookId, ownership(actor), body);
   }
 }

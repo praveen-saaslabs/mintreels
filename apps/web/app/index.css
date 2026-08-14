@@ -695,6 +695,110 @@
   animation-delay: 0.3s;
 }
 
+/* Clip ready — shake + glare pulse, then persistent mint pinpoint */
+@keyframes clip-ready-glare {
+  0% {
+    transform: translateX(-130%) skewX(-14deg);
+    opacity: 0;
+  }
+  18% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(230%) skewX(-14deg);
+    opacity: 0;
+  }
+}
+
+@keyframes clip-ready-shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  12% {
+    transform: translateX(-3.5px);
+  }
+  28% {
+    transform: translateX(3.5px);
+  }
+  44% {
+    transform: translateX(-2.5px);
+  }
+  60% {
+    transform: translateX(2px);
+  }
+  76% {
+    transform: translateX(-1px);
+  }
+  90% {
+    transform: translateX(0.5px);
+  }
+}
+
+@keyframes clip-ready-ring-pulse {
+  0% {
+    box-shadow:
+      0 0 0 0 color-mix(in oklch, var(--mr-acc) 0%, transparent),
+      0 0 0 0 transparent;
+  }
+  45% {
+    box-shadow:
+      0 0 0 3px color-mix(in oklch, var(--mr-acc) 38%, transparent),
+      0 0 18px 2px color-mix(in oklch, var(--mr-acc) 22%, transparent);
+  }
+  100% {
+    box-shadow:
+      0 0 0 1.5px color-mix(in oklch, var(--mr-acc) 42%, transparent),
+      0 0 10px 0 color-mix(in oklch, var(--mr-acc) 14%, transparent);
+  }
+}
+
+@utility clip-ready-attention {
+  position: relative;
+  isolation: isolate;
+  animation: clip-ready-shake 0.5s cubic-bezier(0.36, 0.07, 0.19, 0.97);
+}
+
+.clip-ready-attention::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+  border-radius: inherit;
+  background: linear-gradient(
+    105deg,
+    transparent 32%,
+    color-mix(in oklch, var(--glass-border) 55%, transparent) 46%,
+    color-mix(in oklch, oklch(1 0 0) 42%, transparent) 50%,
+    color-mix(in oklch, var(--glass-border) 40%, transparent) 54%,
+    transparent 68%
+  );
+  width: 55%;
+  animation: clip-ready-glare 1.15s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Persistent accent ring so the card stays findable after looking away */
+@utility clip-ready-highlight {
+  position: relative;
+  isolation: isolate;
+  border-color: color-mix(in oklch, var(--mr-acc) 72%, var(--glass-border)) !important;
+  box-shadow:
+    0 0 0 1.5px color-mix(in oklch, var(--mr-acc) 48%, transparent),
+    0 0 14px 1px color-mix(in oklch, var(--mr-acc) 18%, transparent),
+    var(--glass-shadow);
+}
+
+.clip-ready-highlight::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  z-index: 2;
+  pointer-events: none;
+  border-radius: inherit;
+  animation: clip-ready-ring-pulse 1.15s ease-out 2;
+}
+
 @media (prefers-reduced-transparency: reduce) {
   .glass,
   .glass-elevated,
@@ -728,6 +832,19 @@
 
 @media (prefers-reduced-motion: reduce) {
   .glass-materialize {
+    animation: none;
+  }
+
+  .clip-ready-attention {
+    animation: none;
+  }
+
+  .clip-ready-attention::after {
+    display: none;
+    animation: none;
+  }
+
+  .clip-ready-highlight::before {
     animation: none;
   }
 

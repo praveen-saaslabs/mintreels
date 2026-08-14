@@ -1,6 +1,7 @@
 FROM node:22-alpine
 WORKDIR /app
-RUN apk add --no-cache ffmpeg
+# ffmpeg + libass for burn-in; DejaVu fonts required (libass silently skips glyphs with no font)
+RUN apk add --no-cache ffmpeg fontconfig font-dejavu
 RUN corepack enable
 # No dependency install here: the repo is bind-mounted at runtime and each service
 # installs only its own workspace slice (see docker-compose.yml). Keeping the image

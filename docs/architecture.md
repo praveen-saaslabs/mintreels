@@ -535,8 +535,6 @@ export interface SpeechProvider {
 }
 ```
 
-## VoiceProvider
-
 ```ts
 export interface VoiceProvider {
   listVoices(): Promise<Voice[]>;
@@ -894,13 +892,30 @@ When the user selects a hook (Cut clip):
 POST /api/recordings/:id/hooks/:hookId/export
 ```
 
-The API looks up the recording video (`storageKey`) and the hook `startMs` / `endMs`, inserts a `clips` row (`queued`, `recordingId`, `hookId`), and enqueues `render-clip`. Optional `voiceover` on the export/create body stores title/CTA + stock `voiceId`; the worker synthesizes via `VoiceProvider` (PyAI Speak) and FFmpeg-mixes onto the trimmed clip (`duck` or `pre`). It uploads the MP4 to Filestack, then asks Filestack for a video thumbnail (`video_convert=preset:thumbnail`, FFmpeg frame upload as fallback). It stores `clip.storageKey` + `clip.thumbnailStorageKey` and sets `status: ready` (or `failed`). The UI polls `GET /api/clips/:id` and, when ready, downloads via public `videoUrl` and shows `thumbnailUrl` (HTTPS Filestack CDN).
+The API looks up the recording video (`storageKey`) and the hook `startMs` / `endMs`, inserts a `clips` row (`queued`, `recordingId`, `hookId`, `aspectRatio` default `9:16`, `fitMode` default `fit`, `burnSubtitles` default `true`), and enqueues `render-clip` with those fields. The worker downloads the source, then FFmpeg trims + aspect framing: **Fit** (default) scales to fit and pads with a blurred copy of the same frame (layout-agnostic — preserves the full source); **Fill** center-crops then scales (opt-in). Optionally burns overlapping transcript segments as WebVTT. It uploads the MP4 to Filestack, then asks Filestack for a video thumbnail (`video_convert=preset:thumbnail` at the clip midpoint, FFmpeg frame upload as fallback). It stores `clip.storageKey` + `clip.thumbnailStorageKey` and sets `status: ready` (or `failed`). The UI polls `GET /api/clips/:id` and, when ready, downloads via public `videoUrl` and shows `thumbnailUrl` (HTTPS Filestack CDN).
 
-Transcript overdub: `PATCH /api/recordings/:id/transcript/segments/:segmentId` updates text; `POST …/overdub` with `{ voiceId }` enqueues `apply-overdub`, which synthesizes the line and replaces that audio range on the **source recording** (video timing fixed). Serialize per recording (`OVERDUB_IN_PROGRESS` if one is already queued/running).
+---
+
+
+Optional `voiceover` on the export/create body stores title/CTA + stock `voiceId`; after aspect/trim/burn, the worker synthesizes via `VoiceProvider` (PyAI Speak) and FFmpeg-mixes onto the clip (`duck` or `pre`).
+
+Transcript overdub: `PATCH /api/recordings/:id/transcript/segments/:segmentId` updates text; `POST …/overdub` with `{ voiceId }` enqueues `apply-overdub`, which synthesizes the line and replaces that audio range on the **source recording** (video timing fixed). Serialize per recording (`OVERDUB_IN_PROGRESS` if one is already queued/running). Recording-level voiceover: `POST /api/recordings/:id/voiceover` enqueues `apply-recording-voiceover`.
+
+# 23b. Full recording export
+
+When the user exports the whole recording from the editor:
+
+```text
+POST /api/recordings/:id/export
+```
+
+Optional body matches clip export (`aspectRatio` default `9:16`, `fitMode` default `fit`, `burnSubtitles` default `true`, optional `force`). The API snapshots current `export_*` into job metadata (`previousExport`), then stores options on the `recordings` row (`exportStatus: queued`, …), inserts a `jobs` row (`EXPORT_RECORDING`), and enqueues `export-recording`. The worker downloads the source, resolves duration (`durationMs` or ffprobe), optionally builds ASS for the full timeline, then calls the same `renderClipVideo` path (`startMs: 0` … `endMs`). It uploads the MP4 + thumbnail to Filestack and sets `exportStorageKey` / `exportThumbnailStorageKey` / `exportStatus: ready`. Only the latest `EXPORT_RECORDING` job id may write `export_*` (superseded or user-cancelled workers no-op success). `POST /api/recordings/:id/export/cancel` removes the BullMQ job when possible, marks the job `EXPORT_CANCELLED`, and restores `export_*` from `previousExport`. Public GETs expose `exportVideoUrl` / `exportThumbnailUrl` only — never storage keys. Soft-delete mid-job → no-op success; Filestack objects stay until a later purge. Re-export with different options or `force: true` overwrites the latest export columns.
+
+---
 
 Prompt ask (`POST /api/recordings/:id/moments/ask`) routes to transcript Q&A, clip candidates, or a funny off-topic reject. Direct search remains `POST /api/recordings/:id/moments/search`. **Cut clip** uses `POST /api/clips` with the padded `clipStartMs` / `clipEndMs` (`hookId` null). Signed `GET /api/clips/:id/download` remains unimplemented (501).
 
-MVP render is **trim + encode + optional Speak voiceover mix + upload + thumbnail**. Crop, resize, subtitle burn-in, and VTT sidecar are future FFmpeg work.
+MVP render is **trim + aspect framing (fit/fill) + optional ASS caption burn-in + optional Speak voiceover mix + encode + upload + thumbnail**. Sidecar VTT download remains unimplemented.
 
 Example conceptual input (legacy / generic create — not the product path yet):
 
@@ -1100,6 +1115,8 @@ POST /api/recordings/:id/add-to-global-kb
 GET  /api/recordings/:id/hooks
 POST /api/recordings/:id/hooks/generate
 POST /api/recordings/:id/hooks/:hookId/export
+POST /api/recordings/:id/export
+POST /api/recordings/:id/export/cancel
 POST /api/recordings/:id/moments/search
 POST /api/recordings/:id/moments/ask
 ```
@@ -1111,11 +1128,14 @@ POST   /api/clips
 GET    /api/clips
 GET    /api/clips/filters
 GET    /api/clips/:id
+POST   /api/clips/:id/social-copy
 DELETE /api/clips/:id
 GET    /api/clips/:id/download
 ```
 
 Product clip create is hook export (`POST /api/recordings/:id/hooks/:hookId/export`) or prompt-range `POST /api/clips`. `GET /api/clips/:id/download` is still 501; the UI downloads `videoUrl` from `GET /api/clips/:id`.
+
+`POST /api/clips/:id/social-copy` generates a share title + description via `LLMProvider.generateSocialCopy` from the clip’s transcript excerpt (and optional hook context), persists `socialTitle` / `socialDescription` on the clip, and returns the public clip. Ready clips only; human-initiated share copy — not automated social posting.
 
 `DELETE /api/clips/:id` is tenant-scoped (**204**). Soft-deletes the clip row (`deleted_at`). Does not delete the hook. Filestack video + thumbnail stay until a later purge.
 
@@ -1288,7 +1308,8 @@ export interface StorageProvider {
   ): Promise<void>;
 
   createVideoThumbnail(
-    sourceKey: string
+    sourceKey: string,
+    options?: { atMs?: number }
   ): Promise<StoredObject>;
 }
 ```
@@ -1545,6 +1566,9 @@ mintreels/
 │       │   │   ├── summarize.ts
 │       │   │   ├── generate-hooks.ts
 │       │   │   ├── sync-knowledge-base.ts
+│       │   │   ├── export-recording.ts
+│       │   │   ├── apply-overdub.ts
+│       │   │   ├── apply-recording-voiceover.ts
 │       │   │   └── render-clip.ts
 │       │   │
 │       │   ├── queues/
@@ -1730,7 +1754,7 @@ Return { id, jobId }
 
 Client polls `GET /api/recordings/:id/processing`. Worker:
 
-Best-effort recording thumbnail (Filestack `video_convert=preset:thumbnail`, FFmpeg frame upload as fallback) runs at ingest start and again after audio extraction has a local video. Failure never fails ingest. Stored as `recordings.thumbnail_storage_key`; public `thumbnailUrl` on recording/processing/project GETs.
+Best-effort recording thumbnail (Filestack `video_convert=preset:thumbnail` at the video midpoint, FFmpeg frame upload as fallback) runs after a local video is available (or when `durationMs` is known). Ingest start skips the poster when duration is unknown so a 1s blank frame is not persisted. Failure never fails ingest. Stored as `recordings.thumbnail_storage_key`; public `thumbnailUrl` on recording/processing/project GETs.
 
 ```text
 VIDEO_INGEST (single BullMQ job, sequential job_steps)
