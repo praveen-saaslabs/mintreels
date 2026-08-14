@@ -6,13 +6,15 @@ import { mapHookCandidates, weightedHookScore, type HookScoreWeights } from './h
 import { buildSemanticWindows } from './semantic-windows';
 
 const WEIGHTS: HookScoreWeights = {
-  quality: 0.3,
-  standalone: 0.2,
-  curiosity: 0.15,
-  emotional: 0.1,
-  specificity: 0.1,
-  shareability: 0.1,
-  novelty: 0.05,
+  quality: 0.22,
+  standalone: 0.15,
+  curiosity: 0.12,
+  emotional: 0.08,
+  specificity: 0.08,
+  shareability: 0.08,
+  novelty: 0.04,
+  controversy: 0.12,
+  headline: 0.11,
 };
 
 /** 12 segments of 5s each => 60s of transcript, ids 101..112. */
@@ -35,6 +37,8 @@ function scores(value: number): HookScoreWeights {
     specificity: value,
     shareability: value,
     novelty: value,
+    controversy: value,
+    headline: value,
   };
 }
 
@@ -93,7 +97,7 @@ test('segment ids resolve to transcript milliseconds and context text', () => {
       maxCandidates: 50,
       provider: 'openai',
       model: 'gpt-4o-mini',
-      promptVersion: 'hooks-v1',
+      promptVersion: 'hooks-v2',
     },
   );
 
@@ -105,8 +109,10 @@ test('segment ids resolve to transcript milliseconds and context text', () => {
   assert.equal(candidate?.endSegmentId, 107);
   assert.equal(candidate?.contextText, 'line 3 line 4 line 5 line 6 line 7');
   assert.equal(candidate?.hookType, HookType.Lesson);
-  assert.equal(candidate?.promptVersion, 'hooks-v1');
+  assert.equal(candidate?.promptVersion, 'hooks-v2');
   assert.equal(candidate?.dimensions?.quality, 0.8);
+  assert.equal(candidate?.dimensions?.controversy, 0.8);
+  assert.equal(candidate?.dimensions?.headline, 0.8);
   assertClose(candidate?.score, 0.8);
 });
 
@@ -119,9 +125,11 @@ test('weighted score follows the configured weights and stays 0..1', () => {
     specificity: 0,
     shareability: 0,
     novelty: 0,
+    controversy: 0,
+    headline: 0,
   };
-  assertClose(weightedHookScore(dimensions, WEIGHTS), 0.3);
-  assertClose(weightedHookScore(dimensions, { ...WEIGHTS, quality: 1 }), 1 / 1.7);
+  assertClose(weightedHookScore(dimensions, WEIGHTS), 0.22);
+  assertClose(weightedHookScore(dimensions, { ...WEIGHTS, quality: 1 }), 1 / 1.78);
   assert.equal(weightedHookScore(dimensions, scores(0)), 0);
 });
 
@@ -174,7 +182,7 @@ test('unknown segment ids, zero-length spans, and duplicates are dropped; rankin
       maxCandidates: 1,
       provider: 'openai',
       model: 'gpt-4o-mini',
-      promptVersion: 'hooks-v1',
+      promptVersion: 'hooks-v2',
     },
   );
 

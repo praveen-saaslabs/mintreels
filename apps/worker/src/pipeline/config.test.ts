@@ -16,6 +16,8 @@ const HOOK_ENV_KEYS = [
   EnvKey.HookWeightSpecificity,
   EnvKey.HookWeightShareability,
   EnvKey.HookWeightNovelty,
+  EnvKey.HookWeightControversy,
+  EnvKey.HookWeightHeadline,
 ] as const;
 
 function snapshotEnv(): Record<string, string | undefined> {
@@ -50,13 +52,15 @@ test('loadHookConfig uses documented defaults', () => {
     assert.equal(config.preRollMs, 3000);
     assert.equal(config.postRollMs, 5000);
     assert.deepEqual(config.weights, {
-      quality: 0.3,
-      standalone: 0.2,
-      curiosity: 0.15,
-      emotional: 0.1,
-      specificity: 0.1,
-      shareability: 0.1,
-      novelty: 0.05,
+      quality: 0.22,
+      standalone: 0.15,
+      curiosity: 0.12,
+      emotional: 0.08,
+      specificity: 0.08,
+      shareability: 0.08,
+      novelty: 0.04,
+      controversy: 0.12,
+      headline: 0.11,
     });
     const weightSum = Object.values(config.weights).reduce((sum, value) => sum + value, 0);
     assert.ok(Math.abs(weightSum - 1) < 1e-9);
@@ -80,6 +84,8 @@ test('loadHookConfig parses overrides', () => {
     process.env[EnvKey.HookWeightSpecificity] = '0';
     process.env[EnvKey.HookWeightShareability] = '0';
     process.env[EnvKey.HookWeightNovelty] = '0';
+    process.env[EnvKey.HookWeightControversy] = '0';
+    process.env[EnvKey.HookWeightHeadline] = '0';
     const config = loadHookConfig();
     assert.equal(config.similarityThreshold, 0.9);
     assert.equal(config.maxCandidates, 20);
@@ -88,6 +94,8 @@ test('loadHookConfig parses overrides', () => {
     assert.equal(config.postRollMs, 2000);
     assert.equal(config.weights.quality, 1);
     assert.equal(config.weights.novelty, 0);
+    assert.equal(config.weights.controversy, 0);
+    assert.equal(config.weights.headline, 0);
   } finally {
     restoreEnv(snapshot);
   }
@@ -102,7 +110,7 @@ test('loadHookConfig ignores invalid values', () => {
     const config = loadHookConfig();
     assert.equal(config.similarityThreshold, 0.85);
     assert.equal(config.maxCandidates, 50);
-    assert.equal(config.weights.quality, 0.3);
+    assert.equal(config.weights.quality, 0.22);
   } finally {
     restoreEnv(snapshot);
   }

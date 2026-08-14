@@ -31,7 +31,7 @@ TRAILING (sequential, soft-fail → Partial)
 ```
 
 - Summary + action items: OpenAI-compatible LLM with structured JSON (`LLM_PROVIDER=openai|nvidia`).
-- Hooks: **LLM discovery** on the OpenAI-compatible adapter (Part 2) — deterministic 20–60s semantic windows, `hooks-v1` prompt, segment IDs resolved to milliseconds server-side, weighted dimension scoring. The extractive heuristic (`packages/ai/src/extractive-hooks.ts`) is the fallback; the PyAI adapter still uses it directly.
+- Hooks: **LLM discovery** on the OpenAI-compatible adapter (Part 2) — deterministic 20–60s semantic windows, `hooks-v2` prompt, segment IDs resolved to milliseconds server-side, weighted dimension scoring. The extractive heuristic (`packages/ai/src/extractive-hooks.ts`) is the fallback; the PyAI adapter still uses it directly.
 - `HOOK_EMBEDDINGS` embeds hooks (OpenAI-compatible) and upserts to Qdrant (Part 3).
 - `CLIP_RECOMMENDATIONS` runs dedup → diversity ranking → clip boundaries (Part 4).
 
@@ -141,7 +141,7 @@ New columns (nullable unless noted):
 - `start_segment_id`, `end_segment_id`
 - `hook_type` (HookType enum)
 - `context_text`
-- dimension scores 0..1: `quality_score`, `standalone_score`, `curiosity_score`, `emotional_score`, `specificity_score`, `shareability_score`, `novelty_score`
+- dimension scores 0..1: `quality_score`, `standalone_score`, `curiosity_score`, `emotional_score`, `specificity_score`, `shareability_score`, `novelty_score`, `controversy_score`, `headline_score`
 - `score` — final weighted score, still 0..1
 - `status` — HookStatus, `VARCHAR(32)` default `candidate` (MySQL 8.4 rejects `TEXT` defaults)
 - `embedding_status` — EmbeddingStatus, `VARCHAR(32)` default `pending`
@@ -179,13 +179,15 @@ Weights from `loadHookConfig()` (not hardcoded in business logic):
 
 ```text
 finalScore =
-  0.30 * quality +
-  0.20 * standalone +
-  0.15 * curiosity +
-  0.10 * emotional +
-  0.10 * specificity +
-  0.10 * shareability +
-  0.05 * novelty
+  0.22 * quality +
+  0.15 * standalone +
+  0.12 * curiosity +
+  0.08 * emotional +
+  0.08 * specificity +
+  0.08 * shareability +
+  0.04 * novelty +
+  0.12 * controversy +
+  0.11 * headline
 ```
 
 All dimensions stored 0..1. Configurable via `HOOK_WEIGHT_*`.
@@ -240,7 +242,7 @@ Until embeddings/chat are in the PyAI OpenAPI contract: use OpenAI-compatible LL
 ### Part 2 — LLM hook discovery (shipped)
 
 - `packages/ai/src/semantic-windows.ts` — shortest segment-aligned run reaching 20s, never past 60s; short tail merges backwards
-- `packages/ai/src/prompts/hooks.prompt.ts` — `hooks-v1` system prompt, strict JSON schema (segment IDs, not timestamps), window payload builder
+- `packages/ai/src/prompts/hooks.prompt.ts` — `hooks-v2` system prompt, strict JSON schema (segment IDs, not timestamps), window payload builder
 - `packages/ai/src/hook-candidates.ts` — `HookCandidate`, response parsing, segment-ID→ms resolution, 0–10 → 0..1 normalisation, weighted score, `maxCandidates` cap
 - `packages/ai/src/llm-provider.ts` — `generateHooks(transcript, options)` returns `HookCandidate[]`
 - `OpenAICompatibleLLMProvider.generateHooks` calls the LLM; `generateExtractiveHooks` stays as fallback
@@ -310,13 +312,15 @@ HOOK_MAX_CANDIDATES=50
 HOOK_FINAL_COUNT=10
 CLIP_PREROLL_MS=3000
 CLIP_POSTROLL_MS=5000
-HOOK_WEIGHT_QUALITY=0.30
-HOOK_WEIGHT_STANDALONE=0.20
-HOOK_WEIGHT_CURIOSITY=0.15
-HOOK_WEIGHT_EMOTIONAL=0.10
-HOOK_WEIGHT_SPECIFICITY=0.10
-HOOK_WEIGHT_SHAREABILITY=0.10
-HOOK_WEIGHT_NOVELTY=0.05
+HOOK_WEIGHT_QUALITY=0.22
+HOOK_WEIGHT_STANDALONE=0.15
+HOOK_WEIGHT_CURIOSITY=0.12
+HOOK_WEIGHT_EMOTIONAL=0.08
+HOOK_WEIGHT_SPECIFICITY=0.08
+HOOK_WEIGHT_SHAREABILITY=0.08
+HOOK_WEIGHT_NOVELTY=0.04
+HOOK_WEIGHT_CONTROVERSY=0.12
+HOOK_WEIGHT_HEADLINE=0.11
 ```
 
 Read only through `EnvKey` + `loadHookConfig()` / provider factories. Do not scatter `process.env`.
