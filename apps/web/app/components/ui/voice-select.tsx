@@ -1,5 +1,6 @@
 import { Select } from '@base-ui/react/select';
-import { CheckIcon, ChevronDownIcon } from 'lucide-react';
+import { CheckIcon, ChevronDownIcon, SearchIcon } from 'lucide-react';
+import { useMemo, useState } from 'react';
 import type { VoiceOption } from '@/lib/api';
 import { cn } from '@/lib/utils';
 
@@ -30,7 +31,21 @@ export function VoiceSelect({
   onValueChange,
   onKeyDown,
 }: VoiceSelectProps) {
-  const items = voices.map((voice) => ({
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState('');
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (q === '') {
+      return voices;
+    }
+    return voices.filter((voice) => {
+      const hay = `${voice.name} ${voice.language ?? ''} ${voice.id}`.toLowerCase();
+      return hay.includes(q);
+    });
+  }, [voices, query]);
+
+  const items = filtered.map((voice) => ({
     value: voice.id,
     label: voiceLabel(voice),
   }));
@@ -38,6 +53,13 @@ export function VoiceSelect({
   return (
     <Select.Root
       value={value === '' ? null : value}
+      open={open}
+      onOpenChange={(next) => {
+        setOpen(next);
+        if (!next) {
+          setQuery('');
+        }
+      }}
       onValueChange={(next) => {
         if (typeof next === 'string' && next.length > 0) {
           onValueChange(next);
@@ -52,10 +74,10 @@ export function VoiceSelect({
         aria-label={ariaLabel}
         onKeyDown={onKeyDown}
         className={cn(
-          'flex w-full min-w-0 items-center justify-between gap-2 rounded-md border border-input bg-transparent text-left outline-none',
+          'glass-chip flex w-full min-w-0 items-center justify-between gap-2 rounded-xl text-left outline-none',
           'focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50',
           'disabled:cursor-not-allowed disabled:opacity-50',
-          size === 'xs' ? 'h-7 min-w-40 px-2 text-xs' : 'h-8 px-2 text-sm',
+          size === 'xs' ? 'h-7 min-w-40 px-2 text-xs' : 'h-9 px-2.5 text-sm',
           className,
         )}
       >
@@ -64,43 +86,93 @@ export function VoiceSelect({
           className="min-w-0 flex-1 truncate data-placeholder:text-muted-foreground"
         />
         <Select.Icon className="shrink-0 text-muted-foreground">
-          <ChevronDownIcon className={size === 'xs' ? 'size-3' : 'size-3.5'} aria-hidden />
+          <ChevronDownIcon
+            className={cn(
+              'transition-transform duration-200',
+              size === 'xs' ? 'size-3' : 'size-3.5',
+              open && 'rotate-180',
+            )}
+            aria-hidden
+          />
         </Select.Icon>
       </Select.Trigger>
 
       <Select.Portal>
         <Select.Positioner
           className="z-70 outline-none"
-          sideOffset={4}
+          sideOffset={6}
           alignItemWithTrigger={false}
         >
           <Select.Popup
             className={cn(
-              'origin-(--transform-origin) overflow-hidden rounded-md border border-border bg-popover text-popover-foreground shadow-md outline-none',
+              'glass-elevated origin-(--transform-origin) overflow-hidden rounded-2xl text-foreground outline-none',
+              'border border-[color-mix(in_oklch,var(--glass-border)_80%,transparent)]',
+              'shadow-(--glass-shadow-elevated)',
               'data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95',
               'data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95',
-              'w-(--anchor-width) min-w-48 max-w-80',
+              'w-[max(var(--anchor-width),14rem)] min-w-56 max-w-80',
             )}
           >
-            <Select.List className="max-h-[min(16rem,var(--available-height,16rem))] overflow-y-auto overscroll-contain p-1 outline-none">
-              {voices.map((voice) => (
-                <Select.Item
-                  key={voice.id}
-                  value={voice.id}
+            <div className="border-b border-[color-mix(in_oklch,var(--glass-border-subtle)_90%,transparent)] p-1.5">
+              <label className="relative block">
+                <SearchIcon
+                  className="pointer-events-none absolute top-1/2 left-2 size-3.5 -translate-y-1/2 text-muted-foreground"
+                  aria-hidden
+                />
+                <input
+                  type="search"
+                  value={query}
+                  placeholder="Search voices…"
+                  aria-label="Search voices"
+                  autoComplete="off"
                   className={cn(
-                    'grid cursor-default grid-cols-[1rem_1fr] items-center gap-2 rounded px-2 py-1.5 text-sm outline-none select-none',
-                    'data-highlighted:bg-muted data-highlighted:text-foreground',
-                    'data-disabled:pointer-events-none data-disabled:opacity-50',
+                    'h-8 w-full rounded-lg bg-transparent pr-2 pl-7 text-sm outline-none',
+                    'placeholder:text-muted-foreground',
+                    'focus-visible:ring-2 focus-visible:ring-ring/40',
                   )}
-                >
-                  <Select.ItemIndicator className="col-start-1 flex items-center justify-center">
-                    <CheckIcon className="size-3.5 text-mr-acc" aria-hidden />
-                  </Select.ItemIndicator>
-                  <Select.ItemText className="col-start-2 truncate">
-                    {voiceLabel(voice)}
-                  </Select.ItemText>
-                </Select.Item>
-              ))}
+                  onChange={(event) => setQuery(event.target.value)}
+                  onKeyDown={(event) => {
+                    // Keep typing in the filter without hijacking select keyboard nav for arrows.
+                    if (event.key === 'Escape') {
+                      return;
+                    }
+                    event.stopPropagation();
+                  }}
+                />
+              </label>
+            </div>
+
+            <Select.List className="max-h-[min(14rem,var(--available-height,14rem))] overflow-y-auto overscroll-contain p-1 outline-none">
+              {filtered.length === 0 ? (
+                <p className="px-2.5 py-3 text-center text-xs text-muted-foreground">
+                  No voices match
+                </p>
+              ) : (
+                filtered.map((voice) => (
+                  <Select.Item
+                    key={voice.id}
+                    value={voice.id}
+                    className={cn(
+                      'grid cursor-default grid-cols-[1rem_minmax(0,1fr)_auto] items-center gap-2 rounded-xl px-2 py-2 text-sm outline-none select-none',
+                      'data-highlighted:bg-[color-mix(in_oklch,var(--mr-acc)_12%,transparent)] data-highlighted:text-foreground',
+                      'data-selected:bg-[color-mix(in_oklch,var(--mr-acc)_10%,transparent)]',
+                      'data-disabled:pointer-events-none data-disabled:opacity-50',
+                    )}
+                  >
+                    <Select.ItemIndicator className="col-start-1 flex items-center justify-center">
+                      <CheckIcon className="size-3.5 text-mr-acc" aria-hidden />
+                    </Select.ItemIndicator>
+                    <Select.ItemText className="col-start-2 truncate font-medium">
+                      {voice.name}
+                    </Select.ItemText>
+                    {voice.language ? (
+                      <span className="col-start-3 rounded-md px-1.5 py-0.5 font-mono text-[10px] tracking-wide text-muted-foreground uppercase">
+                        {voice.language}
+                      </span>
+                    ) : null}
+                  </Select.Item>
+                ))
+              )}
             </Select.List>
           </Select.Popup>
         </Select.Positioner>

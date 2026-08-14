@@ -6,6 +6,12 @@ import { HookThumb } from '@/components/summary/hook-thumb';
 import { ShareClipModal } from '@/components/summary/share-clip-modal';
 import { buttonVariants } from '@/components/ui/button';
 import { ConfirmDeleteDialog } from '@/components/ui/confirm-delete-dialog';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { useClipDownload } from '@/hooks/use-clip-download';
 import { useClipReadyAttention } from '@/hooks/use-clip-ready-attention';
 import { useDeleteClip } from '@/hooks/use-delete-clip';
@@ -27,6 +33,26 @@ type HookCardProps = {
 
 function formatHookDuration(start: number, end: number): string {
   return `${Math.max(0, Math.round(end - start))}s`;
+}
+
+/** Pitch retention score (0..1) as a readable keep-watching strength. */
+function formatRetentionMatchLabel(score: number): string {
+  const pct = Math.round(Math.min(1, Math.max(0, score)) * 100);
+  return `${String(pct)}% match`;
+}
+
+function retentionScoreTooltip(score: number): string {
+  const pct = Math.round(Math.min(1, Math.max(0, score)) * 100);
+  return (
+    `Mint guessed how likely people are to keep watching this bit — a strong opening, ` +
+    `clear idea, emotion, and whether it feels shareable. ` +
+    `${String(pct)}% means “pretty sticky” — closer to 100% ranks higher on this list.`
+  );
+}
+
+function stopCardActivate(event: MouseEvent<HTMLElement>) {
+  event.preventDefault();
+  event.stopPropagation();
 }
 
 function cutClipLabel(status: EditorHookStatus, isExporting: boolean): string {
@@ -66,6 +92,8 @@ function DeleteClipButton({
 
 export function HookCard({ hook, sequenceLabel, selected, recordingId, onPreview }: HookCardProps) {
   const score = hook.score;
+  const matchLabel = score != null ? formatRetentionMatchLabel(score) : null;
+  const scoreTooltip = score != null ? retentionScoreTooltip(score) : null;
   const mediaSrc = useEditorStore((state) => state.mediaElement?.currentSrc);
   const storeSrc = useEditorStore((state) => state.video.src);
   const clearHookClip = useEditorStore((state) => state.clearHookClip);
@@ -177,10 +205,31 @@ export function HookCard({ hook, sequenceLabel, selected, recordingId, onPreview
             <p className="line-clamp-2 text-[13px] font-semibold leading-snug text-pretty text-foreground">
               {hook.title}
             </p>
-            {score != null ? (
-              <span className="shrink-0 pt-0.5 font-mono text-xs tabular-nums text-[var(--mr-acc)]">
-                {score.toFixed(2)}
-              </span>
+            {matchLabel != null && scoreTooltip != null ? (
+              <TooltipProvider delay={200}>
+                <Tooltip>
+                  <TooltipTrigger
+                    render={
+                      <button
+                        type="button"
+                        aria-label={`${matchLabel}. How this score is calculated`}
+                        className="glass-chip shrink-0 cursor-help rounded-full px-1.5 py-0.5 text-[10px] font-medium tabular-nums text-mr-acc"
+                        onClick={stopCardActivate}
+                        onPointerDown={stopCardActivate}
+                      />
+                    }
+                  >
+                    {matchLabel}
+                  </TooltipTrigger>
+                  <TooltipContent
+                    side="left"
+                    align="start"
+                    className="max-w-[240px] text-left text-pretty leading-relaxed"
+                  >
+                    {scoreTooltip}
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             ) : null}
           </div>
           <div className="flex items-center justify-between gap-2">

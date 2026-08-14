@@ -22,14 +22,14 @@ export const clipRatioSchema = z.enum([
 
 export const clipFitModeSchema = z.enum([ClipFitMode.Fit, ClipFitMode.Fill]);
 
-export const clipVoiceoverPlacementSchema = z.enum(['pre', 'duck']);
+export const clipVoiceoverPlacementSchema = z.enum(['pre', 'post']);
 
 export const clipVoiceoverSchema = z.object({
   enabled: z.boolean(),
   voiceId: z.string().min(1),
   titleText: z.string().min(1).max(500).optional(),
   ctaText: z.string().min(1).max(500).optional(),
-  placement: clipVoiceoverPlacementSchema.default('duck'),
+  placement: clipVoiceoverPlacementSchema.default('pre'),
 });
 
 export const clipRowSchema = z

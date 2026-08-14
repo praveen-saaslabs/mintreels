@@ -117,6 +117,10 @@ function voiceoverScript(voiceover: ClipVoiceover, fallbackTitle: string): strin
   return cta;
 }
 
+function resolveVoiceoverPlacement(placement: string | undefined): 'pre' | 'post' {
+  return placement === 'post' ? 'post' : 'pre';
+}
+
 function ttsCacheKey(voiceId: string, text: string): string {
   const hash = createHash('sha256').update(`${voiceId}\n${text}`).digest('hex').slice(0, 32);
   return `tts-cache/${hash}.mp3`;
@@ -309,7 +313,7 @@ export async function renderClip(payload: RenderClipPayload, deps: WorkerDeps): 
         videoPath: outputPath,
         voiceoverPath: voicePath,
         outputPath: mixedPath,
-        placement: voiceover.placement,
+        placement: resolveVoiceoverPlacement(voiceover.placement),
       });
       finalPath = mixedPath;
       logClip(payload.recordingId, payload.clipId, 'voiceover', 'done mix', runExtras);

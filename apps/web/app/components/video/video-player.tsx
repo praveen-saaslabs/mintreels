@@ -179,6 +179,19 @@ export function VideoPlayer({ src, pending = false, poster }: Readonly<VideoPlay
     };
   }, [resolvedSrc]);
 
+  // Filestack handle changes after overdub/voiceover — force a reload so the
+  // element does not keep playing the previously buffered file.
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || !resolvedSrc) {
+      return;
+    }
+    if (video.getAttribute('src') !== resolvedSrc) {
+      video.src = resolvedSrc;
+    }
+    video.load();
+  }, [resolvedSrc]);
+
   // Sole seek driver. Timeline overlay playhead follows this element's currentTime on rAF.
   // Re-apply on loadedmetadata so deep-link seeks survive src attach.
   useEffect(() => {

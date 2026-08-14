@@ -95,7 +95,7 @@ export class HooksController {
           voiceId: 'stock_dorit_en_us',
           titleText: 'The roadmap was never a plan',
           ctaText: 'Follow for more product stories',
-          placement: 'duck',
+          placement: 'pre',
         },
       },
     },

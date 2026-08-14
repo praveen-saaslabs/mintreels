@@ -216,7 +216,7 @@ export class RecordingsController {
         voiceId: 'stock_dorit_en_us',
         titleText: 'Protecting Mental Health',
         ctaText: 'Follow for more such videos',
-        placement: 'duck',
+        placement: 'pre',
       },
     },
   })
@@ -227,7 +227,7 @@ export class RecordingsController {
         jobId: 14,
         status: 'queued',
         voiceId: 'stock_dorit_en_us',
-        placement: 'duck',
+        placement: 'pre',
       },
     },
   })

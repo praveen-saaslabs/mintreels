@@ -9,11 +9,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { VoiceSelect } from '@/components/ui/voice-select';
 import { api } from '@/lib/api';
 import type { ClipVoiceover, ClipVoiceoverPlacement } from '@/lib/data/types';
 import { queryKeys } from '@/lib/query-keys';
+import { cn } from '@/lib/utils';
+
+const SCRIPT_MAX = 500;
 
 type ClipVoiceoverDialogProps = {
   open: boolean;
@@ -23,6 +26,12 @@ type ClipVoiceoverDialogProps = {
   pending?: boolean;
   /** clip = optional VO on export; recording = always apply VO to source video */
   variant?: 'clip' | 'recording';
+};
+
+type PlacementOption = {
+  value: ClipVoiceoverPlacement;
+  label: string;
+  hint: string;
 };
 
 export function ClipVoiceoverDialog({
@@ -36,9 +45,8 @@ export function ClipVoiceoverDialog({
   const isRecording = variant === 'recording';
   const [enabled, setEnabled] = useState(isRecording);
   const [voiceId, setVoiceId] = useState('');
-  const [titleText, setTitleText] = useState(defaultTitle);
-  const [ctaText, setCtaText] = useState('');
-  const [placement, setPlacement] = useState<ClipVoiceoverPlacement>('duck');
+  const [script, setScript] = useState(defaultTitle);
+  const [placement, setPlacement] = useState<ClipVoiceoverPlacement>('pre');
 
   const voicesQuery = useQuery({
     queryKey: queryKeys.voices.list(),
@@ -51,10 +59,9 @@ export function ClipVoiceoverDialog({
     if (!open) {
       return;
     }
-    setTitleText(defaultTitle);
-    setCtaText('');
+    setScript(defaultTitle.slice(0, SCRIPT_MAX));
     setEnabled(isRecording);
-    setPlacement('duck');
+    setPlacement('pre');
   }, [open, defaultTitle, isRecording]);
 
   useEffect(() => {
@@ -72,30 +79,53 @@ export function ClipVoiceoverDialog({
       onConfirm(null);
       return;
     }
-    if (voiceId.trim() === '' || titleText.trim() === '') {
+    const spoken = script.trim();
+    if (voiceId.trim() === '' || spoken === '') {
       return;
     }
     onConfirm({
       enabled: true,
       voiceId: voiceId.trim(),
-      titleText: titleText.trim(),
-      ...(ctaText.trim() !== '' ? { ctaText: ctaText.trim() } : {}),
+      titleText: spoken,
       placement,
     });
   }
 
   const showForm = isRecording || enabled;
-  const dialogTitle = isRecording ? 'Add AI voiceover' : 'Cut clip';
+  const scriptLength = script.trim().length;
+  const canSubmit = !pending && (!showForm || (voiceId.trim() !== '' && scriptLength > 0));
+
+  const dialogTitle = isRecording ? 'Mint Voiceover' : 'Cut clip';
   const dialogDescription = isRecording
-    ? 'Spoken title and optional CTA play at the start of this recording. “Before video” freezes the first frame and shifts the transcript to stay in sync.'
-    : 'Optionally add an AI voiceover (title and CTA) mixed onto the export.';
-  const confirmLabel = isRecording ? 'Apply voiceover' : 'Cut clip';
-  const duckLabel = isRecording
-    ? 'Over start (duck original audio)'
-    : 'Duck under clip audio';
-  const preLabel = isRecording
-    ? 'Before video (freeze first frame)'
-    : 'Play before clip audio';
+    ? 'Mint speaks your line before or after this video.'
+    : 'Export this moment as a clip. Optionally add a short spoken line before or after.';
+  const confirmLabel = isRecording ? 'Add Mint Voiceover' : 'Cut clip';
+
+  const placementOptions: PlacementOption[] = isRecording
+    ? [
+        {
+          value: 'pre',
+          label: 'Before the video',
+          hint: 'Holds the first frame while Mint speaks, then the video starts',
+        },
+        {
+          value: 'post',
+          label: 'After the video',
+          hint: 'Holds the last frame while Mint speaks at the end',
+        },
+      ]
+    : [
+        {
+          value: 'pre',
+          label: 'Before the clip',
+          hint: 'Plays first, then your clip begins',
+        },
+        {
+          value: 'post',
+          label: 'After the clip',
+          hint: 'Plays after your clip ends',
+        },
+      ];
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -105,78 +135,84 @@ export function ClipVoiceoverDialog({
           <DialogDescription>{dialogDescription}</DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-3">
+        <div className="space-y-4">
           {!isRecording ? (
-            <label className="flex items-center gap-2 text-sm text-foreground">
+            <label className="flex items-center gap-2.5 text-sm text-foreground">
               <input
                 type="checkbox"
+                className="size-3.5 accent-mr-acc"
                 checked={enabled}
                 disabled={pending}
                 onChange={(event) => setEnabled(event.target.checked)}
               />
-              Add AI voiceover
+              <span>Add a spoken Voiceover</span>
             </label>
           ) : null}
 
           {showForm ? (
-            <div className="space-y-3 rounded-md border border-[var(--glass-border-subtle)] p-3">
+            <div className="space-y-4">
               <div className="space-y-1.5">
-                <Label htmlFor="clip-vo-voice">Voice</Label>
-                <select
+                <Label htmlFor="clip-vo-script">What should Mint say?</Label>
+                <textarea
+                  id="clip-vo-script"
+                  value={script}
+                  disabled={pending}
+                  rows={3}
+                  maxLength={SCRIPT_MAX}
+                  placeholder="e.g. Protecting mental health. Follow for more."
+                  className="w-full resize-none rounded-md border border-input bg-(--glass-bg) px-2.5 py-2 text-sm leading-relaxed shadow-(--glass-highlight) outline-none backdrop-blur-sm placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50"
+                  onChange={(event) => setScript(event.target.value.slice(0, SCRIPT_MAX))}
+                />
+                <p className="text-xs text-muted-foreground">
+                  {scriptLength}/{SCRIPT_MAX} · Spoken as one continuous line
+                </p>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="clip-vo-voice">Narrator</Label>
+                <VoiceSelect
                   id="clip-vo-voice"
-                  className="flex h-8 w-full rounded-md border border-input bg-transparent px-2 text-sm"
                   value={voiceId}
+                  voices={voicesQuery.data ?? []}
                   disabled={pending || voicesQuery.isLoading}
-                  onChange={(event) => setVoiceId(event.target.value)}
-                >
-                  {(voicesQuery.data ?? []).map((voice) => (
-                    <option key={voice.id} value={voice.id}>
-                      {voice.name}
-                      {voice.language ? ` (${voice.language})` : ''}
-                    </option>
-                  ))}
-                </select>
+                  aria-label="Narrator voice"
+                  onValueChange={setVoiceId}
+                />
                 {voicesQuery.isError ? (
-                  <p className="text-xs text-[var(--mr-bad)]">Could not load voices.</p>
+                  <p className="text-xs text-(--mr-bad)">Could not load voices.</p>
                 ) : null}
               </div>
 
-              <div className="space-y-1.5">
-                <Label htmlFor="clip-vo-title">Title line</Label>
-                <Input
-                  id="clip-vo-title"
-                  value={titleText}
-                  disabled={pending}
-                  onChange={(event) => setTitleText(event.target.value)}
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="clip-vo-cta">CTA (optional)</Label>
-                <Input
-                  id="clip-vo-cta"
-                  value={ctaText}
-                  disabled={pending}
-                  placeholder="Follow for more"
-                  onChange={(event) => setCtaText(event.target.value)}
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="clip-vo-placement">Placement</Label>
-                <select
-                  id="clip-vo-placement"
-                  className="flex h-8 w-full rounded-md border border-input bg-transparent px-2 text-sm"
-                  value={placement}
-                  disabled={pending}
-                  onChange={(event) =>
-                    setPlacement(event.target.value as ClipVoiceoverPlacement)
-                  }
-                >
-                  <option value="duck">{duckLabel}</option>
-                  <option value="pre">{preLabel}</option>
-                </select>
-              </div>
+              <fieldset className="space-y-2">
+                <legend className="text-sm font-medium text-foreground">When should it play?</legend>
+                <div className="grid gap-2">
+                  {placementOptions.map((option) => {
+                    const selected = placement === option.value;
+                    return (
+                      <button
+                        key={option.value}
+                        type="button"
+                        disabled={pending}
+                        aria-pressed={selected}
+                        onClick={() => setPlacement(option.value)}
+                        className={cn(
+                          'rounded-md border px-3 py-2.5 text-left transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50',
+                          selected
+                            ? 'border-ring bg-(--glass-bg) shadow-(--glass-highlight)'
+                            : 'border-input hover:border-ring/60',
+                        )}
+                      >
+                        <span className="block text-sm font-medium text-foreground">
+                          {option.label}
+                        </span>
+                        <span className="mt-0.5 block text-xs text-muted-foreground">
+                          {option.hint}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </fieldset>
             </div>
           ) : null}
         </div>
@@ -192,11 +228,9 @@ export function ClipVoiceoverDialog({
           </Button>
           <Button
             type="button"
-            disabled={
-              pending ||
-              (showForm && (voiceId.trim() === '' || titleText.trim() === ''))
-            }
+            disabled={!canSubmit}
             onClick={() => confirm(showForm)}
+            className={cn(pending && 'animate-mr-pulse')}
           >
             {pending ? 'Starting…' : confirmLabel}
           </Button>

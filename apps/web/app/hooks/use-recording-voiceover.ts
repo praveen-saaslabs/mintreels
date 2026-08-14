@@ -1,12 +1,28 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef } from 'react';
-import { api } from '@/lib/api';
+import { api, ApiError } from '@/lib/api';
 import type { ClipVoiceover } from '@/lib/data/types';
 import { isHttpsFilestackPlaybackUrl } from '@/lib/filestack-playback';
 import { queryKeys } from '@/lib/query-keys';
 import { useEditorStore } from '@/stores/editor-store';
 
 const POLL_MS = 3000;
+
+function voiceoverApplyErrorMessage(error: unknown): string | undefined {
+  if (error instanceof ApiError) {
+    if (error.code === 'VOICEOVER_IN_PROGRESS') {
+      return 'A voiceover or voice edit is already running. Wait for it to finish, then try again.';
+    }
+    if (error.code === 'VIDEO_NOT_AVAILABLE') {
+      return 'Video is not ready for voiceover yet.';
+    }
+    if (error.code === 'EMPTY_VOICEOVER_TEXT') {
+      return 'Enter what Mint should say.';
+    }
+    return error.code;
+  }
+  return error instanceof Error ? error.message : undefined;
+}
 
 export function useRecordingVoiceover(recordingId: number | undefined) {
   const queryClient = useQueryClient();
@@ -19,6 +35,17 @@ export function useRecordingVoiceover(recordingId: number | undefined) {
   const voiceoverQuery = useQuery({
     queryKey: [...queryKeys.recordings.detail(recordingId ?? 0), 'voiceover'] as const,
     queryFn: () => api.getRecordingVoiceover(recordingId as number),
+    enabled: recordingId != null,
+    refetchInterval: (query) => {
+      const status = query.state.data?.status;
+      return status === 'queued' || status === 'running' ? POLL_MS : false;
+    },
+    staleTime: 0,
+  });
+
+  const overdubQuery = useQuery({
+    queryKey: [...queryKeys.recordings.detail(recordingId ?? 0), 'overdub'] as const,
+    queryFn: () => api.getTranscriptOverdub(recordingId as number),
     enabled: recordingId != null,
     refetchInterval: (query) => {
       const status = query.state.data?.status;
@@ -58,10 +85,25 @@ export function useRecordingVoiceover(recordingId: number | undefined) {
     void (async () => {
       const recording = await api.getRecording(recordingId);
       if (recording.videoUrl && isHttpsFilestackPlaybackUrl(recording.videoUrl)) {
+        queryClient.setQueryData(
+          queryKeys.recordings.forProject(recording.projectId),
+          (current: typeof recording | null | undefined) =>
+            current && current.id === recording.id
+              ? { ...current, videoUrl: recording.videoUrl }
+              : current,
+        );
+        queryClient.setQueryData(
+          queryKeys.recordings.processing(recordingId),
+          (current: { videoUrl?: string | null } | undefined) =>
+            current ? { ...current, videoUrl: recording.videoUrl } : current,
+        );
         setSrc(recording.videoUrl);
         seek(0);
       }
       await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.recordings.forProject(recording.projectId),
+        }),
         queryClient.invalidateQueries({
           queryKey: queryKeys.recordings.detail(recordingId),
         }),
@@ -87,11 +129,14 @@ export function useRecordingVoiceover(recordingId: number | undefined) {
       if (recordingId == null) {
         throw new Error('Invalid recording');
       }
+      const script = [voiceover.titleText, voiceover.ctaText]
+        .map((part) => part?.trim() ?? '')
+        .filter((part) => part.length > 0)
+        .join('. ');
       return api.applyRecordingVoiceover(recordingId, {
         voiceId: voiceover.voiceId,
         placement: voiceover.placement,
-        ...(voiceover.titleText ? { titleText: voiceover.titleText } : {}),
-        ...(voiceover.ctaText ? { ctaText: voiceover.ctaText } : {}),
+        ...(script.length > 0 ? { script } : {}),
       });
     },
     onSuccess: () => {
@@ -103,8 +148,11 @@ export function useRecordingVoiceover(recordingId: number | undefined) {
     },
   });
 
-  const inFlight =
+  const voiceoverInFlight =
     voiceoverQuery.data?.status === 'queued' || voiceoverQuery.data?.status === 'running';
+  const overdubInFlight =
+    overdubQuery.data?.status === 'queued' || overdubQuery.data?.status === 'running';
+  const inFlight = voiceoverInFlight || overdubInFlight;
 
   return {
     status: voiceoverQuery.data?.status ?? null,
@@ -112,6 +160,6 @@ export function useRecordingVoiceover(recordingId: number | undefined) {
     inFlight,
     applyVoiceover: (voiceover: ClipVoiceover) => applyMutation.mutateAsync(voiceover),
     isApplying: applyMutation.isPending,
-    applyError: applyMutation.error instanceof Error ? applyMutation.error.message : undefined,
+    applyError: voiceoverApplyErrorMessage(applyMutation.error),
   };
 }

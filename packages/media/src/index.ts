@@ -31,6 +31,7 @@ export type {
   MixVoiceoverOntoVideoResult,
   ProbeDurationInput,
   ReplaceAudioRangeInput,
+  VoiceoverPlacement,
 } from './voiceover';
 export {
   CAPTION_WORDS_PER_CUE,

@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Loader2 } from 'lucide-react';
 import { SpeakerBadge } from '@/components/transcript/speaker-badge';
 import { buttonVariants } from '@/components/ui/button';
+import { VoiceSelect } from '@/components/ui/voice-select';
 import { api } from '@/lib/api';
 import { formatTimestamp } from '@/lib/time';
 import { parseWordStart } from '@/lib/transcript';
@@ -144,7 +145,7 @@ export const TranscriptSegmentItem = memo(function TranscriptSegmentItem({
     }
   }
 
-  function stopKeyPropagation(event: KeyboardEvent<HTMLTextAreaElement | HTMLSelectElement>) {
+  function stopKeyPropagation(event: KeyboardEvent) {
     event.stopPropagation();
   }
 
@@ -190,20 +191,16 @@ export const TranscriptSegmentItem = memo(function TranscriptSegmentItem({
               disabled={busy || overdubBusy}
             />
             <div className="flex flex-wrap items-center gap-2">
-              <select
-                className="h-7 min-w-[10rem] rounded-md border border-input bg-transparent px-2 text-xs"
+              <VoiceSelect
+                size="xs"
+                className="w-auto"
                 value={voiceId}
+                voices={voicesQuery.data ?? []}
                 disabled={busy || overdubBusy || voicesQuery.isLoading}
-                onChange={(event) => setVoiceId(event.target.value)}
-                onKeyDown={stopKeyPropagation}
                 aria-label="Overdub voice"
-              >
-                {(voicesQuery.data ?? []).map((voice) => (
-                  <option key={voice.id} value={voice.id}>
-                    {voice.name}
-                  </option>
-                ))}
-              </select>
+                onValueChange={setVoiceId}
+                onKeyDown={stopKeyPropagation}
+              />
               <button
                 type="button"
                 disabled={busy || overdubBusy || draft.trim() === ''}

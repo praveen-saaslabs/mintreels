@@ -133,8 +133,11 @@ export class ClipsController {
   @ApiNotFoundResponse({ description: 'Clip not found' })
   @ApiConflictResponse({ description: 'CLIP_NOT_READY or TRANSCRIPT_REQUIRED' })
   @Post(':id/social-copy')
-  generateSocialCopy(@CurrentUser() user: RequestUser, @Param('id', ParseIntPipe) id: number) {
-    return this.clipsService.generateSocialCopy(id, user.id);
+  generateSocialCopy(
+    @CurrentActor() actor: RequestActor,
+    @Param('id', ParseIntPipe) id: number,
+  ) {
+    return this.clipsService.generateSocialCopy(id, ownership(actor));
   }
 
   @ApiOperation({ summary: 'Soft-delete a clip' })

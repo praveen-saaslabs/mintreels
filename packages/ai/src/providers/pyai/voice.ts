@@ -9,7 +9,7 @@ import type {
 import type { PyAIClient } from './client';
 import { mapPyAIError } from './errors';
 
-const SPEAK_MODEL = 'pyai-voice';
+const SPEAK_MODEL = 'pyai-speak';
 const DEFAULT_FORMAT: VoiceAudioFormat = 'mp3';
 
 const CONTENT_TYPE_BY_FORMAT: Record<VoiceAudioFormat, string> = {

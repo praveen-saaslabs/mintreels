@@ -41,7 +41,7 @@ export type ClipFilter = {
   count: number;
 };
 
-export type ClipVoiceoverPlacement = 'pre' | 'duck';
+export type ClipVoiceoverPlacement = 'pre' | 'post';
 
 export type ClipVoiceover = {
   enabled: boolean;

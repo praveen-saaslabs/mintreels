@@ -1,4 +1,4 @@
-import { ArrowLeft, Download, FileDown, Loader2, Mic2, Trash2, X } from 'lucide-react';
+import { ArrowLeft, Download, FileDown, Loader2, Mic2, Sparkles, Trash2, X } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ClipVoiceoverDialog } from '@/components/clips/clip-voiceover-dialog';
@@ -106,30 +106,54 @@ export function EditorHeader({
         <>
           <div className="flex shrink-0 items-center gap-1.5">
             {voiceoverBusy ? (
-              <span className="hidden text-[10px] text-muted-foreground sm:inline">
+              <span
+                className="voiceover-status-live hidden text-[10px] font-medium sm:inline-flex"
+                aria-live="polite"
+              >
                 {voiceoverStatus === 'running' || isApplying
-                  ? 'Applying voiceover…'
-                  : 'Voiceover queued…'}
+                  ? 'Adding Voiceover'
+                  : 'Voiceover queued'}
+                <span className="inline-flex translate-y-px gap-px text-mr-acc" aria-hidden>
+                  <span className="voiceover-status-dot">.</span>
+                  <span className="voiceover-status-dot voiceover-status-dot-2">.</span>
+                  <span className="voiceover-status-dot voiceover-status-dot-3">.</span>
+                </span>
               </span>
             ) : null}
             {voiceoverStatus === 'failed' && (voiceoverError || applyError) ? (
-              <span className="hidden max-w-[10rem] truncate text-[10px] text-[var(--mr-bad)] sm:inline">
+              <span
+                className="hidden max-w-56 truncate text-[10px] text-(--mr-bad) sm:inline"
+                title={applyError ?? voiceoverError ?? undefined}
+              >
                 {applyError ?? voiceoverError}
               </span>
             ) : null}
             <button
               type="button"
-              aria-label="Add AI voiceover"
+              aria-label="Mint Voiceover"
               disabled={!canAddVoiceover}
               onClick={() => setVoiceoverOpen(true)}
               className={cn(
                 buttonVariants({ variant: 'outline', size: 'sm' }),
-                'shrink-0 gap-1.5',
+                'shrink-0 gap-2',
                 canAddVoiceover ? '' : 'opacity-50',
+                voiceoverBusy && 'animate-mr-pulse',
               )}
             >
-              <Mic2 className="size-3.5" aria-hidden />
-              <span className="hidden sm:inline">AI voiceover</span>
+              <span className="relative mr-0.5 inline-flex size-3.5 shrink-0 items-center justify-center">
+                <Mic2
+                  className={cn('size-3.5 text-mr-acc', voiceoverBusy && 'animate-mr-pulse')}
+                  aria-hidden
+                />
+                <Sparkles
+                  className={cn(
+                    'absolute -top-1 -right-1.5 size-2.5 text-mr-acc',
+                    voiceoverBusy && 'mint-thinking-sparkle',
+                  )}
+                  aria-hidden
+                />
+              </span>
+              <span className="hidden sm:inline">Mint Voiceover</span>
             </button>
           </div>
           <button
@@ -231,7 +255,7 @@ export function EditorHeader({
             }}
             className={cn(
               buttonVariants({ variant: 'ghost', size: 'icon-sm' }),
-              'shrink-0 text-muted-foreground hover:text-[var(--mr-bad)]',
+              'shrink-0 text-muted-foreground hover:text-(--mr-bad)',
             )}
           >
             <Trash2 />

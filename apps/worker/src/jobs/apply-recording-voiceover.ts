@@ -17,7 +17,7 @@ export interface ApplyRecordingVoiceoverPayload {
   recordingId: number;
   jobId: number;
   voiceId: string;
-  placement: 'pre' | 'duck';
+  placement: 'pre' | 'post';
   text: string;
 }
 
@@ -160,6 +160,104 @@ async function alignTimelineAfterPreVoiceover(
     await deps.recordings.save(recording);
   }
 
+  await refreshSearchIndexes(deps, recordingId, hooks);
+}
+
+/** Append VO words after existing rawResponse words (no timestamp shift). */
+function appendRawResponse(
+  raw: unknown,
+  startMs: number,
+  durationMs: number,
+  voiceoverText: string,
+): Record<string, unknown> | null {
+  const base = isRecord(raw) ? { ...raw } : {};
+  const existing = Array.isArray(base.words)
+    ? base.words.filter((item): item is Record<string, unknown> => isRecord(item))
+    : [];
+
+  const tokens = voiceoverText.trim().split(/\s+/).filter(Boolean);
+  const voWords =
+    tokens.length === 0
+      ? []
+      : tokens.map((word, index) => {
+          const wordStart = startMs + Math.round((index / tokens.length) * durationMs);
+          const wordEnd = startMs + Math.round(((index + 1) / tokens.length) * durationMs);
+          return { word, startMs: wordStart, endMs: wordEnd, speaker: 'AI' };
+        });
+
+  return { ...base, words: [...existing, ...voWords] };
+}
+
+/**
+ * When `post` pads the end, keep existing timings and append an AI segment after the original video.
+ */
+async function alignTimelineAfterPostVoiceover(
+  deps: WorkerDeps,
+  recordingId: number,
+  originalDurationMs: number,
+  voiceoverDurationMs: number,
+  voiceoverText: string,
+): Promise<void> {
+  if (voiceoverDurationMs <= 0) {
+    return;
+  }
+
+  const startMs = Math.max(0, originalDurationMs);
+  const endMs = startMs + voiceoverDurationMs;
+
+  const segments = await deps.segments.listByRecordingId(recordingId);
+  const nextSequence =
+    segments.reduce((max, segment) => Math.max(max, segment.sequence), -1) + 1;
+
+  await deps.segments.save(
+    deps.segments.create({
+      recordingId,
+      sequence: nextSequence,
+      startMs,
+      endMs,
+      speaker: 'AI',
+      text: voiceoverText,
+    }),
+  );
+
+  const transcript = await deps.transcripts.findByRecordingId(recordingId);
+  if (transcript) {
+    const existingText = (transcript.text ?? '').trim();
+    transcript.text =
+      existingText.length > 0 ? `${existingText}\n\n${voiceoverText}` : voiceoverText;
+    if (typeof transcript.durationMs === 'number') {
+      transcript.durationMs = Math.max(transcript.durationMs, endMs);
+    } else {
+      transcript.durationMs = endMs;
+    }
+    transcript.rawResponse = appendRawResponse(
+      transcript.rawResponse,
+      startMs,
+      voiceoverDurationMs,
+      voiceoverText,
+    );
+    await deps.transcripts.save(transcript);
+  }
+
+  const recording = await deps.recordings.findOneBy({ id: recordingId });
+  if (recording) {
+    if (typeof recording.durationMs === 'number') {
+      recording.durationMs = Math.max(recording.durationMs, endMs);
+    } else {
+      recording.durationMs = endMs;
+    }
+    await deps.recordings.save(recording);
+  }
+
+  const hooks = await deps.hooks.listByRecordingId(recordingId);
+  await refreshSearchIndexes(deps, recordingId, hooks);
+}
+
+async function refreshSearchIndexes(
+  deps: WorkerDeps,
+  recordingId: number,
+  hooks: Awaited<ReturnType<WorkerDeps['hooks']['listByRecordingId']>>,
+): Promise<void> {
   // Best-effort: refresh vector payloads so Ask Moments / hooks stay time-aligned.
   try {
     const rows = await deps.segments.listByRecordingId(recordingId);
@@ -327,6 +425,14 @@ export async function applyRecordingVoiceover(
         deps,
         payload.recordingId,
         mixResult.timelineOffsetMs,
+        text,
+      );
+    } else if (payload.placement === 'post' && mixResult.voiceoverDurationMs > 0) {
+      await alignTimelineAfterPostVoiceover(
+        deps,
+        payload.recordingId,
+        mixResult.originalDurationMs,
+        mixResult.voiceoverDurationMs,
         text,
       );
     }

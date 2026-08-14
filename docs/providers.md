@@ -25,7 +25,7 @@ PyAI Adapter (or Filestack / BullMQ adapter)
 `packages/ai/src/voice-provider.ts`
 
 - `listVoices()` → stock voice catalog (`GET /v1/voices`)
-- `synthesize({ text, voiceId?, format? })` → audio bytes (`POST /v1/audio/speech`, model `pyai-voice`, `stream: false`)
+- `synthesize({ text, voiceId?, format? })` → audio bytes (`POST /v1/audio/speech`, model `pyai-speak`, `stream: false`)
 - Default: PyAI (`packages/ai/src/providers/pyai/voice.ts`) via HTTP fetch inside the adapter (not from apps/web)
 - API proxy: `GET /api/voices` (auth cookie). Browser never receives `PYAI_API_KEY`.
 - Used by: clip title/CTA voiceover on `render-clip`, and transcript overdub (`apply-overdub`)

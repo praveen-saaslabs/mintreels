@@ -25,12 +25,37 @@ class HttpStatusError extends Error {
   readonly status: number;
   readonly payload: unknown;
 
-  constructor(status: number, payload: unknown) {
-    super(`transcription job upload failed (${String(status)})`);
+  constructor(status: number, payload: unknown, action: string) {
+    const detail = payloadMessage(payload);
+    super(
+      detail !== undefined
+        ? `${action} failed (${String(status)}): ${detail}`
+        : `${action} failed (${String(status)})`,
+    );
     this.name = 'HttpStatusError';
     this.status = status;
     this.payload = payload;
   }
+}
+
+function payloadMessage(payload: unknown): string | undefined {
+  if (typeof payload !== 'object' || payload === null) {
+    return undefined;
+  }
+  const record = payload as Record<string, unknown>;
+  if (typeof record.message === 'string' && record.message.trim() !== '') {
+    return record.message.trim();
+  }
+  if (typeof record.error === 'string' && record.error.trim() !== '') {
+    return record.error.trim();
+  }
+  if (typeof record.error === 'object' && record.error !== null) {
+    const nested = record.error as Record<string, unknown>;
+    if (typeof nested.message === 'string' && nested.message.trim() !== '') {
+      return nested.message.trim();
+    }
+  }
+  return undefined;
 }
 
 export class PyAIClient {
@@ -80,7 +105,7 @@ export class PyAIClient {
     });
     const payload: unknown = await response.json().catch(() => null);
     if (!response.ok) {
-      throw new HttpStatusError(response.status, payload);
+      throw new HttpStatusError(response.status, payload, 'transcription job upload');
     }
     return payload;
   }
@@ -94,7 +119,7 @@ export class PyAIClient {
     });
     const payload: unknown = await response.json().catch(() => null);
     if (!response.ok) {
-      throw new HttpStatusError(response.status, payload);
+      throw new HttpStatusError(response.status, payload, 'voice list');
     }
     return payload;
   }
@@ -107,7 +132,7 @@ export class PyAIClient {
     stream?: boolean;
   }): Promise<{ audio: Buffer; contentType: string }> {
     const body: Record<string, unknown> = {
-      model: input.model ?? 'pyai-voice',
+      model: input.model ?? 'pyai-speak',
       input: input.input,
       response_format: input.responseFormat ?? 'mp3',
       stream: input.stream ?? false,
@@ -127,7 +152,7 @@ export class PyAIClient {
 
     if (!response.ok) {
       const payload: unknown = await response.json().catch(() => null);
-      throw new HttpStatusError(response.status, payload);
+      throw new HttpStatusError(response.status, payload, 'speech synthesis');
     }
 
     const arrayBuffer = await response.arrayBuffer();

@@ -16,6 +16,7 @@ import {
 } from '@mintreels/db';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { GuestModule } from '../guest/guest.module';
 import { ClipsController } from './clips.controller';
 import { ClipsService } from './clips.service';
 
@@ -30,7 +31,7 @@ import { ClipsService } from './clips.service';
       Transcript,
       TranscriptSegment,
     ]),
-    AuthModule,
+    GuestModule,
   ],
   controllers: [ClipsController],
   providers: [

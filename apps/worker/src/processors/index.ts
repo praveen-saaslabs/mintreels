@@ -163,8 +163,8 @@ function parseApplyRecordingVoiceoverPayload(data: unknown): ApplyRecordingVoice
   if (typeof rec.text !== 'string' || rec.text.trim() === '') {
     throw new Error('apply-recording-voiceover payload.text is required');
   }
-  if (rec.placement !== 'pre' && rec.placement !== 'duck') {
-    throw new Error('apply-recording-voiceover payload.placement must be pre or duck');
+  if (rec.placement !== 'pre' && rec.placement !== 'post') {
+    throw new Error('apply-recording-voiceover payload.placement must be pre or post');
   }
   return {
     recordingId: rec.recordingId,

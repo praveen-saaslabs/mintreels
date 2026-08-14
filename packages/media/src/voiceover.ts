@@ -64,24 +64,27 @@ export function buildAtempoFilter(speed: number): string {
   return filters.join(',');
 }
 
+export type VoiceoverPlacement = 'pre' | 'post';
+
 export interface MixVoiceoverOntoVideoInput {
   videoPath: string;
   voiceoverPath: string;
   outputPath: string;
-  placement: 'pre' | 'duck';
+  placement: VoiceoverPlacement;
 }
 
 export interface MixVoiceoverOntoVideoResult {
-  /** Timeline pad applied for `pre` (0 for `duck`). Callers should shift transcript timestamps by this. */
+  /** Timeline pad applied for `pre` (0 for `post`). Callers should shift transcript timestamps by this. */
   timelineOffsetMs: number;
   voiceoverDurationMs: number;
+  /** Source video duration before padding (start of VO for `post`). */
+  originalDurationMs: number;
 }
 
 /**
- * Mix TTS voiceover onto a trimmed clip.
- * - duck: lower original audio under the VO; video timing unchanged
- * - pre: freeze the first frame for the VO duration, delay original audio by the
- *   same amount, then play the clip in sync (VO first, then original A/V together)
+ * Mix TTS voiceover onto a video.
+ * - pre: freeze the first frame for the VO duration, delay original audio, VO plays first
+ * - post: freeze the last frame for the VO duration, delay VO to after the video
  */
 export async function mixVoiceoverOntoVideo(
   input: MixVoiceoverOntoVideoInput,
@@ -94,7 +97,9 @@ export async function mixVoiceoverOntoVideo(
     throw new Error('videoPath, voiceoverPath, and outputPath are required');
   }
 
+  const videoSeconds = await probeDurationSeconds({ inputPath: input.videoPath });
   const voSeconds = await probeDurationSeconds({ inputPath: input.voiceoverPath });
+  const originalDurationMs = Math.max(0, Math.round(videoSeconds * 1000));
   const voiceoverDurationMs = Math.max(0, Math.round(voSeconds * 1000));
   const padSec = (voiceoverDurationMs / 1000).toFixed(3);
 
@@ -129,12 +134,16 @@ export async function mixVoiceoverOntoVideo(
         input.outputPath,
       ],
     });
-    return { timelineOffsetMs: voiceoverDurationMs, voiceoverDurationMs };
+    return { timelineOffsetMs: voiceoverDurationMs, voiceoverDurationMs, originalDurationMs };
   }
 
-  const filterComplex =
-    `[0:a]volume=0.25[main];[1:a]aformat=sample_fmts=fltp:channel_layouts=stereo[vo];` +
-    `[main][vo]amix=inputs=2:duration=first:dropout_transition=2[aout]`;
+  // post: freeze last frame; VO starts when the original video ends.
+  const filterComplex = [
+    `[0:v]tpad=stop_mode=clone:stop_duration=${padSec},setpts=PTS-STARTPTS[vout]`,
+    `[0:a]aformat=sample_fmts=fltp:channel_layouts=stereo[main]`,
+    `[1:a]adelay=${String(originalDurationMs)}|${String(originalDurationMs)},aformat=sample_fmts=fltp:channel_layouts=stereo[vo]`,
+    `[main][vo]amix=inputs=2:duration=longest:dropout_transition=0[aout]`,
+  ].join(';');
 
   await runFfmpeg({
     args: [
@@ -146,20 +155,19 @@ export async function mixVoiceoverOntoVideo(
       '-filter_complex',
       filterComplex,
       '-map',
-      '0:v',
+      '[vout]',
       '-map',
       '[aout]',
       '-c:v',
-      'copy',
+      'libx264',
       '-c:a',
       'aac',
       '-movflags',
       '+faststart',
-      '-shortest',
       input.outputPath,
     ],
   });
-  return { timelineOffsetMs: 0, voiceoverDurationMs };
+  return { timelineOffsetMs: 0, voiceoverDurationMs, originalDurationMs };
 }
 
 export interface ReplaceAudioRangeInput {

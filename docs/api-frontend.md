@@ -314,7 +314,7 @@ Discriminated **200** responses:
 
 ### Hook export — `POST /api/recordings/:id/hooks/:hookId/export`
 
-Optional body: `{ aspectRatio?: "9:16"|"1:1"|"16:9", fitMode?: "fit"|"fill", burnSubtitles?: boolean, voiceover?: { enabled, voiceId, titleText?, ctaText?, placement: "pre"|"duck" } }` (defaults `9:16` / `fit` / `true`). Creates a `clips` row (`queued`) and enqueues `render-clip`. Optional `voiceover` mixes AI Speak audio onto the render. **202** with the public clip DTO. Poll `GET /api/clips/:id` while `status` is `queued` or `rendering`.
+Optional body: `{ aspectRatio?: "9:16"|"1:1"|"16:9", fitMode?: "fit"|"fill", burnSubtitles?: boolean, voiceover?: { enabled, voiceId, titleText?, ctaText?, placement: "pre"|"post" } }` (defaults `9:16` / `fit` / `true`). Creates a `clips` row (`queued`) and enqueues `render-clip`. Optional `voiceover` mixes AI Speak audio onto the render. **202** with the public clip DTO. Poll `GET /api/clips/:id` while `status` is `queued` or `rendering`.
 
 `fitMode`: **`fit`** (default) = full frame + blurred pad; **`fill`** = center crop (opt-in). Layout-agnostic — Fit preserves the whole source regardless of hosts/grid/PiP.
 
@@ -407,7 +407,7 @@ Editor header: **Export** (confirm dialog sends `force: true`) → poll → **Ca
 
 **No `storageKey`, no signed URL, no `caption`.** Playback URL is `videoUrl` (`null` until render finishes). Poster is `thumbnailUrl` (`null` until Filestack/FFmpeg thumb is stored). `hookId` is `null` when the clip was not created from a hook. `aspectRatio` / `ratio` is the **export target** (`9:16` \| `1:1` \| `16:9`). `fitMode` is `fit` (full frame + blur pad, default) or `fill` (center crop). `burnSubtitles` is whether captions were burned in. Status: `queued` \| `rendering` \| `ready` \| `failed`. Optional `socialTitle` / `socialDescription` are AI share copy (null until generated).
 
-`POST /api/clips` creates a clip from an owned recording time range (prompt search uses padded `clipStartMs` / `clipEndMs`, `hookId` omitted). Optional `aspectRatio` (default `9:16`), `fitMode` (default `fit`), `burnSubtitles` (default `true`), and `voiceover: { enabled, voiceId, titleText?, ctaText?, placement: "pre"|"duck" }`. Hook export remains `POST /recordings/:id/hooks/:hookId/export`. Stock voices: `GET /api/voices`.
+`POST /api/clips` creates a clip from an owned recording time range (prompt search uses padded `clipStartMs` / `clipEndMs`, `hookId` omitted). Optional `aspectRatio` (default `9:16`), `fitMode` (default `fit`), `burnSubtitles` (default `true`), and `voiceover: { enabled, voiceId, titleText?, ctaText?, placement: "pre"|"post" }`. Hook export remains `POST /recordings/:id/hooks/:hookId/export`. Stock voices: `GET /api/voices`.
 
 `POST /api/clips/:id/social-copy` (ready clips only) generates and persists `socialTitle` + `socialDescription` for human-initiated sharing. **409** `CLIP_NOT_READY` or `TRANSCRIPT_REQUIRED`. Share UI edits the copy then copies title + description + HTTPS `videoUrl` (not auto-posting).
 

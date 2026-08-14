@@ -77,7 +77,10 @@ function normalizeVoiceover(value: ClipVoiceover | null | undefined): ClipVoiceo
   if (!value || !value.enabled) {
     return null;
   }
-  return value;
+  // Legacy `duck` mixes are no longer supported — treat as before-video.
+  const placement =
+    (value as { placement?: string }).placement === 'post' ? 'post' : 'pre';
+  return { ...value, placement };
 }
 
 function sameVoiceover(
@@ -329,8 +332,9 @@ export class ClipsService {
     return toPublicClip(clip);
   }
 
-  async generateSocialCopy(id: number, userId: number) {
-    const clip = await this.clips.findByIdForUser(id, userId);
+  async generateSocialCopy(id: number, owner: Ownership) {
+    this.requireExportAuth(owner);
+    const clip = await this.clips.findByIdForOwner(id, owner);
     if (!clip) {
       throw new HttpError(404, 'Not found');
     }
@@ -377,8 +381,8 @@ export class ClipsService {
     return toPublicClip(saved);
   }
 
-  async remove(id: number, userId: number): Promise<void> {
-    const clip = await this.clips.findByIdForUser(id, userId);
+  async remove(id: number, owner: Ownership): Promise<void> {
+    const clip = await this.clips.findByIdForOwner(id, owner);
     if (!clip) {
       throw new HttpError(404, 'Not found');
     }

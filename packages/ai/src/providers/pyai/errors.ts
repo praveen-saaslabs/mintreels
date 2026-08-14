@@ -16,6 +16,7 @@ const PERMANENT_CODES = new Set([
   'invalid_request_error',
   'unsupported_language',
   'idempotency_conflict',
+  'metering_unavailable',
 ]);
 
 function isNetworkError(error: unknown): boolean {
@@ -89,6 +90,26 @@ export function isRetryableTranscriptionJobError(message: string | undefined): b
   );
 }
 
+function payloadMessage(payload: unknown): string | undefined {
+  if (typeof payload !== 'object' || payload === null) {
+    return undefined;
+  }
+  const record = payload as Record<string, unknown>;
+  if (typeof record.message === 'string' && record.message.trim() !== '') {
+    return record.message.trim();
+  }
+  if (typeof record.error === 'string' && record.error.trim() !== '') {
+    return record.error.trim();
+  }
+  if (typeof record.error === 'object' && record.error !== null) {
+    const nested = record.error as Record<string, unknown>;
+    if (typeof nested.message === 'string' && nested.message.trim() !== '') {
+      return nested.message.trim();
+    }
+  }
+  return undefined;
+}
+
 export function mapPyAIError(error: unknown, provider = 'pyai'): ProviderError {
   if (error instanceof ProviderError) {
     return error;
@@ -123,13 +144,18 @@ export function mapPyAIError(error: unknown, provider = 'pyai'): ProviderError {
     const status = Number((error as { status?: unknown }).status);
     if (Number.isFinite(status) && status >= 400) {
       const payload = (error as { payload?: unknown }).payload;
-      const code = codeFromUnknownPayload(payload) ?? (status >= 500 ? 'server_error' : 'provider_error');
-      const message = error instanceof Error ? error.message : `HTTP ${String(status)}`;
+      const code =
+        codeFromUnknownPayload(payload) ?? (status >= 500 ? 'server_error' : 'provider_error');
+      const detail =
+        payloadMessage(payload) ??
+        (error instanceof Error ? error.message : `HTTP ${String(status)}`);
+      const retryable =
+        !PERMANENT_CODES.has(code) && (status === 429 || status >= 500);
       return new ProviderError({
         provider,
         code,
-        message,
-        retryable: status === 429 || status >= 500,
+        message: detail,
+        retryable,
         metadata: { status },
       });
     }
