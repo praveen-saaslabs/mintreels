@@ -7,6 +7,7 @@ export const JOB_NAMES = [
   'generate-hooks',
   'sync-knowledge-base',
   'render-clip',
+  'export-recording',
 ] as const;
 
 export type JobName = (typeof JOB_NAMES)[number];

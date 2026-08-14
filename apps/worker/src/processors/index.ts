@@ -1,5 +1,6 @@
 import { EnvKey } from '@mintreels/schema';
 import { startWorker } from '@mintreels/queue';
+import { exportRecording, type ExportRecordingPayload } from '../jobs/export-recording';
 import { generateHooks, type GenerateHooksPayload } from '../jobs/generate-hooks';
 import { ingestVideo, type IngestVideoPayload } from '../jobs/ingest-video';
 import { renderClip, type RenderClipPayload } from '../jobs/render-clip';
@@ -74,6 +75,37 @@ function parseGenerateHooksPayload(data: unknown): GenerateHooksPayload {
   return { recordingId: rec.recordingId, jobId: rec.jobId };
 }
 
+function parseExportRecordingPayload(data: unknown): ExportRecordingPayload {
+  if (typeof data !== 'object' || data === null) {
+    throw new Error('export-recording payload is required');
+  }
+  const rec = data as Record<string, unknown>;
+  if (typeof rec.recordingId !== 'number') {
+    throw new Error('export-recording payload.recordingId is required');
+  }
+  if (typeof rec.jobId !== 'number') {
+    throw new Error('export-recording payload.jobId is required');
+  }
+  const payload: ExportRecordingPayload = {
+    recordingId: rec.recordingId,
+    jobId: rec.jobId,
+  };
+  if (
+    rec.aspectRatio === '9:16' ||
+    rec.aspectRatio === '1:1' ||
+    rec.aspectRatio === '16:9'
+  ) {
+    payload.aspectRatio = rec.aspectRatio;
+  }
+  if (rec.fitMode === 'fit' || rec.fitMode === 'fill') {
+    payload.fitMode = rec.fitMode;
+  }
+  if (typeof rec.burnSubtitles === 'boolean') {
+    payload.burnSubtitles = rec.burnSubtitles;
+  }
+  return payload;
+}
+
 export function createProcessors(deps: WorkerDeps): { close: () => Promise<void> } {
   const redisUrl = requireRedisUrl();
   const concurrency = Number(process.env[EnvKey.WorkerConcurrency]) || 1;
@@ -87,6 +119,9 @@ export function createProcessors(deps: WorkerDeps): { close: () => Promise<void>
       },
       'render-clip': async (data) => {
         await renderClip(parseRenderClipPayload(data), deps);
+      },
+      'export-recording': async (data) => {
+        await exportRecording(parseExportRecordingPayload(data), deps);
       },
       'generate-hooks': async (data) => {
         await generateHooks(parseGenerateHooksPayload(data), deps);

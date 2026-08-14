@@ -1,5 +1,5 @@
-import { access, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
-import { createWriteStream } from 'node:fs';
+import { access, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { createReadStream, createWriteStream } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { pipeline } from 'node:stream/promises';
@@ -182,10 +182,10 @@ export async function renderClip(payload: RenderClipPayload, deps: WorkerDeps): 
       ...(burnAssPath ? { vttPath: burnAssPath } : {}),
     });
 
-    const body = await readFile(outputPath);
+    // Filestack store still buffers the body once; stream from disk avoids a prior readFile copy.
     const stored = await deps.storage.upload({
       key: `clip-${String(clip.id)}.mp4`,
-      body,
+      body: Readable.toWeb(createReadStream(outputPath)) as ReadableStream,
       contentType: 'video/mp4',
     });
 

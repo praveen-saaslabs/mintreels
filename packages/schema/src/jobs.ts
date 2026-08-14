@@ -15,6 +15,7 @@ export const jobTypeSchema = z.enum([
   JobType.SyncKnowledgeBase,
   JobType.GenerateHooks,
   JobType.RenderClip,
+  JobType.ExportRecording,
 ]);
 
 export const jobStatusSchema = z.enum([

@@ -9,6 +9,7 @@ import { RecordingThumbnail1700000000006 } from './0007-recording-thumbnail';
 import { ClipAspectBurn1700000000007 } from './0008-clip-aspect-burn';
 import { ClipFitMode1700000000008 } from './0009-clip-fit-mode';
 import { HookHeadlineScores1700000000007 } from './0008-hook-headline-scores';
+import { RecordingExport1700000000009 } from './0010-recording-export';
 
 // Keep this list ordered. New migrations get appended here.
 export const migrations = [
@@ -23,4 +24,5 @@ export const migrations = [
   ClipAspectBurn1700000000007,
   ClipFitMode1700000000008,
   HookHeadlineScores1700000000007,
+  RecordingExport1700000000009,
 ];

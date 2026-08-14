@@ -11,7 +11,7 @@ import {
   UpdateDateColumn,
   type Relation,
 } from 'typeorm';
-import { RecordingStatus, type RecordingRow } from '@mintreels/schema';
+import { ClipFitMode, ClipRatio, ClipStatus, RecordingStatus, type RecordingRow } from '@mintreels/schema';
 import type { Clip } from './clip.entity';
 import type { Hook } from './hook.entity';
 import type { Job } from './job.entity';
@@ -58,6 +58,24 @@ export class Recording implements RecordingRow {
 
   @Column({ type: 'text' })
   status!: RecordingStatus;
+
+  @Column({ type: 'text', name: 'export_storage_key', nullable: true })
+  exportStorageKey!: string | null;
+
+  @Column({ type: 'text', name: 'export_thumbnail_storage_key', nullable: true })
+  exportThumbnailStorageKey!: string | null;
+
+  @Column({ type: 'text', name: 'export_status', nullable: true })
+  exportStatus!: ClipStatus | null;
+
+  @Column({ type: 'varchar', length: 16, name: 'export_aspect_ratio', nullable: true })
+  exportAspectRatio!: ClipRatio | null;
+
+  @Column({ type: 'varchar', length: 16, name: 'export_fit_mode', nullable: true })
+  exportFitMode!: ClipFitMode | null;
+
+  @Column({ type: 'boolean', name: 'export_burn_subtitles', nullable: true })
+  exportBurnSubtitles!: boolean | null;
 
   @CreateDateColumn({ type: 'datetime', name: 'created_at' })
   createdAt!: Date;

@@ -36,3 +36,46 @@ export async function runFfmpeg(input: FfmpegRunInput): Promise<void> {
     });
   });
 }
+
+/** Probe media duration in milliseconds via ffprobe. */
+export async function probeDurationMs(filePath: string): Promise<number> {
+  if (filePath.trim() === '') {
+    throw new Error('filePath is required');
+  }
+  const stdout = await new Promise<string>((resolve, reject) => {
+    const child = spawn(
+      'ffprobe',
+      [
+        '-v',
+        'error',
+        '-show_entries',
+        'format=duration',
+        '-of',
+        'default=noprint_wrappers=1:nokey=1',
+        filePath,
+      ],
+      { stdio: ['ignore', 'pipe', 'pipe'] },
+    );
+    let out = '';
+    let err = '';
+    child.stdout?.on('data', (chunk: Buffer | string) => {
+      out += typeof chunk === 'string' ? chunk : chunk.toString('utf8');
+    });
+    child.stderr?.on('data', (chunk: Buffer | string) => {
+      err += typeof chunk === 'string' ? chunk : chunk.toString('utf8');
+    });
+    child.on('error', reject);
+    child.on('close', (code) => {
+      if (code === 0) {
+        resolve(out.trim());
+        return;
+      }
+      reject(new Error(err.trim() || `ffprobe exited with code ${String(code)}`));
+    });
+  });
+  const seconds = Number(stdout);
+  if (!Number.isFinite(seconds) || seconds <= 0) {
+    throw new Error('ffprobe returned an invalid duration');
+  }
+  return Math.round(seconds * 1000);
+}

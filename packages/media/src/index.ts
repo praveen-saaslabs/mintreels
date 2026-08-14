@@ -1,4 +1,4 @@
-export { runFfmpeg } from './ffmpeg';
+export { runFfmpeg, probeDurationMs } from './ffmpeg';
 export type { FfmpegRunInput } from './ffmpeg';
 export { extractAudio } from './audio';
 export type { ExtractAudioInput } from './audio';

@@ -16,15 +16,17 @@ import { parsePositiveIntId, RecordingIdProvider } from '@/lib/recording-id';
 function EditorChrome({
   title,
   projectId,
+  recordingId,
   children,
 }: Readonly<{
   title: string;
   projectId?: number | undefined;
+  recordingId?: number | undefined;
   children: ReactNode;
 }>) {
   return (
     <div className="mr-ambient flex h-svh flex-col">
-      <EditorHeader title={title} projectId={projectId} />
+      <EditorHeader title={title} projectId={projectId} recordingId={recordingId} />
       <div className="relative min-h-0 flex-1">{children}</div>
     </div>
   );
@@ -141,7 +143,7 @@ function ProjectEditor({ projectId }: Readonly<{ projectId: number }>) {
 
   return (
     <RecordingIdProvider value={recordingId}>
-      <EditorChrome title={projectName} projectId={projectId}>
+      <EditorChrome title={projectName} projectId={projectId} recordingId={recordingId}>
         <EditorLayout
           area1={<Transcriptions pending={pending.transcript} />}
           area2={

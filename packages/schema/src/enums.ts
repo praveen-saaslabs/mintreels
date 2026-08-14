@@ -29,6 +29,7 @@ export enum JobType {
   SyncKnowledgeBase = 'SYNC_KNOWLEDGE_BASE',
   GenerateHooks = 'GENERATE_HOOKS',
   RenderClip = 'RENDER_CLIP',
+  ExportRecording = 'EXPORT_RECORDING',
 }
 
 export enum KnowledgeBaseScope {

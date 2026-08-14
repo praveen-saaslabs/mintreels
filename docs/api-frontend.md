@@ -68,6 +68,8 @@ All paths are under `/api`. All GETs below are implemented and cookie-scoped to 
 | `searchMoments(id, { query })` | POST | `/recordings/:id/moments/search` |
 | `askMoments(id, { query })` | POST | `/recordings/:id/moments/ask` |
 | `exportHookClip(recordingId, hookId)` | POST | `/recordings/:id/hooks/:hookId/export` |
+| `exportRecording(id, body?)` | POST | `/recordings/:id/export` |
+| `cancelRecordingExport(id)` | POST | `/recordings/:id/export/cancel` |
 | `createClip(body)` | POST | `/clips` |
 | `getKnowledgeBases()` | GET | `/knowledge-bases` |
 | `getClip(id)` | GET | `/clips/:id` |
@@ -91,6 +93,8 @@ All paths are under `/api`. All GETs below are implemented and cookie-scoped to 
 
 **No `storageKey`.** Playback URLs are `videoUrl` / `audioUrl` (`audioUrl` is `null` until extraction finishes). Poster is `thumbnailUrl` (`null` until ingest thumbnail finishes). Status: `uploaded` \| `processing` \| `ready` \| `failed`.
 
+Latest full-video export (if any): `exportStatus` (`queued` \| `rendering` \| `ready` \| `failed`, or `null` if never exported), `exportAspectRatio`, `exportFitMode`, `exportBurnSubtitles`, `exportVideoUrl`, `exportThumbnailUrl`. Never `exportStorageKey`.
+
 ```json
 {
   "id": 10,
@@ -104,6 +108,12 @@ All paths are under `/api`. All GETs below are implemented and cookie-scoped to 
   "videoUrl": "https://cdn.filestackcontent.com/HANDLE",
   "audioUrl": "https://cdn.filestackcontent.com/AUDIO",
   "thumbnailUrl": "https://cdn.filestackcontent.com/THUMB",
+  "exportStatus": null,
+  "exportAspectRatio": null,
+  "exportFitMode": null,
+  "exportBurnSubtitles": null,
+  "exportVideoUrl": null,
+  "exportThumbnailUrl": null,
   "createdAt": "2026-08-13T08:00:00.000Z",
   "updatedAt": "2026-08-13T08:00:00.000Z"
 }
@@ -324,6 +334,45 @@ Errors: `404` recording/hook, `400 INVALID_HOOK_RANGE`, `409 VIDEO_NOT_AVAILABLE
   "videoUrl": null,
   "thumbnailUrl": null,
   "ratio": "9:16"
+}
+```
+
+### Full recording export — `POST /api/recordings/:id/export`
+
+Optional body: `{ aspectRatio?: "9:16"|"1:1"|"16:9", fitMode?: "fit"|"fill", burnSubtitles?: boolean, force?: boolean }` (defaults `9:16` / `fit` / `true` / `force` false). Sets `recordings.export_*` to `queued` and enqueues `export-recording` (previous `export_*` snapshotted in job metadata). **202** with the public recording export fields plus `jobId`. Poll `GET /api/recordings/:id` while `exportStatus` is `queued` or `rendering` (or `ready` without `exportVideoUrl`).
+
+Idempotent when aspect + fit + burn match and `force` is omitted/false: in-flight (`queued`/`rendering`) or `ready` returns the current export fields (no re-enqueue). `failed`, different options, or `force: true` reset export keys/status and re-enqueue. Latest export only (overwrite). Only the latest `EXPORT_RECORDING` job may write `export_*`.
+
+### Cancel export — `POST /api/recordings/:id/export/cancel`
+
+Cancels an in-flight export (`exportStatus` `queued` or `rendering`). Best-effort BullMQ remove, marks the job `failed` with `EXPORT_CANCELLED`, restores `export_*` from the enqueue snapshot (or all `null`). **200** with public recording + `jobId`. **409 `EXPORT_NOT_IN_PROGRESS`** when nothing to cancel. Worker treats cancel like supersession (no further `export_*` writes).
+
+Errors: `404`, `409 VIDEO_NOT_AVAILABLE` (no source video), `409 TRANSCRIPT_REQUIRED` when `burnSubtitles: true` and there are no transcript segments. Never returns `exportStorageKey`.
+
+Editor header: **Export** (confirm dialog sends `force: true`) → poll → **Cancel** while in flight → **Download** when `exportStatus === ready` and `exportVideoUrl` is a valid HTTPS Filestack URL. Failed exports show a destructive Export control and dialog message. Download uses the client Filestack helper (same as clips).
+
+```json
+{
+  "id": 10,
+  "projectId": 2,
+  "title": "Ep. 14",
+  "originalFilename": "ep14.mp4",
+  "durationMs": 3600000,
+  "width": 1920,
+  "height": 1080,
+  "status": "ready",
+  "videoUrl": "https://cdn.filestackcontent.com/HANDLE",
+  "audioUrl": "https://cdn.filestackcontent.com/AUDIO",
+  "thumbnailUrl": "https://cdn.filestackcontent.com/THUMB",
+  "exportStatus": "queued",
+  "exportAspectRatio": "9:16",
+  "exportFitMode": "fit",
+  "exportBurnSubtitles": true,
+  "exportVideoUrl": null,
+  "exportThumbnailUrl": null,
+  "jobId": 42,
+  "createdAt": "2026-08-13T08:00:00.000Z",
+  "updatedAt": "2026-08-13T08:00:00.000Z"
 }
 ```
 

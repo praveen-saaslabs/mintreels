@@ -28,7 +28,12 @@ import { AuthGuard } from '../auth/auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
 import type { RequestUser } from '../auth/auth.types';
 import { ZodValidationPipe } from '../common/zod-validation.pipe';
-import { createRecordingRequestSchema, type CreateRecordingRequest } from './recordings.dto';
+import {
+  createRecordingRequestSchema,
+  exportRecordingRequestSchema,
+  type CreateRecordingRequest,
+  type ExportRecordingRequest,
+} from './recordings.dto';
 import { RecordingsService } from './recordings.service';
 
 @ApiTags('Recordings')
@@ -133,6 +138,66 @@ export class RecordingsController {
     return this.recordingsService.retry(id, user.id);
   }
 
+  @ApiOperation({
+    summary: 'Export the full recording (aspect + optional burned captions)',
+  })
+  @ApiParam({ name: 'id', type: Number })
+  @ApiAcceptedResponse({
+    description: 'Export job queued or existing in-flight/ready export returned',
+    schema: {
+      example: {
+        id: 10,
+        projectId: 2,
+        title: 'Ep. 14',
+        originalFilename: 'ep14.mp4',
+        durationMs: 3600000,
+        width: 1920,
+        height: 1080,
+        status: 'ready',
+        videoUrl: 'https://cdn.filestackcontent.com/HANDLE',
+        audioUrl: 'https://cdn.filestackcontent.com/AUDIO',
+        thumbnailUrl: 'https://cdn.filestackcontent.com/THUMB',
+        exportStatus: 'queued',
+        exportAspectRatio: '9:16',
+        exportFitMode: 'fit',
+        exportBurnSubtitles: true,
+        exportVideoUrl: null,
+        exportThumbnailUrl: null,
+        jobId: 42,
+        createdAt: '2026-08-13T08:00:00.000Z',
+        updatedAt: '2026-08-13T08:00:00.000Z',
+      },
+    },
+  })
+  @ApiNotFoundResponse({ description: 'Recording not found' })
+  @ApiConflictResponse({ description: 'VIDEO_NOT_AVAILABLE or TRANSCRIPT_REQUIRED' })
+  @ApiBadRequestResponse({ description: 'Invalid request' })
+  @HttpCode(HttpStatus.ACCEPTED)
+  @Post(':id/export')
+  exportRecording(
+    @CurrentUser() user: RequestUser,
+    @Param('id', ParseIntPipe) id: number,
+    @Body(new ZodValidationPipe(exportRecordingRequestSchema)) body: ExportRecordingRequest,
+  ) {
+    return this.recordingsService.exportRecording(id, user.id, body);
+  }
+
+  @ApiOperation({ summary: 'Cancel an in-flight full recording export and restore prior export_*' })
+  @ApiParam({ name: 'id', type: Number })
+  @ApiOkResponse({
+    description: 'Export cancelled; recording export fields restored from pre-job snapshot',
+  })
+  @ApiNotFoundResponse({ description: 'Recording not found' })
+  @ApiConflictResponse({ description: 'EXPORT_NOT_IN_PROGRESS' })
+  @HttpCode(HttpStatus.OK)
+  @Post(':id/export/cancel')
+  cancelExportRecording(
+    @CurrentUser() user: RequestUser,
+    @Param('id', ParseIntPipe) id: number,
+  ) {
+    return this.recordingsService.cancelExportRecording(id, user.id);
+  }
+
   @ApiOperation({ summary: 'Get a single recording by ID' })
   @ApiParam({ name: 'id', type: Number })
   @ApiOkResponse({
@@ -150,6 +215,12 @@ export class RecordingsController {
         videoUrl: 'https://cdn.filestackcontent.com/HANDLE',
         audioUrl: 'https://cdn.filestackcontent.com/AUDIO',
         thumbnailUrl: 'https://cdn.filestackcontent.com/THUMB',
+        exportStatus: null,
+        exportAspectRatio: null,
+        exportFitMode: null,
+        exportBurnSubtitles: null,
+        exportVideoUrl: null,
+        exportThumbnailUrl: null,
         createdAt: '2026-08-13T08:00:00.000Z',
         updatedAt: '2026-08-13T08:00:00.000Z',
       },

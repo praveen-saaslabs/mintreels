@@ -45,6 +45,8 @@ A repository is **one table**. If a feature needs recordings + clips + jobs, the
 - `POST /api/recordings/:id/add-to-global-kb`
 - `GET /api/recordings/:id/hooks`, `POST /api/recordings/:id/hooks/generate`
 - `POST /api/recordings/:id/hooks/:hookId/export`
+- `POST /api/recordings/:id/export` (full recording export → `export-recording` job; public `exportVideoUrl` only)
+- `POST /api/recordings/:id/export/cancel` (cancel in-flight export; restore snapshotted `export_*`)
 - `POST /api/recordings/:id/moments/search` (sync embed + transcript-window search; no job)
 - `POST /api/recordings/:id/moments/ask` (sync LLM route: transcript Q&A, clip search, or funny reject)
 - `GET/POST /api/knowledge-bases`

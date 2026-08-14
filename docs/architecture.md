@@ -881,9 +881,23 @@ POST /api/recordings/:id/hooks/:hookId/export
 
 The API looks up the recording video (`storageKey`) and the hook `startMs` / `endMs`, inserts a `clips` row (`queued`, `recordingId`, `hookId`, `aspectRatio` default `9:16`, `fitMode` default `fit`, `burnSubtitles` default `true`), and enqueues `render-clip` with those fields. The worker downloads the source, then FFmpeg trims + aspect framing: **Fit** (default) scales to fit and pads with a blurred copy of the same frame (layout-agnostic — preserves the full source); **Fill** center-crops then scales (opt-in). Optionally burns overlapping transcript segments as WebVTT. It uploads the MP4 to Filestack, then asks Filestack for a video thumbnail (`video_convert=preset:thumbnail`, FFmpeg frame upload as fallback). It stores `clip.storageKey` + `clip.thumbnailStorageKey` and sets `status: ready` (or `failed`). The UI polls `GET /api/clips/:id` and, when ready, downloads via public `videoUrl` and shows `thumbnailUrl` (HTTPS Filestack CDN).
 
+---
+
+# 23b. Full recording export
+
+When the user exports the whole recording from the editor:
+
+```text
+POST /api/recordings/:id/export
+```
+
+Optional body matches clip export (`aspectRatio` default `9:16`, `fitMode` default `fit`, `burnSubtitles` default `true`, optional `force`). The API snapshots current `export_*` into job metadata (`previousExport`), then stores options on the `recordings` row (`exportStatus: queued`, …), inserts a `jobs` row (`EXPORT_RECORDING`), and enqueues `export-recording`. The worker downloads the source, resolves duration (`durationMs` or ffprobe), optionally builds ASS for the full timeline, then calls the same `renderClipVideo` path (`startMs: 0` … `endMs`). It uploads the MP4 + thumbnail to Filestack and sets `exportStorageKey` / `exportThumbnailStorageKey` / `exportStatus: ready`. Only the latest `EXPORT_RECORDING` job id may write `export_*` (superseded or user-cancelled workers no-op success). `POST /api/recordings/:id/export/cancel` removes the BullMQ job when possible, marks the job `EXPORT_CANCELLED`, and restores `export_*` from `previousExport`. Public GETs expose `exportVideoUrl` / `exportThumbnailUrl` only — never storage keys. Soft-delete mid-job → no-op success; Filestack objects stay until a later purge. Re-export with different options or `force: true` overwrites the latest export columns.
+
+---
+
 Prompt ask (`POST /api/recordings/:id/moments/ask`) routes to transcript Q&A, clip candidates, or a funny off-topic reject. Direct search remains `POST /api/recordings/:id/moments/search`. **Cut clip** uses `POST /api/clips` with the padded `clipStartMs` / `clipEndMs` (`hookId` null). Signed `GET /api/clips/:id/download` remains unimplemented (501).
 
-MVP render is **trim + encode + upload + thumbnail**. Crop, resize, subtitle burn-in, and VTT sidecar are future FFmpeg work.
+MVP render is **trim + aspect framing (fit/fill) + optional ASS caption burn-in + encode + upload + thumbnail**. Sidecar VTT download remains unimplemented.
 
 Example conceptual input (legacy / generic create — not the product path yet):
 
@@ -1083,6 +1097,8 @@ POST /api/recordings/:id/add-to-global-kb
 GET  /api/recordings/:id/hooks
 POST /api/recordings/:id/hooks/generate
 POST /api/recordings/:id/hooks/:hookId/export
+POST /api/recordings/:id/export
+POST /api/recordings/:id/export/cancel
 POST /api/recordings/:id/moments/search
 POST /api/recordings/:id/moments/ask
 ```
@@ -1528,6 +1544,7 @@ mintreels/
 │       │   │   ├── summarize.ts
 │       │   │   ├── generate-hooks.ts
 │       │   │   ├── sync-knowledge-base.ts
+│       │   │   ├── export-recording.ts
 │       │   │   └── render-clip.ts
 │       │   │
 │       │   ├── queues/

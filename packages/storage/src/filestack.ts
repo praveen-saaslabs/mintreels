@@ -86,13 +86,11 @@ export class FilestackStorageProvider implements StorageProvider {
 
   async upload(input: UploadInput): Promise<StoredObject> {
     const bytes = await toUint8Array(input.body);
-    const copy = new Uint8Array(bytes.byteLength);
-    copy.set(bytes);
     const filename = filenameFromKey(input.key);
     const form = new FormData();
     form.set(
       'fileUpload',
-      new Blob([copy], { type: input.contentType ?? 'application/octet-stream' }),
+      new Blob([bytes], { type: input.contentType ?? 'application/octet-stream' }),
       filename,
     );
 
