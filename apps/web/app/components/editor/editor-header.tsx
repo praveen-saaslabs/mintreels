@@ -1,25 +1,57 @@
-import { ArrowLeft, Trash2 } from 'lucide-react';
+import { ArrowLeft, Mic2, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { ClipVoiceoverDialog } from '@/components/clips/clip-voiceover-dialog';
 import { ConfirmDeleteDialog } from '@/components/ui/confirm-delete-dialog';
 import { buttonVariants } from '@/components/ui/button';
 import { useDeleteProject } from '@/hooks/use-delete-project';
+import { useRecordingVoiceover } from '@/hooks/use-recording-voiceover';
+import type { ClipVoiceover } from '@/lib/data/types';
 import { cn } from '@/lib/utils';
 
 export function EditorHeader({
   title,
   projectId,
+  recordingId,
+  voiceoverDefaultTitle,
 }: Readonly<{
   title: string;
   projectId?: number | undefined;
+  recordingId?: number | undefined;
+  voiceoverDefaultTitle?: string | undefined;
 }>) {
   const navigate = useNavigate();
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [voiceoverOpen, setVoiceoverOpen] = useState(false);
   const { deleteProject, isDeleting, errorMessage, reset } = useDeleteProject({
     onSuccess: () => {
       navigate('/');
     },
   });
+  const {
+    applyVoiceover,
+    isApplying,
+    inFlight,
+    status,
+    error: voiceoverError,
+    applyError,
+  } = useRecordingVoiceover(recordingId);
+
+  const voiceoverBusy = isApplying || inFlight;
+  const canAddVoiceover = recordingId != null && !voiceoverBusy;
+
+  async function onConfirmVoiceover(voiceover: ClipVoiceover | null) {
+    if (!voiceover) {
+      setVoiceoverOpen(false);
+      return;
+    }
+    try {
+      await applyVoiceover(voiceover);
+      setVoiceoverOpen(false);
+    } catch {
+      // Error surfaced via applyError / status poll.
+    }
+  }
 
   return (
     <header className="flex h-[52px] shrink-0 items-center gap-3 px-4 border border-b-[var(--glass-border-subtle)]">
@@ -36,6 +68,34 @@ export function EditorHeader({
       <h1 className="min-w-0 flex-1 truncate text-sm font-semibold tracking-[-0.01em] text-foreground">
         {title}
       </h1>
+      {recordingId != null ? (
+        <div className="flex shrink-0 items-center gap-1.5">
+          {voiceoverBusy ? (
+            <span className="hidden text-[10px] text-muted-foreground sm:inline">
+              {status === 'running' || isApplying ? 'Applying voiceover…' : 'Voiceover queued…'}
+            </span>
+          ) : null}
+          {status === 'failed' && (voiceoverError || applyError) ? (
+            <span className="hidden max-w-[10rem] truncate text-[10px] text-[var(--mr-bad)] sm:inline">
+              {applyError ?? voiceoverError}
+            </span>
+          ) : null}
+          <button
+            type="button"
+            aria-label="Add AI voiceover"
+            disabled={!canAddVoiceover}
+            onClick={() => setVoiceoverOpen(true)}
+            className={cn(
+              buttonVariants({ variant: 'outline', size: 'sm' }),
+              'shrink-0 gap-1.5',
+              canAddVoiceover ? '' : 'opacity-50',
+            )}
+          >
+            <Mic2 className="size-3.5" aria-hidden />
+            <span className="hidden sm:inline">AI voiceover</span>
+          </button>
+        </div>
+      ) : null}
       {projectId != null ? (
         <>
           <button
@@ -65,6 +125,17 @@ export function EditorHeader({
           />
         </>
       ) : null}
+
+      <ClipVoiceoverDialog
+        open={voiceoverOpen}
+        onOpenChange={setVoiceoverOpen}
+        defaultTitle={voiceoverDefaultTitle?.trim() || title}
+        pending={isApplying}
+        variant="recording"
+        onConfirm={(voiceover) => {
+          void onConfirmVoiceover(voiceover);
+        }}
+      />
     </header>
   );
 }

@@ -21,6 +21,8 @@ type ClipVoiceoverDialogProps = {
   defaultTitle: string;
   onConfirm: (voiceover: ClipVoiceover | null) => void;
   pending?: boolean;
+  /** clip = optional VO on export; recording = always apply VO to source video */
+  variant?: 'clip' | 'recording';
 };
 
 export function ClipVoiceoverDialog({
@@ -29,8 +31,10 @@ export function ClipVoiceoverDialog({
   defaultTitle,
   onConfirm,
   pending = false,
+  variant = 'clip',
 }: Readonly<ClipVoiceoverDialogProps>) {
-  const [enabled, setEnabled] = useState(false);
+  const isRecording = variant === 'recording';
+  const [enabled, setEnabled] = useState(isRecording);
   const [voiceId, setVoiceId] = useState('');
   const [titleText, setTitleText] = useState(defaultTitle);
   const [ctaText, setCtaText] = useState('');
@@ -49,9 +53,9 @@ export function ClipVoiceoverDialog({
     }
     setTitleText(defaultTitle);
     setCtaText('');
-    setEnabled(false);
+    setEnabled(isRecording);
     setPlacement('duck');
-  }, [open, defaultTitle]);
+  }, [open, defaultTitle, isRecording]);
 
   useEffect(() => {
     if (!open || voiceId !== '' || !voicesQuery.data?.length) {
@@ -68,40 +72,53 @@ export function ClipVoiceoverDialog({
       onConfirm(null);
       return;
     }
-    if (voiceId.trim() === '') {
+    if (voiceId.trim() === '' || titleText.trim() === '') {
       return;
     }
     onConfirm({
       enabled: true,
       voiceId: voiceId.trim(),
-      ...(titleText.trim() !== '' ? { titleText: titleText.trim() } : {}),
+      titleText: titleText.trim(),
       ...(ctaText.trim() !== '' ? { ctaText: ctaText.trim() } : {}),
       placement,
     });
   }
 
+  const showForm = isRecording || enabled;
+  const dialogTitle = isRecording ? 'Add AI voiceover' : 'Cut clip';
+  const dialogDescription = isRecording
+    ? 'Spoken title and optional CTA play at the start of this recording. “Before video” freezes the first frame and shifts the transcript to stay in sync.'
+    : 'Optionally add an AI voiceover (title and CTA) mixed onto the export.';
+  const confirmLabel = isRecording ? 'Apply voiceover' : 'Cut clip';
+  const duckLabel = isRecording
+    ? 'Over start (duck original audio)'
+    : 'Duck under clip audio';
+  const preLabel = isRecording
+    ? 'Before video (freeze first frame)'
+    : 'Play before clip audio';
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md" showCloseButton={!pending}>
         <DialogHeader>
-          <DialogTitle>Cut clip</DialogTitle>
-          <DialogDescription>
-            Optionally add an AI voiceover (title and CTA) mixed onto the export.
-          </DialogDescription>
+          <DialogTitle>{dialogTitle}</DialogTitle>
+          <DialogDescription>{dialogDescription}</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-3">
-          <label className="flex items-center gap-2 text-sm text-foreground">
-            <input
-              type="checkbox"
-              checked={enabled}
-              disabled={pending}
-              onChange={(event) => setEnabled(event.target.checked)}
-            />
-            Add AI voiceover
-          </label>
+          {!isRecording ? (
+            <label className="flex items-center gap-2 text-sm text-foreground">
+              <input
+                type="checkbox"
+                checked={enabled}
+                disabled={pending}
+                onChange={(event) => setEnabled(event.target.checked)}
+              />
+              Add AI voiceover
+            </label>
+          ) : null}
 
-          {enabled ? (
+          {showForm ? (
             <div className="space-y-3 rounded-md border border-[var(--glass-border-subtle)] p-3">
               <div className="space-y-1.5">
                 <Label htmlFor="clip-vo-voice">Voice</Label>
@@ -156,8 +173,8 @@ export function ClipVoiceoverDialog({
                     setPlacement(event.target.value as ClipVoiceoverPlacement)
                   }
                 >
-                  <option value="duck">Duck under clip audio</option>
-                  <option value="pre">Play before clip audio</option>
+                  <option value="duck">{duckLabel}</option>
+                  <option value="pre">{preLabel}</option>
                 </select>
               </div>
             </div>
@@ -175,10 +192,13 @@ export function ClipVoiceoverDialog({
           </Button>
           <Button
             type="button"
-            disabled={pending || (enabled && voiceId.trim() === '')}
-            onClick={() => confirm(enabled)}
+            disabled={
+              pending ||
+              (showForm && (voiceId.trim() === '' || titleText.trim() === ''))
+            }
+            onClick={() => confirm(showForm)}
           >
-            {pending ? 'Starting…' : 'Cut clip'}
+            {pending ? 'Starting…' : confirmLabel}
           </Button>
         </DialogFooter>
       </DialogContent>

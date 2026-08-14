@@ -30,6 +30,7 @@ export enum JobType {
   GenerateHooks = 'GENERATE_HOOKS',
   RenderClip = 'RENDER_CLIP',
   ApplyOverdub = 'APPLY_OVERDUB',
+  ApplyRecordingVoiceover = 'APPLY_RECORDING_VOICEOVER',
 }
 
 export enum KnowledgeBaseScope {

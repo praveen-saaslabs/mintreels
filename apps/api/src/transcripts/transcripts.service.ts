@@ -119,15 +119,21 @@ export class TranscriptsService {
       throw new HttpError(400, 'EMPTY_SEGMENT_TEXT');
     }
 
-    const inFlight = await this.jobs.findLatestByRecordingAndType(
+    const inFlightOverdub = await this.jobs.findLatestByRecordingAndType(
       recordingId,
       JobType.ApplyOverdub,
     );
-    if (
-      inFlight &&
-      (inFlight.status === JobStatus.Queued || inFlight.status === JobStatus.Running)
-    ) {
-      throw new HttpError(409, 'OVERDUB_IN_PROGRESS');
+    const inFlightVoiceover = await this.jobs.findLatestByRecordingAndType(
+      recordingId,
+      JobType.ApplyRecordingVoiceover,
+    );
+    for (const job of [inFlightOverdub, inFlightVoiceover]) {
+      if (
+        job &&
+        (job.status === JobStatus.Queued || job.status === JobStatus.Running)
+      ) {
+        throw new HttpError(409, 'OVERDUB_IN_PROGRESS');
+      }
     }
 
     const job = await this.jobs.save(

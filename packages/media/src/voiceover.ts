@@ -71,13 +71,21 @@ export interface MixVoiceoverOntoVideoInput {
   placement: 'pre' | 'duck';
 }
 
+export interface MixVoiceoverOntoVideoResult {
+  /** Timeline pad applied for `pre` (0 for `duck`). Callers should shift transcript timestamps by this. */
+  timelineOffsetMs: number;
+  voiceoverDurationMs: number;
+}
+
 /**
  * Mix TTS voiceover onto a trimmed clip.
  * - duck: lower original audio under the VO; video timing unchanged
  * - pre: freeze the first frame for the VO duration, delay original audio by the
  *   same amount, then play the clip in sync (VO first, then original A/V together)
  */
-export async function mixVoiceoverOntoVideo(input: MixVoiceoverOntoVideoInput): Promise<void> {
+export async function mixVoiceoverOntoVideo(
+  input: MixVoiceoverOntoVideoInput,
+): Promise<MixVoiceoverOntoVideoResult> {
   if (
     input.videoPath.trim() === '' ||
     input.voiceoverPath.trim() === '' ||
@@ -87,14 +95,14 @@ export async function mixVoiceoverOntoVideo(input: MixVoiceoverOntoVideoInput): 
   }
 
   const voSeconds = await probeDurationSeconds({ inputPath: input.voiceoverPath });
-  const delayMs = Math.max(0, Math.round(voSeconds * 1000));
-  const padSec = (delayMs / 1000).toFixed(3);
+  const voiceoverDurationMs = Math.max(0, Math.round(voSeconds * 1000));
+  const padSec = (voiceoverDurationMs / 1000).toFixed(3);
 
   if (input.placement === 'pre') {
     // Pad video start so it stays locked to the delayed original audio.
     const filterComplex = [
       `[0:v]tpad=start_mode=clone:start_duration=${padSec},setpts=PTS-STARTPTS[vout]`,
-      `[0:a]adelay=${String(delayMs)}|${String(delayMs)},aformat=sample_fmts=fltp:channel_layouts=stereo[main]`,
+      `[0:a]adelay=${String(voiceoverDurationMs)}|${String(voiceoverDurationMs)},aformat=sample_fmts=fltp:channel_layouts=stereo[main]`,
       `[1:a]aformat=sample_fmts=fltp:channel_layouts=stereo[vo]`,
       `[main][vo]amix=inputs=2:duration=longest:dropout_transition=0[aout]`,
     ].join(';');
@@ -121,7 +129,7 @@ export async function mixVoiceoverOntoVideo(input: MixVoiceoverOntoVideoInput): 
         input.outputPath,
       ],
     });
-    return;
+    return { timelineOffsetMs: voiceoverDurationMs, voiceoverDurationMs };
   }
 
   const filterComplex =
@@ -151,6 +159,7 @@ export async function mixVoiceoverOntoVideo(input: MixVoiceoverOntoVideoInput): 
       input.outputPath,
     ],
   });
+  return { timelineOffsetMs: 0, voiceoverDurationMs };
 }
 
 export interface ReplaceAudioRangeInput {

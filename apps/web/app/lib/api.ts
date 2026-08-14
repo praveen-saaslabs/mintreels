@@ -10,6 +10,7 @@ import type {
   ClipFilter,
   ClipSummary,
   ClipVoiceover,
+  ClipVoiceoverPlacement,
   ProjectSummary,
   SettingsSnapshot,
   SidebarProject,
@@ -262,6 +263,20 @@ export type ApplyOverdubRequest = {
   voiceId: string;
 };
 
+export type ApplyRecordingVoiceoverRequest = {
+  voiceId: string;
+  titleText?: string;
+  ctaText?: string;
+  script?: string;
+  placement: ClipVoiceoverPlacement;
+};
+
+export type RecordingVoiceoverJobSnapshot = {
+  jobId: number | null;
+  status: 'queued' | 'running' | 'success' | 'failed' | 'partial' | null;
+  error?: string | null;
+};
+
 export const api = {
   getRecordings: () => request<RecordingSummary[]>('/recordings'),
   getRecording: (id: number) => request<RecordingSummary>(`/recordings/${encodeURIComponent(id)}`),
@@ -278,6 +293,15 @@ export const api = {
     request<CreateRecordingResponse>(`/recordings/${encodeURIComponent(id)}/retry`, {
       method: 'POST',
     }),
+  applyRecordingVoiceover: (id: number, body: ApplyRecordingVoiceoverRequest) =>
+    request<{ jobId: number; status: string; voiceId: string; placement: string }>(
+      `/recordings/${encodeURIComponent(id)}/voiceover`,
+      { method: 'POST', body: JSON.stringify(body) },
+    ),
+  getRecordingVoiceover: (id: number) =>
+    request<RecordingVoiceoverJobSnapshot>(
+      `/recordings/${encodeURIComponent(id)}/voiceover`,
+    ),
   getTranscript: (id: number) =>
     request<TranscriptResponse>(`/recordings/${encodeURIComponent(id)}/transcript`),
   getSummary: (id: number) =>

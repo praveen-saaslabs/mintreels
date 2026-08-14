@@ -1,6 +1,10 @@
 import { EnvKey } from '@mintreels/schema';
 import { startWorker } from '@mintreels/queue';
 import { applyOverdub, type ApplyOverdubPayload } from '../jobs/apply-overdub';
+import {
+  applyRecordingVoiceover,
+  type ApplyRecordingVoiceoverPayload,
+} from '../jobs/apply-recording-voiceover';
 import { generateHooks, type GenerateHooksPayload } from '../jobs/generate-hooks';
 import { ingestVideo, type IngestVideoPayload } from '../jobs/ingest-video';
 import { renderClip, type RenderClipPayload } from '../jobs/render-clip';
@@ -96,6 +100,35 @@ function parseApplyOverdubPayload(data: unknown): ApplyOverdubPayload {
   };
 }
 
+function parseApplyRecordingVoiceoverPayload(data: unknown): ApplyRecordingVoiceoverPayload {
+  if (typeof data !== 'object' || data === null) {
+    throw new Error('apply-recording-voiceover payload is required');
+  }
+  const rec = data as Record<string, unknown>;
+  if (typeof rec.recordingId !== 'number') {
+    throw new Error('apply-recording-voiceover payload.recordingId is required');
+  }
+  if (typeof rec.jobId !== 'number') {
+    throw new Error('apply-recording-voiceover payload.jobId is required');
+  }
+  if (typeof rec.voiceId !== 'string' || rec.voiceId.trim() === '') {
+    throw new Error('apply-recording-voiceover payload.voiceId is required');
+  }
+  if (typeof rec.text !== 'string' || rec.text.trim() === '') {
+    throw new Error('apply-recording-voiceover payload.text is required');
+  }
+  if (rec.placement !== 'pre' && rec.placement !== 'duck') {
+    throw new Error('apply-recording-voiceover payload.placement must be pre or duck');
+  }
+  return {
+    recordingId: rec.recordingId,
+    jobId: rec.jobId,
+    voiceId: rec.voiceId.trim(),
+    placement: rec.placement,
+    text: rec.text,
+  };
+}
+
 export function createProcessors(deps: WorkerDeps): { close: () => Promise<void> } {
   const redisUrl = requireRedisUrl();
   const concurrency = Number(process.env[EnvKey.WorkerConcurrency]) || 1;
@@ -115,6 +148,9 @@ export function createProcessors(deps: WorkerDeps): { close: () => Promise<void>
       },
       'apply-overdub': async (data) => {
         await applyOverdub(parseApplyOverdubPayload(data), deps);
+      },
+      'apply-recording-voiceover': async (data) => {
+        await applyRecordingVoiceover(parseApplyRecordingVoiceoverPayload(data), deps);
       },
     },
   });

@@ -47,7 +47,7 @@ async function main(): Promise<void> {
 
   const worker = createProcessors(deps);
   console.log(
-    'MintReels worker listening on queue mintreels for ingest-video, render-clip, generate-hooks, apply-overdub',
+    'MintReels worker listening on queue mintreels for ingest-video, render-clip, generate-hooks, apply-overdub, apply-recording-voiceover',
   );
 
   const shutdown = async () => {

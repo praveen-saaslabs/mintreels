@@ -8,6 +8,7 @@ export const JOB_NAMES = [
   'sync-knowledge-base',
   'render-clip',
   'apply-overdub',
+  'apply-recording-voiceover',
 ] as const;
 
 export type JobName = (typeof JOB_NAMES)[number];

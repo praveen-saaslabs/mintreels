@@ -37,7 +37,7 @@ import {
   VECTOR_STORE_PROVIDER,
 } from '../providers/provider-tokens';
 import { toPublicTranscript } from '../transcripts/public-transcript';
-import type { CreateRecordingRequest } from './recordings.dto';
+import type { CreateRecordingRequest, ApplyRecordingVoiceoverRequest } from './recordings.dto';
 
 function retryGenerationFromMetadata(metadata: Record<string, unknown> | null): number {
   const raw = metadata?.retryGeneration;
@@ -132,6 +132,24 @@ function toPublicRecording(recording: Recording) {
     createdAt: recording.createdAt,
     updatedAt: recording.updatedAt,
   };
+}
+
+function voiceoverScript(
+  body: ApplyRecordingVoiceoverRequest,
+  fallbackTitle: string,
+): string {
+  if (body.script !== undefined && body.script.trim() !== '') {
+    return body.script.trim();
+  }
+  const title = (body.titleText ?? fallbackTitle).trim();
+  const cta = body.ctaText?.trim() ?? '';
+  if (title !== '' && cta !== '') {
+    return `${title}. ${cta}`;
+  }
+  if (title !== '') {
+    return title;
+  }
+  return cta;
 }
 
 @Injectable()
@@ -430,6 +448,104 @@ export class RecordingsService {
 
   async addToGlobalKnowledgeBase(_id: number, _userId: number): Promise<never> {
     throw new HttpError(501, 'recordingsService.addToGlobalKnowledgeBase is not implemented');
+  }
+
+  async applyVoiceover(id: number, body: ApplyRecordingVoiceoverRequest, userId: number) {
+    const recording = await this.recordings.findByIdForUser(id, userId);
+    if (!recording) {
+      throw new HttpError(404, 'Not found');
+    }
+    if (recording.storageKey.trim() === '') {
+      throw new HttpError(409, 'VIDEO_NOT_AVAILABLE');
+    }
+
+    await this.assertNoAudioMutationInFlight(id);
+
+    const script = voiceoverScript(body, recording.title);
+    if (script.trim() === '') {
+      throw new HttpError(400, 'EMPTY_VOICEOVER_TEXT');
+    }
+
+    const job = await this.jobs.save(
+      this.jobs.create({
+        type: JobType.ApplyRecordingVoiceover,
+        recordingId: id,
+        status: JobStatus.Queued,
+        attempt: 0,
+        maxAttempts: DEFAULT_MAX_ATTEMPTS,
+        error: null,
+        errorCode: null,
+        errorMetadata: null,
+        currentStep: null,
+        startedAt: null,
+        finishedAt: null,
+        metadata: {
+          voiceId: body.voiceId,
+          placement: body.placement,
+        },
+      }),
+    );
+
+    await this.jobAuditLogs.save(
+      this.jobAuditLogs.create({
+        jobId: job.id,
+        step: null,
+        event: 'job_queued',
+        message: 'APPLY_RECORDING_VOICEOVER enqueued',
+        metadata: { voiceId: body.voiceId, placement: body.placement },
+      }),
+    );
+
+    await this.queue.enqueue({
+      id: `apply-recording-voiceover-${String(job.id)}`,
+      name: 'apply-recording-voiceover',
+      payload: {
+        recordingId: id,
+        jobId: job.id,
+        voiceId: body.voiceId,
+        placement: body.placement,
+        text: script,
+      },
+      maxAttempts: 3,
+    });
+
+    return {
+      jobId: job.id,
+      status: job.status,
+      voiceId: body.voiceId,
+      placement: body.placement,
+    };
+  }
+
+  async getVoiceoverJob(id: number, userId: number) {
+    const recording = await this.recordings.findByIdForUser(id, userId);
+    if (!recording) {
+      throw new HttpError(404, 'Not found');
+    }
+    const job = await this.jobs.findLatestByRecordingAndType(
+      id,
+      JobType.ApplyRecordingVoiceover,
+    );
+    if (!job) {
+      return { jobId: null, status: null as string | null, error: null as string | null };
+    }
+    return {
+      jobId: job.id,
+      status: job.status,
+      error: job.error,
+    };
+  }
+
+  private async assertNoAudioMutationInFlight(recordingId: number): Promise<void> {
+    const [overdub, voiceover] = await Promise.all([
+      this.jobs.findLatestByRecordingAndType(recordingId, JobType.ApplyOverdub),
+      this.jobs.findLatestByRecordingAndType(recordingId, JobType.ApplyRecordingVoiceover),
+    ]);
+    for (const job of [overdub, voiceover]) {
+      if (job && isInFlightJob(job.status)) {
+        throw new HttpError(409, 'VOICEOVER_IN_PROGRESS');
+      }
+    }
   }
 
   private async enqueueIngestJob(

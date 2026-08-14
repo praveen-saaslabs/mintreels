@@ -17,6 +17,7 @@ export {
 } from './voiceover';
 export type {
   MixVoiceoverOntoVideoInput,
+  MixVoiceoverOntoVideoResult,
   ProbeDurationInput,
   ReplaceAudioRangeInput,
 } from './voiceover';

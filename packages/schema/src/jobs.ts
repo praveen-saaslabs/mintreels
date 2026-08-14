@@ -5,7 +5,7 @@ import { JobStatus, JobType } from './enums';
 /**
  * jobs — docs/architecture.md §29
  *
- * type: VIDEO_INGEST | TRANSCRIBE | GENERATE_SUMMARY | SYNC_KNOWLEDGE_BASE | GENERATE_HOOKS | RENDER_CLIP | APPLY_OVERDUB
+ * type: VIDEO_INGEST | TRANSCRIBE | GENERATE_SUMMARY | SYNC_KNOWLEDGE_BASE | GENERATE_HOOKS | RENDER_CLIP | APPLY_OVERDUB | APPLY_RECORDING_VOICEOVER
  * status: queued | running | success | failed | partial
  */
 export const jobTypeSchema = z.enum([
@@ -16,6 +16,7 @@ export const jobTypeSchema = z.enum([
   JobType.GenerateHooks,
   JobType.RenderClip,
   JobType.ApplyOverdub,
+  JobType.ApplyRecordingVoiceover,
 ]);
 
 export const jobStatusSchema = z.enum([
