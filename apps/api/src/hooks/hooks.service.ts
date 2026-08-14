@@ -12,6 +12,7 @@ import {
 import { DEFAULT_MAX_ATTEMPTS } from '@mintreels/domain';
 import type { QueueProvider } from '@mintreels/queue';
 import { JobStatus, JobStepName, JobStepStatus, JobType } from '@mintreels/schema';
+import type { Ownership } from '../auth/auth.types';
 import { toHookClipSummary } from '../clips/clips.service';
 import { HttpError } from '../common/http-error';
 import { QUEUE_PROVIDER, VECTOR_STORE_PROVIDER } from '../providers/provider-tokens';
@@ -37,8 +38,8 @@ export class HooksService {
     @Inject(VECTOR_STORE_PROVIDER) private readonly vectorStore: VectorStoreProvider,
   ) {}
 
-  async listByRecordingId(recordingId: number, userId: number) {
-    const recording = await this.recordings.findByIdForUser(recordingId, userId);
+  async listByRecordingId(recordingId: number, owner: Ownership) {
+    const recording = await this.recordings.findByIdForOwner(recordingId, owner);
     if (!recording) {
       throw new HttpError(404, 'Not found');
     }
@@ -83,8 +84,8 @@ export class HooksService {
    * the worker re-runs hook discovery → embeddings → dedup/clips against the existing transcript.
    * Existing hooks and their vectors are cleared first so this is a clean regeneration.
    */
-  async generate(recordingId: number, userId: number) {
-    const recording = await this.recordings.findByIdForUser(recordingId, userId);
+  async generate(recordingId: number, owner: Ownership) {
+    const recording = await this.recordings.findByIdForOwner(recordingId, owner);
     if (!recording) {
       throw new HttpError(404, 'Not found');
     }

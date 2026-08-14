@@ -8,7 +8,9 @@ import { deletedAtSchema, idSchema, timestampsSchema } from './common';
 export const projectRowSchema = z
   .object({
     id: idSchema,
-    userId: idSchema,
+    // Exactly one owner is set (user_id XOR guest_id). guestId is an opaque token.
+    userId: idSchema.nullable(),
+    guestId: z.string().min(1).nullable(),
     name: z.string().min(1),
   })
   .merge(timestampsSchema)
@@ -16,6 +18,8 @@ export const projectRowSchema = z
 
 export const projectInsertSchema = projectRowSchema.partial({
   id: true,
+  userId: true,
+  guestId: true,
   createdAt: true,
   updatedAt: true,
   deletedAt: true,

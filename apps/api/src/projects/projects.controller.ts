@@ -18,16 +18,17 @@ import {
   ApiTags,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
-import { AuthGuard } from '../auth/auth.guard';
+import { IdentityGuard } from '../guest/identity.guard';
+import { GuestRateLimitGuard } from '../guest/guest-rate-limit.guard';
 import { JobActivityStatus, KnowledgeBaseScope, SidebarAccent } from '@mintreels/schema';
-import { CurrentUser } from '../auth/current-user.decorator';
-import type { RequestUser } from '../auth/auth.types';
+import { CurrentActor } from '../guest/current-actor.decorator';
+import { ownership, type RequestActor } from '../auth/auth.types';
 import { ProjectsService } from './projects.service';
 
 @ApiTags('Projects')
 @ApiCookieAuth('auth_token')
 @ApiUnauthorizedResponse({ description: 'UNAUTHORIZED' })
-@UseGuards(AuthGuard)
+@UseGuards(IdentityGuard, GuestRateLimitGuard)
 @Controller('api/projects')
 export class ProjectsController {
   constructor(private readonly projectsService: ProjectsService) {}
@@ -42,8 +43,8 @@ export class ProjectsController {
     },
   })
   @Get('sidebar')
-  listSidebar(@CurrentUser() user: RequestUser) {
-    return this.projectsService.listSidebar(user.id);
+  listSidebar(@CurrentActor() actor: RequestActor) {
+    return this.projectsService.listSidebar(ownership(actor));
   }
 
   @ApiOperation({ summary: 'List projects for the current user' })
@@ -68,8 +69,8 @@ export class ProjectsController {
     },
   })
   @Get()
-  list(@CurrentUser() user: RequestUser) {
-    return this.projectsService.list(user.id);
+  list(@CurrentActor() actor: RequestActor) {
+    return this.projectsService.list(ownership(actor));
   }
 
   @ApiOperation({
@@ -80,7 +81,7 @@ export class ProjectsController {
   @ApiNotFoundResponse({ description: 'Project not found' })
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  remove(@CurrentUser() user: RequestUser, @Param('id', ParseIntPipe) id: number) {
-    return this.projectsService.remove(id, user.id);
+  remove(@CurrentActor() actor: RequestActor, @Param('id', ParseIntPipe) id: number) {
+    return this.projectsService.remove(id, ownership(actor));
   }
 }

@@ -1,4 +1,5 @@
 export { User } from './user.entity';
+export { GuestSession } from './guest-session.entity';
 export { Project } from './project.entity';
 export { Recording } from './recording.entity';
 export { Transcript } from './transcript.entity';

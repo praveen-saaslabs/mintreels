@@ -8,12 +8,12 @@ import {
   TranscriptRepository,
   TranscriptSegmentRepository,
 } from '@mintreels/db';
-import { AuthModule } from '../auth/auth.module';
+import { GuestModule } from '../guest/guest.module';
 import { TranscriptsController } from './transcripts.controller';
 import { TranscriptsService } from './transcripts.service';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Transcript, TranscriptSegment, Recording]), AuthModule],
+  imports: [TypeOrmModule.forFeature([Transcript, TranscriptSegment, Recording]), GuestModule],
   controllers: [TranscriptsController],
   providers: [
     TranscriptsService,

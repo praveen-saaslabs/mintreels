@@ -14,7 +14,7 @@ import {
   Transcript,
   TranscriptRepository,
 } from '@mintreels/db';
-import { AuthModule } from '../auth/auth.module';
+import { GuestModule } from '../guest/guest.module';
 import { ClipsModule } from '../clips/clips.module';
 import { HooksController } from './hooks.controller';
 import { HooksService } from './hooks.service';
@@ -22,7 +22,7 @@ import { HooksService } from './hooks.service';
 @Module({
   imports: [
     TypeOrmModule.forFeature([Hook, Recording, Transcript, Job, JobStep, JobAuditLog]),
-    AuthModule,
+    GuestModule,
     ClipsModule,
   ],
   controllers: [HooksController],

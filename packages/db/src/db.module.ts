@@ -5,6 +5,7 @@ import { createDataSourceOptions, entities } from './data-source';
 import type { MigrationClass } from './data-source';
 import {
   UserRepository,
+  GuestSessionRepository,
   ProjectRepository,
   RecordingRepository,
   TranscriptRepository,
@@ -21,6 +22,7 @@ import {
 
 const repositories = [
   UserRepository,
+  GuestSessionRepository,
   ProjectRepository,
   RecordingRepository,
   TranscriptRepository,

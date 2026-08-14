@@ -16,17 +16,20 @@ import {
   ApiConflictResponse,
   ApiCookieAuth,
   ApiCreatedResponse,
+  ApiForbiddenResponse,
   ApiNoContentResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
   ApiParam,
   ApiTags,
+  ApiTooManyRequestsResponse,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
-import { AuthGuard } from '../auth/auth.guard';
-import { CurrentUser } from '../auth/current-user.decorator';
-import type { RequestUser } from '../auth/auth.types';
+import { IdentityGuard } from '../guest/identity.guard';
+import { GuestRateLimitGuard, RateLimit } from '../guest/guest-rate-limit.guard';
+import { CurrentActor } from '../guest/current-actor.decorator';
+import { ownership, type RequestActor } from '../auth/auth.types';
 import { ZodValidationPipe } from '../common/zod-validation.pipe';
 import {
   createRecordingRequestSchema,
@@ -39,7 +42,7 @@ import { RecordingsService } from './recordings.service';
 @ApiTags('Recordings')
 @ApiCookieAuth('auth_token')
 @ApiUnauthorizedResponse({ description: 'UNAUTHORIZED' })
-@UseGuards(AuthGuard)
+@UseGuards(IdentityGuard, GuestRateLimitGuard)
 @Controller('api/recordings')
 export class RecordingsController {
   constructor(private readonly recordingsService: RecordingsService) {}
@@ -52,19 +55,22 @@ export class RecordingsController {
     schema: { example: { id: 10, projectId: 4, jobId: 1 } },
   })
   @ApiBadRequestResponse({ description: 'Invalid request' })
+  @ApiTooManyRequestsResponse({ description: 'RATE_LIMITED' })
+  @ApiForbiddenResponse({ description: 'GUEST_LIMIT_REACHED' })
+  @RateLimit('uploads')
   @Post()
   create(
-    @CurrentUser() user: RequestUser,
+    @CurrentActor() actor: RequestActor,
     @Body(new ZodValidationPipe(createRecordingRequestSchema)) body: CreateRecordingRequest,
   ) {
-    return this.recordingsService.create(body, user.id);
+    return this.recordingsService.create(body, ownership(actor));
   }
 
   @ApiOperation({ summary: 'List recordings for the current user' })
   @ApiOkResponse({ description: 'Array of recording objects' })
   @Get()
-  list(@CurrentUser() user: RequestUser) {
-    return this.recordingsService.list(user.id);
+  list(@CurrentActor() actor: RequestActor) {
+    return this.recordingsService.list(ownership(actor));
   }
 
   @ApiOperation({ summary: 'Poll ingest/processing status for a recording' })
@@ -121,8 +127,8 @@ export class RecordingsController {
   })
   @ApiNotFoundResponse({ description: 'Recording not found' })
   @Get(':id/processing')
-  getProcessing(@CurrentUser() user: RequestUser, @Param('id', ParseIntPipe) id: number) {
-    return this.recordingsService.getProcessing(id, user.id);
+  getProcessing(@CurrentActor() actor: RequestActor, @Param('id', ParseIntPipe) id: number) {
+    return this.recordingsService.getProcessing(id, ownership(actor));
   }
 
   @ApiOperation({ summary: 'Retry a failed or partial ingest job' })
@@ -135,8 +141,8 @@ export class RecordingsController {
   @ApiConflictResponse({ description: 'INGEST_IN_PROGRESS or NOT_RETRYABLE' })
   @HttpCode(HttpStatus.ACCEPTED)
   @Post(':id/retry')
-  retry(@CurrentUser() user: RequestUser, @Param('id', ParseIntPipe) id: number) {
-    return this.recordingsService.retry(id, user.id);
+  retry(@CurrentActor() actor: RequestActor, @Param('id', ParseIntPipe) id: number) {
+    return this.recordingsService.retry(id, ownership(actor));
   }
 
   @ApiOperation({
@@ -176,11 +182,11 @@ export class RecordingsController {
   @HttpCode(HttpStatus.ACCEPTED)
   @Post(':id/export')
   exportRecording(
-    @CurrentUser() user: RequestUser,
+    @CurrentActor() actor: RequestActor,
     @Param('id', ParseIntPipe) id: number,
     @Body(new ZodValidationPipe(exportRecordingRequestSchema)) body: ExportRecordingRequest,
   ) {
-    return this.recordingsService.exportRecording(id, user.id, body);
+    return this.recordingsService.exportRecording(id, ownership(actor), body);
   }
 
   @ApiOperation({ summary: 'Cancel an in-flight full recording export and restore prior export_*' })
@@ -193,10 +199,10 @@ export class RecordingsController {
   @HttpCode(HttpStatus.OK)
   @Post(':id/export/cancel')
   cancelExportRecording(
-    @CurrentUser() user: RequestUser,
+    @CurrentActor() actor: RequestActor,
     @Param('id', ParseIntPipe) id: number,
   ) {
-    return this.recordingsService.cancelExportRecording(id, user.id);
+    return this.recordingsService.cancelExportRecording(id, ownership(actor));
   }
 
   @ApiOperation({ summary: 'Get a single recording by ID' })
@@ -229,8 +235,8 @@ export class RecordingsController {
   })
   @ApiNotFoundResponse({ description: 'Recording not found' })
   @Get(':id')
-  getById(@CurrentUser() user: RequestUser, @Param('id', ParseIntPipe) id: number) {
-    return this.recordingsService.getById(id, user.id);
+  getById(@CurrentActor() actor: RequestActor, @Param('id', ParseIntPipe) id: number) {
+    return this.recordingsService.getById(id, ownership(actor));
   }
 
   @ApiOperation({ summary: 'Soft-delete a recording and its child rows' })
@@ -239,8 +245,8 @@ export class RecordingsController {
   @ApiNotFoundResponse({ description: 'Recording not found' })
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  remove(@CurrentUser() user: RequestUser, @Param('id', ParseIntPipe) id: number) {
-    return this.recordingsService.remove(id, user.id);
+  remove(@CurrentActor() actor: RequestActor, @Param('id', ParseIntPipe) id: number) {
+    return this.recordingsService.remove(id, ownership(actor));
   }
 
   @ApiOperation({ summary: 'Add recording to the global knowledge base' })
@@ -249,9 +255,9 @@ export class RecordingsController {
   @ApiNotFoundResponse({ description: 'Recording not found' })
   @Post(':id/add-to-global-kb')
   addToGlobalKnowledgeBase(
-    @CurrentUser() user: RequestUser,
+    @CurrentActor() actor: RequestActor,
     @Param('id', ParseIntPipe) id: number,
   ) {
-    return this.recordingsService.addToGlobalKnowledgeBase(id, user.id);
+    return this.recordingsService.addToGlobalKnowledgeBase(id, ownership(actor));
   }
 }

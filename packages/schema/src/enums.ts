@@ -155,6 +155,13 @@ export enum EmbeddingStatus {
   Failed = 'failed',
 }
 
+export enum GuestSessionStatus {
+  Active = 'active',
+  Claimed = 'claimed',
+  Expired = 'expired',
+  Revoked = 'revoked',
+}
+
 export enum EnvKey {
   AiProvider = 'AI_PROVIDER',
   LlmProvider = 'LLM_PROVIDER',
@@ -197,4 +204,14 @@ export enum EnvKey {
   HookWeightNovelty = 'HOOK_WEIGHT_NOVELTY',
   HookWeightControversy = 'HOOK_WEIGHT_CONTROVERSY',
   HookWeightHeadline = 'HOOK_WEIGHT_HEADLINE',
+  GuestEnabled = 'GUEST_ENABLED',
+  GuestSessionTtlSeconds = 'GUEST_SESSION_TTL_SECONDS',
+  GuestDataRetentionSeconds = 'GUEST_DATA_RETENTION_SECONDS',
+  GuestMaxProjects = 'GUEST_MAX_PROJECTS',
+  GuestMaxRecordings = 'GUEST_MAX_RECORDINGS',
+  GuestRequestsPerMinute = 'GUEST_REQUESTS_PER_MINUTE',
+  GuestUploadsPerHour = 'GUEST_UPLOADS_PER_HOUR',
+  GuestTranscriptionsPerHour = 'GUEST_TRANSCRIPTIONS_PER_HOUR',
+  GuestAiGenerationsPerHour = 'GUEST_AI_GENERATIONS_PER_HOUR',
+  GuestSessionCreationsPerIpPerHour = 'GUEST_SESSION_CREATIONS_PER_IP_PER_HOUR',
 }

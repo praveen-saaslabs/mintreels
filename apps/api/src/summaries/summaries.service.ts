@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { RecordingRepository, SummaryRepository } from '@mintreels/db';
+import type { Ownership } from '../auth/auth.types';
 import { HttpError, notImplemented } from '../common/http-error';
 
 @Injectable()
@@ -9,8 +10,8 @@ export class SummariesService {
     private readonly recordings: RecordingRepository,
   ) {}
 
-  async getByRecordingId(recordingId: number, userId: number) {
-    const recording = await this.recordings.findByIdForUser(recordingId, userId);
+  async getByRecordingId(recordingId: number, owner: Ownership) {
+    const recording = await this.recordings.findByIdForOwner(recordingId, owner);
     if (!recording) {
       throw new HttpError(404, 'Not found');
     }
@@ -26,7 +27,7 @@ export class SummariesService {
     };
   }
 
-  async create(_recordingId: number, _userId: number): Promise<never> {
+  async create(_recordingId: number, _owner: Ownership): Promise<never> {
     notImplemented('summariesService.create');
   }
 }
