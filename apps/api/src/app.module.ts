@@ -1,7 +1,8 @@
 import { Module } from '@nestjs/common';
-import { APP_FILTER } from '@nestjs/core';
+import { APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
 import { DbModule } from '@mintreels/db';
 import { AllExceptionsFilter } from './common/all-exceptions.filter';
+import { HttpLoggingInterceptor } from './common/http-logging.interceptor';
 import { HealthController } from './health.controller';
 import { migrations } from './migrations';
 import { AuthModule } from './auth/auth.module';
@@ -42,6 +43,10 @@ import { VoicesModule } from './voices/voices.module';
     {
       provide: APP_FILTER,
       useClass: AllExceptionsFilter,
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: HttpLoggingInterceptor,
     },
   ],
 })

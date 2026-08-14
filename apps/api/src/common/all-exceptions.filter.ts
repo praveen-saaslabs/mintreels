@@ -1,4 +1,4 @@
-import { Catch, HttpException, HttpStatus } from '@nestjs/common';
+import { Catch, HttpException, HttpStatus, Logger } from '@nestjs/common';
 import type { ArgumentsHost, ExceptionFilter } from '@nestjs/common';
 import type { Response } from 'express';
 import { ZodError } from 'zod';
@@ -6,6 +6,8 @@ import { HttpError } from './http-error';
 
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
+  private readonly logger = new Logger(AllExceptionsFilter.name);
+
   catch(exception: unknown, host: ArgumentsHost): void {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
@@ -34,6 +36,9 @@ export class AllExceptionsFilter implements ExceptionFilter {
       return;
     }
 
+    const message = exception instanceof Error ? exception.message : 'Unknown error';
+    const stack = exception instanceof Error ? exception.stack : undefined;
+    this.logger.error(message, stack);
     response.status(HttpStatus.INTERNAL_SERVER_ERROR).json({ error: 'Internal server error' });
   }
 }

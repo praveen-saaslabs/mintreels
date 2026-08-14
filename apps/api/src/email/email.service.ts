@@ -26,8 +26,9 @@ export class EmailService {
         ...mail,
       });
     } catch (error) {
-      console.error(error);
-      this.logger.error('Failed to send verification email');
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      const stack = error instanceof Error ? error.stack : undefined;
+      this.logger.error(`Failed to send verification email: ${message}`, stack);
       throw error;
     }
   }
