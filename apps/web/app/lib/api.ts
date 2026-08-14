@@ -192,6 +192,14 @@ export type RecordingProcessingSnapshot = {
     endMs: number;
     score: number | null;
   }>;
+  /** Chronological job audit trail for all jobs on this recording (ingest, export, hooks, …). */
+  audit: Array<{
+    jobId: number;
+    event: string;
+    step: string | null;
+    message: string | null;
+    createdAt: string;
+  }>;
 };
 
 export type SummaryResponse = {

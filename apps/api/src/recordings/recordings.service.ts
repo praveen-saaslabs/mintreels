@@ -583,7 +583,12 @@ export class RecordingsService {
 
     const job = await this.jobs.findLatestByRecordingAndType(id, JobType.VideoIngest);
     const steps = job ? await this.jobSteps.listByJobId(job.id) : [];
-    const audit = job ? await this.jobAuditLogs.listByJobId(job.id) : [];
+    const recordingJobs = await this.jobs.find({
+      where: { recordingId: id },
+      select: ['id'],
+      order: { createdAt: 'ASC', id: 'ASC' },
+    });
+    const audit = await this.jobAuditLogs.listByJobIds(recordingJobs.map((row) => row.id));
     const transcript = await this.transcripts.findByRecordingId(id);
     const segments = transcript ? await this.segments.listByRecordingId(id) : [];
     const summary = await this.summaries.findByRecordingId(id);
@@ -631,6 +636,7 @@ export class RecordingsService {
         score: hook.score,
       })),
       audit: audit.map((row) => ({
+        jobId: row.jobId,
         event: row.event,
         step: row.step,
         message: row.message,

@@ -37,6 +37,9 @@ function pickPlaybackUrl(...candidates: unknown[]): string | null {
 }
 
 function isTerminalProcessing(snapshot: RecordingProcessingSnapshot): boolean {
+  if (snapshot.exportStatus === 'queued' || snapshot.exportStatus === 'rendering') {
+    return false;
+  }
   if (snapshot.status === 'ready' || snapshot.status === 'failed') {
     return true;
   }

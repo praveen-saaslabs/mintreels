@@ -69,6 +69,9 @@ export function useRecordingExport(recordingId: number | undefined, title: strin
     },
     onSuccess: (data) => {
       queryClient.setQueryData(queryKeys.recordings.detail(data.id), data);
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.recordings.processing(data.id),
+      });
     },
   });
 
@@ -81,6 +84,9 @@ export function useRecordingExport(recordingId: number | undefined, title: strin
     },
     onSuccess: (data) => {
       queryClient.setQueryData(queryKeys.recordings.detail(data.id), data);
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.recordings.processing(data.id),
+      });
     },
   });
 

@@ -109,6 +109,7 @@ export class RecordingsController {
         hooks: [],
         audit: [
           {
+            jobId: 1,
             event: 'step_started',
             step: 'TRANSCRIPTION',
             message: 'started attempt 1',
