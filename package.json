@@ -2,6 +2,7 @@
   "name": "mintreels",
   "version": "0.0.0",
   "private": true,
+  "license": "MIT",
   "description": "MintReels — open-source video intelligence and clipping application",
   "type": "module",
   "packageManager": "pnpm@10.17.0",
