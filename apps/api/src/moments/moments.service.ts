@@ -18,6 +18,7 @@ import {
   type AskMomentsResponse,
   type SearchMomentsRequest,
 } from '@mintreels/schema';
+import type { Ownership } from '../auth/auth.types';
 import { HttpError } from '../common/http-error';
 import {
   EMBEDDING_PROVIDER,
@@ -57,14 +58,14 @@ export class MomentsService {
     @Inject(LLM_PROVIDER) private readonly llm: LLMProvider,
   ) {}
 
-  async search(recordingId: number, userId: number, body: SearchMomentsRequest) {
-    const recording = await this.requireOwnedRecording(recordingId, userId);
+  async search(recordingId: number, owner: Ownership, body: SearchMomentsRequest) {
+    const recording = await this.requireOwnedRecording(recordingId, owner);
     await this.requireTranscript(recordingId);
     return { moments: await this.findMoments(recording, body.query, body.limit) };
   }
 
-  async ask(recordingId: number, userId: number, body: AskMomentsRequest): Promise<AskMomentsResponse> {
-    const recording = await this.requireOwnedRecording(recordingId, userId);
+  async ask(recordingId: number, owner: Ownership, body: AskMomentsRequest): Promise<AskMomentsResponse> {
+    const recording = await this.requireOwnedRecording(recordingId, owner);
     const transcriptRow = await this.requireTranscript(recordingId);
     const segments = await this.segments.listByRecordingId(recordingId);
     const routed = await this.llm.askTranscript(
@@ -83,8 +84,8 @@ export class MomentsService {
     return { kind: 'moments', moments };
   }
 
-  private async requireOwnedRecording(recordingId: number, userId: number): Promise<Recording> {
-    const recording = await this.recordings.findByIdForUser(recordingId, userId);
+  private async requireOwnedRecording(recordingId: number, owner: Ownership): Promise<Recording> {
+    const recording = await this.recordings.findByIdForOwner(recordingId, owner);
     if (!recording) {
       throw new HttpError(404, 'Not found');
     }

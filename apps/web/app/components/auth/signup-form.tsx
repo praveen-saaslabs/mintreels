@@ -8,7 +8,18 @@ import { authErrorMessage } from '@/lib/auth-errors';
 import { useAuth } from '@/providers/auth-provider';
 import { AuthLayout } from './auth-layout';
 
-export function SignupForm() {
+export function SignupForm({
+  embedded = false,
+  onNeedsVerification,
+}: {
+  /** Render only the form (no page layout) for use inside a dialog. */
+  embedded?: boolean;
+  /**
+   * Called (instead of navigating to /verify-email) once signup succeeds and a
+   * verification code has been sent — lets an embedded host switch to a verify step.
+   */
+  onNeedsVerification?: (email: string) => void;
+} = {}) {
   const { signup } = useAuth();
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
@@ -35,9 +46,13 @@ export function SignupForm() {
     setIsSubmitting(true);
     try {
       await signup(parsed.data);
-      navigate(`/verify-email?email=${encodeURIComponent(parsed.data.email)}`, {
-        replace: true,
-      });
+      if (onNeedsVerification) {
+        onNeedsVerification(parsed.data.email);
+      } else {
+        navigate(`/verify-email?email=${encodeURIComponent(parsed.data.email)}`, {
+          replace: true,
+        });
+      }
     } catch (err) {
       setError(authErrorMessage(err));
     } finally {
@@ -45,20 +60,8 @@ export function SignupForm() {
     }
   }
 
-  return (
-    <AuthLayout
-      title="Create account"
-      description="Sign up with email and password. We’ll send a verification code."
-      footer={
-        <>
-          Already have an account?{' '}
-          <Link to="/login" className="font-medium text-foreground underline-offset-4 hover:underline">
-            Sign in
-          </Link>
-        </>
-      }
-    >
-      <form className="space-y-4" onSubmit={onSubmit} noValidate>
+  const form = (
+    <form className="space-y-4" onSubmit={onSubmit} noValidate>
         <div className="space-y-2">
           <Label htmlFor="signup-email">Email</Label>
           <Input
@@ -106,6 +109,26 @@ export function SignupForm() {
           {isSubmitting ? 'Creating account…' : 'Create account'}
         </Button>
       </form>
+  );
+
+  if (embedded) {
+    return form;
+  }
+
+  return (
+    <AuthLayout
+      title="Create account"
+      description="Sign up with email and password. We’ll send a verification code."
+      footer={
+        <>
+          Already have an account?{' '}
+          <Link to="/login" className="font-medium text-foreground underline-offset-4 hover:underline">
+            Sign in
+          </Link>
+        </>
+      }
+    >
+      {form}
     </AuthLayout>
   );
 }

@@ -32,7 +32,9 @@ import {
   JobType,
   RecordingStatus,
 } from '@mintreels/schema';
+import type { Ownership } from '../auth/auth.types';
 import { HttpError } from '../common/http-error';
+import { GuestQuotaService } from '../guest/guest-quota.service';
 import { publicPlaybackUrl } from '../common/playback-url';
 import {
   QUEUE_PROVIDER,
@@ -229,9 +231,14 @@ export class RecordingsService {
     @Inject(VECTOR_STORE_PROVIDER) private readonly vectorStore: VectorStoreProvider,
     @Inject(TRANSCRIPT_VECTOR_STORE_PROVIDER)
     private readonly transcriptVectorStore: VectorStoreProvider,
+    private readonly guestQuota: GuestQuotaService,
   ) {}
 
-  async create(body: CreateRecordingRequest, userId: number) {
+  async create(body: CreateRecordingRequest, owner: Ownership) {
+    // Guest caps: a new recording also creates a project, so check both.
+    await this.guestQuota.assertCanCreateProject(owner);
+    await this.guestQuota.assertCanCreateRecording(owner);
+
     let storageKey: string;
     try {
       storageKey = parseFilestackRef(body.url).url;
@@ -241,7 +248,7 @@ export class RecordingsService {
 
     const project = await this.projects.save(
       this.projects.create({
-        userId,
+        ...owner,
         name: body.title,
       }),
     );
@@ -313,8 +320,8 @@ export class RecordingsService {
     return { id: recording.id, projectId: project.id, jobId: job.id };
   }
 
-  async retry(id: number, userId: number) {
-    const recording = await this.recordings.findByIdForUser(id, userId);
+  async retry(id: number, owner: Ownership) {
+    const recording = await this.recordings.findByIdForOwner(id, owner);
     if (!recording) {
       throw new HttpError(404, 'Not found');
     }
@@ -410,21 +417,22 @@ export class RecordingsService {
     return { id: recording.id, projectId: recording.projectId, jobId: job.id };
   }
 
-  async list(userId: number) {
-    const recordings = await this.recordings.listForUser(userId);
+  async list(owner: Ownership) {
+    const recordings = await this.recordings.listForOwner(owner);
     return recordings.map(toPublicRecording);
   }
 
-  async getById(id: number, userId: number) {
-    const recording = await this.recordings.findByIdForUser(id, userId);
+  async getById(id: number, owner: Ownership) {
+    const recording = await this.recordings.findByIdForOwner(id, owner);
     if (!recording) {
       throw new HttpError(404, 'Not found');
     }
     return toPublicRecording(recording);
   }
 
-  async exportRecording(id: number, userId: number, body: ExportRecordingRequest) {
-    const recording = await this.recordings.findByIdForUser(id, userId);
+  async exportRecording(id: number, owner: Ownership, body: ExportRecordingRequest) {
+    this.requireExportAuth(owner);
+    const recording = await this.recordings.findByIdForOwner(id, owner);
     if (!recording) {
       throw new HttpError(404, 'Not found');
     }
@@ -522,8 +530,9 @@ export class RecordingsService {
     };
   }
 
-  async cancelExportRecording(id: number, userId: number) {
-    const recording = await this.recordings.findByIdForUser(id, userId);
+  async cancelExportRecording(id: number, owner: Ownership) {
+    this.requireExportAuth(owner);
+    const recording = await this.recordings.findByIdForOwner(id, owner);
     if (!recording) {
       throw new HttpError(404, 'Not found');
     }
@@ -575,8 +584,8 @@ export class RecordingsService {
     };
   }
 
-  async getProcessing(id: number, userId: number) {
-    const recording = await this.recordings.findByIdForUser(id, userId);
+  async getProcessing(id: number, owner: Ownership) {
+    const recording = await this.recordings.findByIdForOwner(id, owner);
     if (!recording) {
       throw new HttpError(404, 'Not found');
     }
@@ -645,8 +654,8 @@ export class RecordingsService {
     };
   }
 
-  async remove(id: number, userId: number): Promise<void> {
-    const recording = await this.recordings.findByIdForUser(id, userId);
+  async remove(id: number, owner: Ownership): Promise<void> {
+    const recording = await this.recordings.findByIdForOwner(id, owner);
     if (!recording) {
       throw new HttpError(404, 'Not found');
     }
@@ -674,8 +683,15 @@ export class RecordingsService {
     await this.recordings.softRemove(recording);
   }
 
-  async addToGlobalKnowledgeBase(_id: number, _userId: number): Promise<never> {
+  async addToGlobalKnowledgeBase(_id: number, _owner: Ownership): Promise<never> {
     throw new HttpError(501, 'recordingsService.addToGlobalKnowledgeBase is not implemented');
+  }
+
+  /** Same login gate as clip export — guests preview freely, render after signup. */
+  private requireExportAuth(owner: Ownership): void {
+    if (owner.userId == null) {
+      throw new HttpError(401, 'AUTH_REQUIRED');
+    }
   }
 
   private async enqueueIngestJob(

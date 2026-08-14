@@ -12,12 +12,12 @@ import {
   Recording,
   RecordingRepository,
 } from '@mintreels/db';
-import { AuthModule } from '../auth/auth.module';
+import { GuestModule } from '../guest/guest.module';
 import { ClipsController } from './clips.controller';
 import { ClipsService } from './clips.service';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Clip, Recording, Hook, Job, JobAuditLog]), AuthModule],
+  imports: [TypeOrmModule.forFeature([Clip, Recording, Hook, Job, JobAuditLog]), GuestModule],
   controllers: [ClipsController],
   providers: [
     ClipsService,

@@ -17,8 +17,12 @@ export class Project implements ProjectRow {
   @PrimaryGeneratedColumn('increment')
   id!: number;
 
-  @Column({ type: 'int', name: 'user_id' })
-  userId!: number;
+  // Owner is exactly one of userId / guestId (XOR — enforced by DB CHECK + service layer).
+  @Column({ type: 'int', name: 'user_id', nullable: true })
+  userId!: number | null;
+
+  @Column({ type: 'varchar', length: 255, name: 'guest_id', nullable: true })
+  guestId!: string | null;
 
   @Column({ type: 'text' })
   name!: string;

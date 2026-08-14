@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { DataSource, In, IsNull, Repository } from 'typeorm';
 import { Recording } from '../entities/recording.entity';
+import { type OwnerFilter, ownerWhere } from './ownership';
 
 @Injectable()
 export class RecordingRepository extends Repository<Recording> {
@@ -8,15 +9,15 @@ export class RecordingRepository extends Repository<Recording> {
     super(Recording, dataSource.createEntityManager());
   }
 
-  async listForUser(userId: number): Promise<Recording[]> {
+  async listForOwner(owner: OwnerFilter): Promise<Recording[]> {
     return this.find({
-      where: { project: { userId, deletedAt: IsNull() } },
+      where: { project: { ...ownerWhere(owner), deletedAt: IsNull() } },
       order: { createdAt: 'DESC' },
     });
   }
 
-  async findByIdForUser(id: number, userId: number): Promise<Recording | null> {
-    return this.findOne({ where: { id, project: { userId, deletedAt: IsNull() } } });
+  async findByIdForOwner(id: number, owner: OwnerFilter): Promise<Recording | null> {
+    return this.findOne({ where: { id, project: { ...ownerWhere(owner), deletedAt: IsNull() } } });
   }
 
   async listByProjectIds(projectIds: number[]): Promise<Recording[]> {

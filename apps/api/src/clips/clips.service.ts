@@ -5,6 +5,7 @@ import {
   JobAuditLogRepository,
   JobRepository,
   RecordingRepository,
+  ownerWhere,
   type Clip,
 } from '@mintreels/db';
 import { DEFAULT_MAX_ATTEMPTS } from '@mintreels/domain';
@@ -18,6 +19,7 @@ import {
   JobStatus,
   JobType,
 } from '@mintreels/schema';
+import type { Ownership } from '../auth/auth.types';
 import { HttpError } from '../common/http-error';
 import { publicPlaybackUrl } from '../common/playback-url';
 import { QUEUE_PROVIDER } from '../providers/provider-tokens';
@@ -74,9 +76,10 @@ export class ClipsService {
     @Inject(QUEUE_PROVIDER) private readonly queue: QueueProvider,
   ) {}
 
-  async create(body: CreateClipRequest, userId: number) {
+  async create(body: CreateClipRequest, owner: Ownership) {
+    this.requireExportAuth(owner);
     const recording = await this.recordings.findOne({
-      where: { id: body.recordingId, project: { userId } },
+      where: { id: body.recordingId, project: { ...ownerWhere(owner) } },
       relations: { project: true },
     });
     const guard = clipCreateGuard(recording, body.startMs, body.endMs);
@@ -129,11 +132,12 @@ export class ClipsService {
   async exportFromHook(
     recordingId: number,
     hookId: number,
-    userId: number,
+    owner: Ownership,
     options: ExportHookClipRequest = {},
   ) {
+    this.requireExportAuth(owner);
     const recording = await this.recordings.findOne({
-      where: { id: recordingId, project: { userId } },
+      where: { id: recordingId, project: { ...ownerWhere(owner) } },
       relations: { project: true },
     });
     if (!recording) {
@@ -212,13 +216,13 @@ export class ClipsService {
     return toPublicClip(clip);
   }
 
-  async list(userId: number) {
-    const clips = await this.clips.listForUser(userId);
+  async list(owner: Ownership) {
+    const clips = await this.clips.listForOwner(owner);
     return clips.map(toPublicClip);
   }
 
-  async listFilters(userId: number) {
-    const clips = await this.clips.listForUser(userId);
+  async listFilters(owner: Ownership) {
+    const clips = await this.clips.listForOwner(owner);
     const counts = {
       [ClipFilterId.All]: clips.length,
       [ClipFilterId.Queued]: 0,
@@ -246,20 +250,31 @@ export class ClipsService {
     ].map((id) => ({ id, label: CLIP_FILTER_LABELS[id], count: counts[id] }));
   }
 
-  async getById(id: number, userId: number) {
-    const clip = await this.clips.findByIdForUser(id, userId);
+  async getById(id: number, owner: Ownership) {
+    const clip = await this.clips.findByIdForOwner(id, owner);
     if (!clip) {
       throw new HttpError(404, 'Not found');
     }
     return toPublicClip(clip);
   }
 
-  async remove(id: number, userId: number): Promise<void> {
-    const clip = await this.clips.findByIdForUser(id, userId);
+  async remove(id: number, owner: Ownership): Promise<void> {
+    const clip = await this.clips.findByIdForOwner(id, owner);
     if (!clip) {
       throw new HttpError(404, 'Not found');
     }
     await this.clips.softRemove(clip);
+  }
+
+  /**
+   * Guests may upload, transcribe, edit and preview freely, but rendering/exporting
+   * a clip is the login gate — the frontend catches AUTH_REQUIRED and resumes the
+   * export after the guest signs in (their data is claimed on login).
+   */
+  private requireExportAuth(owner: Ownership): void {
+    if (owner.userId == null) {
+      throw new HttpError(401, 'AUTH_REQUIRED');
+    }
   }
 
   private async enqueueRender(clip: Clip): Promise<void> {

@@ -3,6 +3,7 @@ import { DataSource } from 'typeorm';
 import type { MigrationInterface } from 'typeorm';
 import {
   User,
+  GuestSession,
   Project,
   Recording,
   Transcript,
@@ -22,6 +23,7 @@ export type MigrationClass = new () => MigrationInterface;
 
 export const entities = [
   User,
+  GuestSession,
   Project,
   Recording,
   Transcript,

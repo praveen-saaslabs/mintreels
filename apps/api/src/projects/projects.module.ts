@@ -16,7 +16,7 @@ import {
   Recording,
   RecordingRepository,
 } from '@mintreels/db';
-import { AuthModule } from '../auth/auth.module';
+import { GuestModule } from '../guest/guest.module';
 import { RecordingsModule } from '../recordings/recordings.module';
 import { ProjectsController } from './projects.controller';
 import { ProjectsService } from './projects.service';
@@ -32,7 +32,7 @@ import { ProjectsService } from './projects.service';
       KnowledgeDocument,
       Job,
     ]),
-    AuthModule,
+    GuestModule,
     RecordingsModule,
   ],
   controllers: [ProjectsController],

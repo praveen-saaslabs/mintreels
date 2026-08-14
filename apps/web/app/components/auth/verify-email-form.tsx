@@ -25,11 +25,22 @@ function formatCountdown(totalSeconds: number) {
   return `${String(minutes)}:${String(seconds).padStart(2, '0')}`;
 }
 
-export function VerifyEmailForm() {
+export function VerifyEmailForm({
+  embedded = false,
+  email: emailProp,
+  onSuccess,
+}: {
+  /** Render only the form (no page layout) for use inside a dialog. */
+  embedded?: boolean;
+  /** Email to verify; overrides the ?email= query param (used when embedded). */
+  email?: string;
+  /** Called after successful verification instead of navigating home. */
+  onSuccess?: () => void;
+} = {}) {
   const { verifyEmail, resendVerification } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const email = searchParams.get('email')?.trim() ?? '';
+  const email = (emailProp ?? searchParams.get('email') ?? '').trim();
 
   const [digits, setDigits] = useState<string[]>(() => Array.from({ length: CODE_LENGTH }, () => ''));
   const [secondsLeft, setSecondsLeft] = useState(EXPIRE_SECONDS);
@@ -105,7 +116,11 @@ export function VerifyEmailForm() {
     setIsSubmitting(true);
     try {
       await verifyEmail(parsed.data);
-      navigate('/', { replace: true });
+      if (onSuccess) {
+        onSuccess();
+      } else {
+        navigate('/', { replace: true });
+      }
     } catch (err) {
       setError(authErrorMessage(err));
     } finally {
@@ -135,24 +150,8 @@ export function VerifyEmailForm() {
     }
   }
 
-  return (
-    <AuthLayout
-      title="Verify your email"
-      description={
-        email
-          ? `We sent a verification code to: ${email}`
-          : 'We sent a verification code to your email.'
-      }
-      footer={
-        <>
-          Wrong email?{' '}
-          <Link to="/signup" className="font-medium text-foreground underline-offset-4 hover:underline">
-            Sign up again
-          </Link>
-        </>
-      }
-    >
-      <form className="space-y-4" onSubmit={onSubmit} noValidate>
+  const form = (
+    <form className="space-y-4" onSubmit={onSubmit} noValidate>
         <div className="space-y-2">
           <Label htmlFor="otp-0">Verification code</Label>
           <div className="flex justify-between gap-2">
@@ -207,6 +206,30 @@ export function VerifyEmailForm() {
           {isResending ? 'Sending…' : 'Resend code'}
         </Button>
       </form>
+  );
+
+  if (embedded) {
+    return form;
+  }
+
+  return (
+    <AuthLayout
+      title="Verify your email"
+      description={
+        email
+          ? `We sent a verification code to: ${email}`
+          : 'We sent a verification code to your email.'
+      }
+      footer={
+        <>
+          Wrong email?{' '}
+          <Link to="/signup" className="font-medium text-foreground underline-offset-4 hover:underline">
+            Sign up again
+          </Link>
+        </>
+      }
+    >
+      {form}
     </AuthLayout>
   );
 }

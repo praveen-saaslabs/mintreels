@@ -6,6 +6,7 @@ import {
   type Transcript,
   type TranscriptSegment,
 } from '@mintreels/db';
+import type { Ownership } from '../auth/auth.types';
 import { HttpError } from '../common/http-error';
 import { toPublicTranscript } from './public-transcript';
 
@@ -43,18 +44,18 @@ export class TranscriptsService {
     private readonly segments: TranscriptSegmentRepository,
   ) {}
 
-  async getByRecordingId(recordingId: number, userId: number) {
-    const loaded = await this.loadForUser(recordingId, userId);
+  async getByRecordingId(recordingId: number, owner: Ownership) {
+    const loaded = await this.loadForOwner(recordingId, owner);
     return toPublicTranscript(loaded, loaded.segments);
   }
 
-  async getVttByRecordingId(recordingId: number, userId: number): Promise<string> {
-    const transcript = await this.loadForUser(recordingId, userId);
+  async getVttByRecordingId(recordingId: number, owner: Ownership): Promise<string> {
+    const transcript = await this.loadForOwner(recordingId, owner);
     return toWebVtt(transcript);
   }
 
-  private async loadForUser(recordingId: number, userId: number): Promise<TranscriptWithSegments> {
-    const recording = await this.recordings.findByIdForUser(recordingId, userId);
+  private async loadForOwner(recordingId: number, owner: Ownership): Promise<TranscriptWithSegments> {
+    const recording = await this.recordings.findByIdForOwner(recordingId, owner);
     if (!recording) {
       throw new HttpError(404, 'Not found');
     }

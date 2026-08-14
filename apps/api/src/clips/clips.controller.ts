@@ -23,9 +23,10 @@ import {
   ApiTags,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
-import { AuthGuard } from '../auth/auth.guard';
-import { CurrentUser } from '../auth/current-user.decorator';
-import type { RequestUser } from '../auth/auth.types';
+import { IdentityGuard } from '../guest/identity.guard';
+import { GuestRateLimitGuard } from '../guest/guest-rate-limit.guard';
+import { CurrentActor } from '../guest/current-actor.decorator';
+import { ownership, type RequestActor } from '../auth/auth.types';
 import { ZodValidationPipe } from '../common/zod-validation.pipe';
 import {
   CLIP_FILTER_LABELS,
@@ -60,7 +61,7 @@ const clipExample = {
 @ApiTags('Clips')
 @ApiCookieAuth('auth_token')
 @ApiUnauthorizedResponse({ description: 'UNAUTHORIZED' })
-@UseGuards(AuthGuard)
+@UseGuards(IdentityGuard, GuestRateLimitGuard)
 @Controller('api/clips')
 export class ClipsController {
   constructor(private readonly clipsService: ClipsService) {}
@@ -75,10 +76,10 @@ export class ClipsController {
   @ApiNotFoundResponse({ description: 'Recording not found' })
   @Post()
   create(
-    @CurrentUser() user: RequestUser,
+    @CurrentActor() actor: RequestActor,
     @Body(new ZodValidationPipe(createClipRequestSchema)) body: CreateClipRequest,
   ) {
-    return this.clipsService.create(body, user.id);
+    return this.clipsService.create(body, ownership(actor));
   }
 
   @ApiOperation({ summary: 'List clip filter counts for the current user' })
@@ -95,8 +96,8 @@ export class ClipsController {
     },
   })
   @Get('filters')
-  listFilters(@CurrentUser() user: RequestUser) {
-    return this.clipsService.listFilters(user.id);
+  listFilters(@CurrentActor() actor: RequestActor) {
+    return this.clipsService.listFilters(ownership(actor));
   }
 
   @ApiOperation({ summary: 'List clips for the current user' })
@@ -105,8 +106,8 @@ export class ClipsController {
     schema: { example: [clipExample] },
   })
   @Get()
-  list(@CurrentUser() user: RequestUser) {
-    return this.clipsService.list(user.id);
+  list(@CurrentActor() actor: RequestActor) {
+    return this.clipsService.list(ownership(actor));
   }
 
   @ApiOperation({ summary: 'Get a clip by ID' })
@@ -117,8 +118,8 @@ export class ClipsController {
   })
   @ApiNotFoundResponse({ description: 'Clip not found' })
   @Get(':id')
-  getById(@CurrentUser() user: RequestUser, @Param('id', ParseIntPipe) id: number) {
-    return this.clipsService.getById(id, user.id);
+  getById(@CurrentActor() actor: RequestActor, @Param('id', ParseIntPipe) id: number) {
+    return this.clipsService.getById(id, ownership(actor));
   }
 
   @ApiOperation({ summary: 'Soft-delete a clip' })
@@ -127,7 +128,7 @@ export class ClipsController {
   @ApiNotFoundResponse({ description: 'Clip not found' })
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  remove(@CurrentUser() user: RequestUser, @Param('id', ParseIntPipe) id: number) {
-    return this.clipsService.remove(id, user.id);
+  remove(@CurrentActor() actor: RequestActor, @Param('id', ParseIntPipe) id: number) {
+    return this.clipsService.remove(id, ownership(actor));
   }
 }
