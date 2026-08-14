@@ -14,6 +14,7 @@ import { Job } from '@mintreels/db';
 import { probeDurationMs, renderClipVideo, segmentsToAss } from '@mintreels/media';
 import { ClipFitMode as ClipFitModeEnum, ClipRatio, ClipStatus, JobStatus, JobType } from '@mintreels/schema';
 import type { WorkerDeps } from '../pipeline/deps';
+import { logPipeline, logPipelineError } from '../pipeline/log';
 import { storeVideoThumbnail } from '../pipeline/video-thumbnail';
 
 /** Match `@mintreels/media` TARGET_SIZE — ASS PlayRes must equal the encoded frame. */
@@ -24,6 +25,7 @@ const EXPORT_FRAME_SIZE: Record<ClipAspectRatio, { width: number; height: number
 };
 
 const EXPORT_CANCELLED = 'EXPORT_CANCELLED';
+const JOB_NAME = 'export-recording';
 
 export interface ExportRecordingPayload {
   recordingId: number;
@@ -31,6 +33,22 @@ export interface ExportRecordingPayload {
   aspectRatio?: ClipAspectRatio;
   fitMode?: ClipFitMode;
   burnSubtitles?: boolean;
+}
+
+function logExport(
+  recordingId: number,
+  step: string,
+  message: string,
+  extras?: { jobId?: number; attempt?: number },
+): void {
+  logPipeline({
+    job: JOB_NAME,
+    recordingId,
+    step,
+    message,
+    ...(extras?.jobId !== undefined ? { jobId: extras.jobId } : {}),
+    ...(extras?.attempt !== undefined ? { attempt: extras.attempt } : {}),
+  });
 }
 
 async function writeStreamToFile(stream: ReadableStream, filePath: string): Promise<void> {
@@ -133,9 +151,11 @@ async function abortIfNeeded(
 ): Promise<DomainJobStatus | null> {
   const reason = await getAbortReason(deps, recordingId, job.id);
   if (reason === 'cancelled') {
+    logExport(recordingId, 'abort', 'cancelled', { jobId: job.id, attempt: job.attempt });
     return 'success';
   }
   if (reason === 'superseded') {
+    logExport(recordingId, 'abort', 'superseded', { jobId: job.id, attempt: job.attempt });
     await markJobSuccess(deps, job);
     return 'success';
   }
@@ -173,6 +193,10 @@ async function tryMarkRunning(
     .execute();
 
   if (!result.affected || result.affected === 0) {
+    logExport(recordingId, 'mark_running', 'skipped cancelled', {
+      jobId: job.id,
+      attempt: job.attempt,
+    });
     return 'success';
   }
 
@@ -182,6 +206,10 @@ async function tryMarkRunning(
   job.error = null;
   job.errorCode = null;
   job.finishedAt = null;
+  logExport(recordingId, 'mark_running', 'running', {
+    jobId: job.id,
+    attempt: job.attempt,
+  });
   return null;
 }
 
@@ -191,15 +219,18 @@ export async function exportRecording(
 ): Promise<DomainJobStatus> {
   const recording = await deps.recordings.findOneBy({ id: payload.recordingId });
   if (!recording) {
+    logExport(payload.recordingId, 'load', 'recording missing no-op', { jobId: payload.jobId });
     return 'success';
   }
 
   const job = await deps.jobs.findOneBy({ id: payload.jobId });
   if (!job) {
+    logExport(payload.recordingId, 'load', 'job missing no-op', { jobId: payload.jobId });
     return 'success';
   }
 
   if (isCancelledJob(job)) {
+    logExport(payload.recordingId, 'abort', 'cancelled', { jobId: job.id, attempt: job.attempt });
     return 'success';
   }
 
@@ -209,7 +240,15 @@ export async function exportRecording(
   }
 
   if (recording.exportStatus === ClipStatus.Ready && recording.exportStorageKey) {
+    logExport(payload.recordingId, 'ready_short_circuit', 'already ready', {
+      jobId: job.id,
+      attempt: job.attempt,
+    });
     if (!recording.exportThumbnailStorageKey) {
+      logExport(payload.recordingId, 'thumbnail', 'start backfill', {
+        jobId: job.id,
+        attempt: job.attempt,
+      });
       const thumbKey = await storeVideoThumbnail({
         storage: deps.storage,
         videoStorageKey: recording.exportStorageKey,
@@ -224,6 +263,10 @@ export async function exportRecording(
         }
         recording.exportThumbnailStorageKey = thumbKey;
         await deps.recordings.save(recording);
+        logExport(payload.recordingId, 'thumbnail', 'done backfill', {
+          jobId: job.id,
+          attempt: job.attempt,
+        });
       }
     }
     if (job.status !== JobStatus.Success && !isCancelledJob(job)) {
@@ -261,11 +304,19 @@ export async function exportRecording(
     if (recording.storageKey.trim() === '') {
       throw new Error('Recording video is not available');
     }
+    logExport(payload.recordingId, 'download', 'start', {
+      jobId: job.id,
+      attempt: job.attempt,
+    });
     const stream = await deps.storage.download(recording.storageKey);
     await writeStreamToFile(stream, videoPath);
     if (!(await fileExists(videoPath))) {
       throw new Error('Failed to download recording video');
     }
+    logExport(payload.recordingId, 'download', 'done', {
+      jobId: job.id,
+      attempt: job.attempt,
+    });
 
     const afterDownload = await abortIfNeeded(deps, job, payload.recordingId);
     if (afterDownload) {
@@ -284,6 +335,10 @@ export async function exportRecording(
     if (endMs <= 0) {
       throw new Error('Could not resolve recording duration');
     }
+    logExport(payload.recordingId, 'probe', `durationMs=${String(endMs)}`, {
+      jobId: job.id,
+      attempt: job.attempt,
+    });
 
     let burnAssPath: string | undefined;
     if (burnSubtitles) {
@@ -298,9 +353,29 @@ export async function exportRecording(
       if (ass.includes('Dialogue:')) {
         await writeFile(assPath, ass, 'utf8');
         burnAssPath = assPath;
+        logExport(payload.recordingId, 'ass', 'cues written', {
+          jobId: job.id,
+          attempt: job.attempt,
+        });
+      } else {
+        logExport(payload.recordingId, 'ass', 'burn on no cues', {
+          jobId: job.id,
+          attempt: job.attempt,
+        });
       }
+    } else {
+      logExport(payload.recordingId, 'ass', 'burn off', {
+        jobId: job.id,
+        attempt: job.attempt,
+      });
     }
 
+    logExport(
+      payload.recordingId,
+      'ffmpeg',
+      `start aspect=${aspectRatio} fit=${fitMode}`,
+      { jobId: job.id, attempt: job.attempt },
+    );
     await renderClipVideo({
       inputPath: videoPath,
       outputPath,
@@ -310,6 +385,10 @@ export async function exportRecording(
       fitMode,
       ...(burnAssPath ? { vttPath: burnAssPath } : {}),
     });
+    logExport(payload.recordingId, 'ffmpeg', 'done', {
+      jobId: job.id,
+      attempt: job.attempt,
+    });
 
     const afterRender = await abortIfNeeded(deps, job, payload.recordingId);
     if (afterRender) {
@@ -318,15 +397,27 @@ export async function exportRecording(
 
     const stillThere = await deps.recordings.findOneBy({ id: payload.recordingId });
     if (!stillThere) {
+      logExport(payload.recordingId, 'load', 'recording gone after ffmpeg', {
+        jobId: job.id,
+        attempt: job.attempt,
+      });
       await markJobSuccess(deps, job);
       return 'success';
     }
 
     // Filestack store still buffers the body once; stream from disk avoids a prior readFile copy.
+    logExport(payload.recordingId, 'upload', 'start', {
+      jobId: job.id,
+      attempt: job.attempt,
+    });
     const stored = await deps.storage.upload({
       key: `recording-${String(recording.id)}-export.mp4`,
       body: Readable.toWeb(createReadStream(outputPath)) as ReadableStream,
       contentType: 'video/mp4',
+    });
+    logExport(payload.recordingId, 'upload', 'done', {
+      jobId: job.id,
+      attempt: job.attempt,
     });
 
     const afterUpload = await abortIfNeeded(deps, job, payload.recordingId);
@@ -334,12 +425,20 @@ export async function exportRecording(
       return afterUpload;
     }
 
+    logExport(payload.recordingId, 'thumbnail', 'start', {
+      jobId: job.id,
+      attempt: job.attempt,
+    });
     const thumbKey = await storeVideoThumbnail({
       storage: deps.storage,
       videoStorageKey: stored.key,
       localVideoPath: outputPath,
       tmpDir,
       uploadKey: `recording-${String(recording.id)}-export-thumb.jpg`,
+    });
+    logExport(payload.recordingId, 'thumbnail', 'done', {
+      jobId: job.id,
+      attempt: job.attempt,
     });
 
     const beforeWrite = await abortIfNeeded(deps, job, payload.recordingId);
@@ -349,6 +448,10 @@ export async function exportRecording(
 
     const latestRecording = await deps.recordings.findOneBy({ id: payload.recordingId });
     if (!latestRecording) {
+      logExport(payload.recordingId, 'load', 'recording gone before ready write', {
+        jobId: job.id,
+        attempt: job.attempt,
+      });
       await markJobSuccess(deps, job);
       return 'success';
     }
@@ -362,6 +465,10 @@ export async function exportRecording(
     await deps.recordings.save(latestRecording);
 
     await markJobSuccess(deps, job);
+    logExport(payload.recordingId, 'ready', 'export status ready', {
+      jobId: job.id,
+      attempt: job.attempt,
+    });
     return 'success';
   } catch (error: unknown) {
     const message = failMessage(error);
@@ -385,6 +492,14 @@ export async function exportRecording(
     job.error = message;
     job.errorCode = 'EXPORT_RECORDING_FAILED';
     await deps.jobs.save(job);
+    logPipelineError({
+      job: JOB_NAME,
+      recordingId: payload.recordingId,
+      jobId: job.id,
+      attempt: job.attempt,
+      step: 'fail',
+      message,
+    });
     throw error instanceof Error ? error : new Error(message);
   } finally {
     await rm(tmpDir, { recursive: true, force: true });

@@ -6,6 +6,7 @@ import { ingestVideo, type IngestVideoPayload } from '../jobs/ingest-video';
 import { renderClip, type RenderClipPayload } from '../jobs/render-clip';
 import { requireRedisUrl } from '../pipeline/config';
 import type { WorkerDeps } from '../pipeline/deps';
+import { logPipeline, logPipelineError } from '../pipeline/log';
 
 function parseIngestPayload(data: unknown): IngestVideoPayload {
   if (typeof data !== 'object' || data === null) {
@@ -106,6 +107,37 @@ function parseExportRecordingPayload(data: unknown): ExportRecordingPayload {
   return payload;
 }
 
+function failMessage(error: unknown): string {
+  if (error instanceof Error && error.message.trim() !== '') {
+    return error.message;
+  }
+  return 'handler failed';
+}
+
+async function runLoggedHandler(params: {
+  job: string;
+  recordingId: number;
+  jobId?: number;
+  clipId?: number;
+  run: () => Promise<void>;
+}): Promise<void> {
+  const base = {
+    job: params.job,
+    recordingId: params.recordingId,
+    step: 'handler',
+    ...(params.jobId !== undefined ? { jobId: params.jobId } : {}),
+    ...(params.clipId !== undefined ? { clipId: params.clipId } : {}),
+  };
+  logPipeline({ ...base, message: 'handler_start' });
+  try {
+    await params.run();
+    logPipeline({ ...base, message: 'handler_done' });
+  } catch (error: unknown) {
+    logPipelineError({ ...base, message: failMessage(error) });
+    throw error;
+  }
+}
+
 export function createProcessors(deps: WorkerDeps): { close: () => Promise<void> } {
   const redisUrl = requireRedisUrl();
   const concurrency = Number(process.env[EnvKey.WorkerConcurrency]) || 1;
@@ -115,16 +147,49 @@ export function createProcessors(deps: WorkerDeps): { close: () => Promise<void>
     concurrency,
     handlers: {
       'ingest-video': async (data) => {
-        await ingestVideo(parseIngestPayload(data), deps);
+        const payload = parseIngestPayload(data);
+        await runLoggedHandler({
+          job: 'ingest-video',
+          recordingId: payload.recordingId,
+          ...(payload.jobId !== undefined ? { jobId: payload.jobId } : {}),
+          run: async () => {
+            await ingestVideo(payload, deps);
+          },
+        });
       },
       'render-clip': async (data) => {
-        await renderClip(parseRenderClipPayload(data), deps);
+        const payload = parseRenderClipPayload(data);
+        await runLoggedHandler({
+          job: 'render-clip',
+          recordingId: payload.recordingId,
+          clipId: payload.clipId,
+          ...(payload.jobId !== undefined ? { jobId: payload.jobId } : {}),
+          run: async () => {
+            await renderClip(payload, deps);
+          },
+        });
       },
       'export-recording': async (data) => {
-        await exportRecording(parseExportRecordingPayload(data), deps);
+        const payload = parseExportRecordingPayload(data);
+        await runLoggedHandler({
+          job: 'export-recording',
+          recordingId: payload.recordingId,
+          jobId: payload.jobId,
+          run: async () => {
+            await exportRecording(payload, deps);
+          },
+        });
       },
       'generate-hooks': async (data) => {
-        await generateHooks(parseGenerateHooksPayload(data), deps);
+        const payload = parseGenerateHooksPayload(data);
+        await runLoggedHandler({
+          job: 'generate-hooks',
+          recordingId: payload.recordingId,
+          jobId: payload.jobId,
+          run: async () => {
+            await generateHooks(payload, deps);
+          },
+        });
       },
     },
   });

@@ -13,6 +13,7 @@ import type {
 import { renderClipVideo, segmentsToAss } from '@mintreels/media';
 import { ClipFitMode as ClipFitModeEnum, ClipRatio, ClipStatus, JobStatus, JobType } from '@mintreels/schema';
 import type { WorkerDeps } from '../pipeline/deps';
+import { logPipeline, logPipelineError } from '../pipeline/log';
 import { storeVideoThumbnail } from '../pipeline/video-thumbnail';
 
 /** Match `@mintreels/media` TARGET_SIZE — ASS PlayRes must equal the encoded frame. */
@@ -21,6 +22,8 @@ const CLIP_FRAME_SIZE: Record<ClipAspectRatio, { width: number; height: number }
   '1:1': { width: 1080, height: 1080 },
   '16:9': { width: 1920, height: 1080 },
 };
+
+const JOB_NAME = 'render-clip';
 
 export interface RenderClipPayload {
   clipId: number;
@@ -31,6 +34,24 @@ export interface RenderClipPayload {
   aspectRatio?: ClipAspectRatio;
   fitMode?: ClipFitMode;
   burnSubtitles?: boolean;
+}
+
+function logClip(
+  recordingId: number,
+  clipId: number,
+  step: string,
+  message: string,
+  extras?: { jobId?: number; attempt?: number },
+): void {
+  logPipeline({
+    job: JOB_NAME,
+    recordingId,
+    clipId,
+    step,
+    message,
+    ...(extras?.jobId !== undefined ? { jobId: extras.jobId } : {}),
+    ...(extras?.attempt !== undefined ? { attempt: extras.attempt } : {}),
+  });
 }
 
 async function writeStreamToFile(stream: ReadableStream, filePath: string): Promise<void> {
@@ -85,11 +106,17 @@ function resolveFitMode(
 export async function renderClip(payload: RenderClipPayload, deps: WorkerDeps): Promise<DomainJobStatus> {
   const clip = await deps.clips.findOneBy({ id: payload.clipId });
   if (!clip) {
+    logClip(payload.recordingId, payload.clipId, 'load', 'clip missing no-op', {
+      ...(payload.jobId !== undefined ? { jobId: payload.jobId } : {}),
+    });
     return 'success';
   }
 
   const recording = await deps.recordings.findOneBy({ id: payload.recordingId });
   if (!recording) {
+    logClip(payload.recordingId, payload.clipId, 'load', 'recording missing no-op', {
+      ...(payload.jobId !== undefined ? { jobId: payload.jobId } : {}),
+    });
     return 'success';
   }
 
@@ -98,8 +125,14 @@ export async function renderClip(payload: RenderClipPayload, deps: WorkerDeps): 
       ? await deps.jobs.findOneBy({ id: payload.jobId })
       : await deps.jobs.findLatestByRecordingAndType(payload.recordingId, JobType.RenderClip);
 
+  const jobExtras = {
+    ...(job ? { jobId: job.id, attempt: job.attempt } : {}),
+  };
+
   if (clip.status === ClipStatus.Ready && clip.storageKey) {
+    logClip(payload.recordingId, payload.clipId, 'ready_short_circuit', 'already ready', jobExtras);
     if (!clip.thumbnailStorageKey) {
+      logClip(payload.recordingId, payload.clipId, 'thumbnail', 'start backfill', jobExtras);
       const thumbKey = await storeVideoThumbnail({
         storage: deps.storage,
         videoStorageKey: clip.storageKey,
@@ -110,6 +143,7 @@ export async function renderClip(payload: RenderClipPayload, deps: WorkerDeps): 
       if (thumbKey) {
         clip.thumbnailStorageKey = thumbKey;
         await deps.clips.save(clip);
+        logClip(payload.recordingId, payload.clipId, 'thumbnail', 'done backfill', jobExtras);
       }
     }
     if (job && job.status !== JobStatus.Success) {
@@ -130,6 +164,10 @@ export async function renderClip(payload: RenderClipPayload, deps: WorkerDeps): 
     job.errorCode = null;
     job.finishedAt = null;
     await deps.jobs.save(job);
+    logClip(payload.recordingId, payload.clipId, 'mark_running', 'running', {
+      jobId: job.id,
+      attempt: job.attempt,
+    });
   }
 
   clip.status = ClipStatus.Rendering;
@@ -141,15 +179,21 @@ export async function renderClip(payload: RenderClipPayload, deps: WorkerDeps): 
   // ASS (not SRT/VTT): explicit PlayRes avoids giant FontSize from SRT’s 384×288 default.
   const assPath = join(tmpDir, `clip-${String(clip.id)}.ass`);
 
+  const runExtras = {
+    ...(job ? { jobId: job.id, attempt: job.attempt } : {}),
+  };
+
   try {
     if (recording.storageKey.trim() === '') {
       throw new Error('Recording video is not available');
     }
+    logClip(payload.recordingId, payload.clipId, 'download', 'start', runExtras);
     const stream = await deps.storage.download(recording.storageKey);
     await writeStreamToFile(stream, videoPath);
     if (!(await fileExists(videoPath))) {
       throw new Error('Failed to download recording video');
     }
+    logClip(payload.recordingId, payload.clipId, 'download', 'done', runExtras);
 
     const aspectRatio = resolveAspectRatio(payload, clip.aspectRatio);
     const fitMode = resolveFitMode(payload, clip.fitMode);
@@ -169,9 +213,21 @@ export async function renderClip(payload: RenderClipPayload, deps: WorkerDeps): 
       if (ass.includes('Dialogue:')) {
         await writeFile(assPath, ass, 'utf8');
         burnAssPath = assPath;
+        logClip(payload.recordingId, payload.clipId, 'ass', 'cues written', runExtras);
+      } else {
+        logClip(payload.recordingId, payload.clipId, 'ass', 'burn on no cues', runExtras);
       }
+    } else {
+      logClip(payload.recordingId, payload.clipId, 'ass', 'burn off', runExtras);
     }
 
+    logClip(
+      payload.recordingId,
+      payload.clipId,
+      'ffmpeg',
+      `start aspect=${aspectRatio} fit=${fitMode} rangeMs=${String(payload.startMs)}-${String(payload.endMs)}`,
+      runExtras,
+    );
     await renderClipVideo({
       inputPath: videoPath,
       outputPath,
@@ -181,14 +237,18 @@ export async function renderClip(payload: RenderClipPayload, deps: WorkerDeps): 
       fitMode,
       ...(burnAssPath ? { vttPath: burnAssPath } : {}),
     });
+    logClip(payload.recordingId, payload.clipId, 'ffmpeg', 'done', runExtras);
 
     // Filestack store still buffers the body once; stream from disk avoids a prior readFile copy.
+    logClip(payload.recordingId, payload.clipId, 'upload', 'start', runExtras);
     const stored = await deps.storage.upload({
       key: `clip-${String(clip.id)}.mp4`,
       body: Readable.toWeb(createReadStream(outputPath)) as ReadableStream,
       contentType: 'video/mp4',
     });
+    logClip(payload.recordingId, payload.clipId, 'upload', 'done', runExtras);
 
+    logClip(payload.recordingId, payload.clipId, 'thumbnail', 'start', runExtras);
     const thumbKey = await storeVideoThumbnail({
       storage: deps.storage,
       videoStorageKey: stored.key,
@@ -196,6 +256,7 @@ export async function renderClip(payload: RenderClipPayload, deps: WorkerDeps): 
       tmpDir,
       uploadKey: `clip-${String(clip.id)}-thumb.jpg`,
     });
+    logClip(payload.recordingId, payload.clipId, 'thumbnail', 'done', runExtras);
 
     clip.storageKey = stored.key;
     clip.thumbnailStorageKey = thumbKey;
@@ -213,6 +274,7 @@ export async function renderClip(payload: RenderClipPayload, deps: WorkerDeps): 
       await deps.jobs.save(job);
     }
 
+    logClip(payload.recordingId, payload.clipId, 'ready', 'clip status ready', runExtras);
     return 'success';
   } catch (error: unknown) {
     const message = failMessage(error);
@@ -225,6 +287,14 @@ export async function renderClip(payload: RenderClipPayload, deps: WorkerDeps): 
       job.errorCode = 'RENDER_CLIP_FAILED';
       await deps.jobs.save(job);
     }
+    logPipelineError({
+      job: JOB_NAME,
+      recordingId: payload.recordingId,
+      clipId: payload.clipId,
+      step: 'fail',
+      message,
+      ...(job ? { jobId: job.id, attempt: job.attempt } : {}),
+    });
     throw error instanceof Error ? error : new Error(message);
   } finally {
     await rm(tmpDir, { recursive: true, force: true });
