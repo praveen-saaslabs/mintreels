@@ -1,4 +1,4 @@
-import { isProviderError, ProviderError } from '@mintreels/ai';
+import { isProviderError, isRetryableTranscriptionJobError, ProviderError } from '@mintreels/ai';
 import { JobStepName } from '@mintreels/schema';
 import type { WorkerDeps } from '../deps';
 import { requireActiveRecording } from '../recording-gone';
@@ -123,11 +123,18 @@ export function transcriptionHandler(deps: WorkerDeps): StepHandler {
         status = await deps.speech.getTranscriptionStatus(providerJobId);
       }
       if (status.status !== 'completed') {
+        const message = status.error ?? `Transcription ${status.status}`;
+        const retryable = isRetryableTranscriptionJobError(status.error);
+        // Terminal failed provider jobs cannot be resumed; clear so a retry submits again.
+        if (retryable) {
+          ctx.step.providerJobId = null;
+          await deps.jobSteps.save(ctx.step);
+        }
         throw new ProviderError({
           provider: PROVIDER,
           code: 'transcription_failed',
-          message: status.error ?? `Transcription ${status.status}`,
-          retryable: false,
+          message,
+          retryable,
           metadata: {
             providerJobId,
             status: status.status,

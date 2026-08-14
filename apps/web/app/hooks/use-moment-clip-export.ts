@@ -3,6 +3,11 @@ import { useEffect, useState } from 'react';
 import { api, type MomentCandidate } from '@/lib/api';
 import type { ClipSummary } from '@/lib/data/types';
 import { queryKeys } from '@/lib/query-keys';
+import {
+  DEFAULT_EDITOR_FIT_MODE,
+  useEditorStore,
+  type EditorAspectRatio,
+} from '@/stores/editor-store';
 
 const POLL_MS = 5000;
 
@@ -12,6 +17,8 @@ function isInFlight(status: ClipSummary['status'] | undefined): boolean {
 
 export function useMomentClipExport(recordingId: number | undefined, moment: MomentCandidate) {
   const queryClient = useQueryClient();
+  const playerAspect = useEditorStore((state) => state.playerAspect);
+  const playerCaptionsOn = useEditorStore((state) => state.playerCaptionsOn);
   const [clip, setClip] = useState<ClipSummary | null>(null);
   const clipId = clip?.id;
   const inFlight = isInFlight(clip?.status);
@@ -37,7 +44,13 @@ export function useMomentClipExport(recordingId: number | undefined, moment: Mom
   }, [clipQuery.data, queryClient]);
 
   const exportMutation = useMutation({
-    mutationFn: async () => {
+    mutationFn: async ({
+      aspectRatio,
+      burnSubtitles,
+    }: {
+      aspectRatio: EditorAspectRatio;
+      burnSubtitles: boolean;
+    }) => {
       if (recordingId == null) {
         throw new Error('Invalid recording');
       }
@@ -46,6 +59,9 @@ export function useMomentClipExport(recordingId: number | undefined, moment: Mom
         title: moment.title,
         startMs: moment.clipStartMs,
         endMs: moment.clipEndMs,
+        aspectRatio,
+        fitMode: DEFAULT_EDITOR_FIT_MODE,
+        burnSubtitles,
       });
     },
     onSuccess: (created) => {
@@ -60,11 +76,24 @@ export function useMomentClipExport(recordingId: number | undefined, moment: Mom
 
   return {
     clip,
-    exportClip: () => {
-      exportMutation.mutate();
+    exportClip: (
+      aspectRatio: EditorAspectRatio = playerAspect,
+      burnSubtitles: boolean = playerCaptionsOn,
+      options?: { onSuccess?: () => void },
+    ) => {
+      exportMutation.mutate(
+        { aspectRatio, burnSubtitles },
+        {
+          onSuccess: () => {
+            options?.onSuccess?.();
+          },
+        },
+      );
     },
     isExporting: exportMutation.isPending,
     canExport,
+    playerAspect,
+    playerCaptionsOn,
     errorMessage:
       exportMutation.error instanceof Error ? exportMutation.error.message : undefined,
   };

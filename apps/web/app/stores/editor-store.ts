@@ -40,13 +40,29 @@ export type EditorProject = {
 
 export type EditorHookStatus = 'ready' | 'rendering' | 'queued' | 'failed';
 
+/** Export / player framing presets — matches ClipRatio. */
+export type EditorAspectRatio = '9:16' | '1:1' | '16:9';
+
+/**
+ * Export framing. UI always sends `'fit'` (full frame + blur pad).
+ * `'fill'` remains in the API schema for a later crop iteration — not exposed.
+ */
+export type EditorFitMode = 'fit' | 'fill';
+
+export const EDITOR_ASPECT_PRESETS: EditorAspectRatio[] = ['9:16', '1:1', '16:9'];
+
+export const DEFAULT_EDITOR_ASPECT: EditorAspectRatio = '9:16';
+
+/** Only framing the UI uses today. */
+export const DEFAULT_EDITOR_FIT_MODE: EditorFitMode = 'fit';
+
 export type EditorHook = {
   id: string;
   label: string;
   title: string;
   start: number;
   end: number;
-  ratio: '9:16' | '1:1' | '16:9';
+  ratio: EditorAspectRatio;
   status: EditorHookStatus;
   score?: number;
   clipId?: number;
@@ -65,6 +81,10 @@ type EditorStore = {
   video: EditorVideoState;
   /** Shared HTMLVideoElement for wavesurfer MediaElement sync. */
   mediaElement: HTMLVideoElement | null;
+  /** Player aspect + default for cut-clip export. Preview is always Fit (blur). */
+  playerAspect: EditorAspectRatio;
+  /** Player caption overlay on/off — also defaults Cut clip burn-in. */
+  playerCaptionsOn: boolean;
   project: EditorProject | null;
   hooks: EditorHook[];
   selectedHookId: string | null;
@@ -73,6 +93,8 @@ type EditorStore = {
   setPlaying: (playing: boolean) => void;
   setMediaElement: (element: HTMLVideoElement | null) => void;
   setSrc: (src: string) => void;
+  setPlayerAspect: (aspect: EditorAspectRatio) => void;
+  setPlayerCaptionsOn: (on: boolean) => void;
   seek: (time: number) => void;
   resetVideo: () => void;
   setProject: (project: EditorProject | null) => void;
@@ -116,6 +138,8 @@ const emptyVideo = (duration = 0, src: string = SEEDED_VIDEO_SRC): EditorVideoSt
 export const useEditorStore = create<EditorStore>((set, get) => ({
   video: emptyVideo(seededProject.result?.audio_seconds ?? 0),
   mediaElement: null,
+  playerAspect: DEFAULT_EDITOR_ASPECT,
+  playerCaptionsOn: true,
   project: seededProject,
   hooks: seededHooks,
   selectedHookId: null,
@@ -173,6 +197,20 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
     set((state) => ({
       video: { ...state.video, src },
     }));
+  },
+
+  setPlayerAspect: (aspect) => {
+    if (get().playerAspect === aspect) {
+      return;
+    }
+    set({ playerAspect: aspect });
+  },
+
+  setPlayerCaptionsOn: (on) => {
+    if (get().playerCaptionsOn === on) {
+      return;
+    }
+    set({ playerCaptionsOn: on });
   },
 
   seek: (time) => {
@@ -286,6 +324,8 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
     set({
       video: emptyVideo(),
       mediaElement: null,
+      playerAspect: DEFAULT_EDITOR_ASPECT,
+      playerCaptionsOn: true,
       project: null,
       hooks: [],
       selectedHookId: null,

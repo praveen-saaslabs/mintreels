@@ -54,6 +54,12 @@ export enum ClipRatio {
   Widescreen = '16:9',
 }
 
+/** Fit = full frame + pad (blur). Fill = center crop. */
+export enum ClipFitMode {
+  Fit = 'fit',
+  Fill = 'fill',
+}
+
 export enum ClipFilterId {
   All = 'all',
   Queued = 'queued',

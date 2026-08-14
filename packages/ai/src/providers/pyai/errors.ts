@@ -65,6 +65,30 @@ function codeFromUnknownPayload(payload: unknown): string | undefined {
   return undefined;
 }
 
+/**
+ * PyAI marks a transcription *job* failed and puts the upstream STT HTTP error
+ * in `job.error` (e.g. "stt: HTTP 503: upstream connect error..."). That path
+ * never goes through mapPyAIError, so callers must classify retryability here.
+ */
+export function isRetryableTranscriptionJobError(message: string | undefined): boolean {
+  if (message === undefined || message.trim() === '') {
+    return false;
+  }
+  if (/\bHTTP\s*(429|5\d\d)\b/i.test(message)) {
+    return true;
+  }
+  const lower = message.toLowerCase();
+  return (
+    lower.includes('upstream connect error') ||
+    lower.includes('remote connection failure') ||
+    lower.includes('connection reset') ||
+    lower.includes('temporarily unavailable') ||
+    lower.includes('econnreset') ||
+    lower.includes('etimedout') ||
+    lower.includes('timeout')
+  );
+}
+
 export function mapPyAIError(error: unknown, provider = 'pyai'): ProviderError {
   if (error instanceof ProviderError) {
     return error;

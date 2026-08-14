@@ -4,14 +4,14 @@ import { cn } from '@/lib/utils';
 
 type HookThumbProps = {
   start: number;
-  ratio: string;
+  chip: string;
   videoUrl?: string;
   className?: string;
 };
 
 export function HookThumb({
   start,
-  ratio,
+  chip,
   videoUrl = DEMO_MEDIA.videoUrl,
   className,
 }: HookThumbProps) {
@@ -58,7 +58,7 @@ export function HookThumb({
         className="pointer-events-none h-full w-full object-cover"
       />
       <span className="glass-chip pointer-events-none absolute left-1.5 top-1.5 z-10 inline-flex h-[18px] items-center rounded-full px-1.5 font-mono text-[10px] font-medium text-foreground">
-        {ratio}
+        {chip}
       </span>
     </div>
   );

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { PyAIError } from '@pyai/sdk';
-import { mapPyAIError } from './errors';
+import { isRetryableTranscriptionJobError, mapPyAIError } from './errors';
 import { mapJobToSubmission, mapResultToCanonical } from './mapper';
 
 test('maps a valid transcription result to canonical ms segments', () => {
@@ -106,4 +106,21 @@ test('unauthorized and credit_exhausted are not retryable', () => {
   assert.equal(mapPyAIError(new PyAIError(401, 'nope', 'unauthorized')).retryable, false);
   assert.equal(mapPyAIError(new PyAIError(402, 'paid', 'credit_exhausted')).retryable, false);
   assert.equal(mapPyAIError(new PyAIError(400, 'bad', 'invalid_request_error')).retryable, false);
+});
+
+test('embedded STT 5xx / 429 job errors are retryable', () => {
+  assert.equal(
+    isRetryableTranscriptionJobError('stt: HTTP 500: Internal Server Error'),
+    true,
+  );
+  assert.equal(
+    isRetryableTranscriptionJobError(
+      'stt: HTTP 503: upstream connect error or disconnect/reset before headers. reset reason: remote connection failure',
+    ),
+    true,
+  );
+  assert.equal(isRetryableTranscriptionJobError('stt: HTTP 429: Too Many Requests'), true);
+  assert.equal(isRetryableTranscriptionJobError('stt: HTTP 400: bad audio'), false);
+  assert.equal(isRetryableTranscriptionJobError('unsupported language'), false);
+  assert.equal(isRetryableTranscriptionJobError(undefined), false);
 });

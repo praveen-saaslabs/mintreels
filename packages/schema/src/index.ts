@@ -2,6 +2,7 @@ export { deletedAtSchema, idSchema, timestampsSchema } from './common';
 export {
   CLIP_FILTER_LABELS,
   ClipFilterId,
+  ClipFitMode,
   ClipRatio,
   ClipStatus,
   EmbeddingStatus,
@@ -108,7 +109,9 @@ export {
   type HookRow,
 } from './hooks';
 export {
+  clipFitModeSchema,
   clipInsertSchema,
+  clipRatioSchema,
   clipRowSchema,
   clipStatusSchema,
   type ClipInsert,

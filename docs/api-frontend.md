@@ -297,9 +297,11 @@ Discriminated **200** responses:
 
 ### Hook export — `POST /api/recordings/:id/hooks/:hookId/export`
 
-Creates a `clips` row (`queued`) and enqueues `render-clip`. **202** with the public clip DTO. Poll `GET /api/clips/:id` while `status` is `queued` or `rendering`.
+Optional body: `{ aspectRatio?: "9:16"|"1:1"|"16:9", fitMode?: "fit"|"fill", burnSubtitles?: boolean }` (defaults `9:16` / `fit` / `true`). Creates a `clips` row (`queued`) and enqueues `render-clip`. **202** with the public clip DTO. Poll `GET /api/clips/:id` while `status` is `queued` or `rendering`.
 
-Idempotent: in-flight (`queued`/`rendering`) or `ready` returns the existing clip; `failed` resets that row and re-enqueues.
+`fitMode`: **`fit`** (default) = full frame + blurred pad; **`fill`** = center crop (opt-in). Layout-agnostic — Fit preserves the whole source regardless of hosts/grid/PiP.
+
+Idempotent when aspect + fit + burn match: in-flight (`queued`/`rendering`) or `ready` returns the existing clip; `failed` or a different aspect/fit/burn resets that row and re-enqueues.
 
 Errors: `404` recording/hook, `400 INVALID_HOOK_RANGE`, `409 VIDEO_NOT_AVAILABLE`. Never returns `storageKey`.
 
@@ -315,9 +317,13 @@ Errors: `404` recording/hook, `400 INVALID_HOOK_RANGE`, `409 VIDEO_NOT_AVAILABLE
   "startMs": 252000,
   "endMs": 293000,
   "status": "queued",
+  "aspectRatio": "9:16",
+  "fitMode": "fit",
+  "burnSubtitles": true,
   "subtitleStyle": null,
   "videoUrl": null,
-  "thumbnailUrl": null
+  "thumbnailUrl": null,
+  "ratio": "9:16"
 }
 ```
 
@@ -343,9 +349,9 @@ Errors: `404` recording/hook, `400 INVALID_HOOK_RANGE`, `409 VIDEO_NOT_AVAILABLE
 
 ### Clips — `GET /api/clips`, `GET /api/clips/:id`
 
-**No `storageKey`, no signed URL, no `caption`.** Playback URL is `videoUrl` (`null` until render finishes). Poster is `thumbnailUrl` (`null` until Filestack/FFmpeg thumb is stored). `hookId` is `null` when the clip was not created from a hook. `ratio` is derived (`9:16` \| `1:1` \| `16:9`) and **omitted** if recording width/height are null. Status: `queued` \| `rendering` \| `ready` \| `failed`.
+**No `storageKey`, no signed URL, no `caption`.** Playback URL is `videoUrl` (`null` until render finishes). Poster is `thumbnailUrl` (`null` until Filestack/FFmpeg thumb is stored). `hookId` is `null` when the clip was not created from a hook. `aspectRatio` / `ratio` is the **export target** (`9:16` \| `1:1` \| `16:9`). `fitMode` is `fit` (full frame + blur pad, default) or `fill` (center crop). `burnSubtitles` is whether captions were burned in. Status: `queued` \| `rendering` \| `ready` \| `failed`.
 
-`POST /api/clips` creates a clip from an owned recording time range (prompt search uses padded `clipStartMs` / `clipEndMs`, `hookId` omitted). Hook export remains `POST /recordings/:id/hooks/:hookId/export`.
+`POST /api/clips` creates a clip from an owned recording time range (prompt search uses padded `clipStartMs` / `clipEndMs`, `hookId` omitted). Optional `aspectRatio` (default `9:16`), `fitMode` (default `fit`), and `burnSubtitles` (default `true`). Hook export remains `POST /recordings/:id/hooks/:hookId/export`.
 
 ```json
 {
@@ -359,6 +365,9 @@ Errors: `404` recording/hook, `400 INVALID_HOOK_RANGE`, `409 VIDEO_NOT_AVAILABLE
   "startMs": 252000,
   "endMs": 293000,
   "status": "ready",
+  "aspectRatio": "9:16",
+  "fitMode": "fit",
+  "burnSubtitles": true,
   "subtitleStyle": "bold_mint",
   "videoUrl": "https://cdn.filestackcontent.com/HANDLE",
   "thumbnailUrl": "https://cdn.filestackcontent.com/THUMB",
@@ -370,6 +379,7 @@ Map to mock `ClipSummary` in the UI: `projectLabel` ← `projectName` + `recordi
 
 ### Editor + clips UI
 
+- Player aspect chips (`9:16` default, `1:1`, `16:9`) frame preview: **Fit** = `object-contain` + blurred backdrop; **Fill** = `object-cover`. Default Fit for vertical/square. **Cut clip** opens a confirm with aspect chips plus **Fit (blur)** / **Fill (crop)** (“Keep full frame” vs “Zoom / crop”), then calls export/`createClip` with `aspectRatio` + `fitMode` + `burnSubtitles: true`.
 - Editor hook card: **Cut clip** until the hook has no ready `videoUrl`; poll `GET /clips/:id` while `queued` / `rendering`. When `status === ready` and `videoUrl` is set, show the **download icon** only.
 - Clips page: list/filter via `GET /clips` + `GET /clips/filters`. Cards use a **4:3** poster (`thumbnailUrl` when present); **Download** when `ready` + `videoUrl`. **Delete** (confirm dialog) calls `DELETE /clips/:id` for any status.
 - Download fetches `videoUrl` in the browser (HTTPS Filestack CDN only, `credentials: 'omit'`). Show a loading state while the file is saving. Signed `GET /clips/:id/download` is still unimplemented.

@@ -6,6 +6,8 @@ import { ClipThumbnail1700000000004 } from './0005-clip-thumbnail';
 import { HookAnalysis1700000000005 } from './0006-hook-analysis';
 import { SoftDelete1700000000005 } from './0006-soft-delete';
 import { RecordingThumbnail1700000000006 } from './0007-recording-thumbnail';
+import { ClipAspectBurn1700000000007 } from './0008-clip-aspect-burn';
+import { ClipFitMode1700000000008 } from './0009-clip-fit-mode';
 import { HookHeadlineScores1700000000007 } from './0008-hook-headline-scores';
 
 // Keep this list ordered. New migrations get appended here.
@@ -18,5 +20,7 @@ export const migrations = [
   HookAnalysis1700000000005,
   SoftDelete1700000000005,
   RecordingThumbnail1700000000006,
+  ClipAspectBurn1700000000007,
+  ClipFitMode1700000000008,
   HookHeadlineScores1700000000007,
 ];

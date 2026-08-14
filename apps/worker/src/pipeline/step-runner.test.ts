@@ -168,7 +168,7 @@ test('transcription reuses provider_job_id and does not submit again', async () 
   });
   const handler = transcriptionHandler({
     recordings: {
-      findOneByOrFail: async () => ({ id: 10, audioStorageKey: 'recordings/10/audio.wav' }),
+      findOneBy: async () => ({ id: 10, audioStorageKey: 'recordings/10/audio.wav' }),
     },
     storage: { getSignedUrl: async () => 'https://example.invalid/audio.wav' },
     speech: {
@@ -185,4 +185,45 @@ test('transcription reuses provider_job_id and does not submit again', async () 
   const result = await handler({ jobId: 1, recordingId: 10, step, attempt: 1 });
   assert.equal(submits, 0);
   assert.equal((result as { providerJobId: string }).providerJobId, 'job-1');
+});
+
+test('transient STT job failure is retryable and clears provider_job_id', async () => {
+  const step = makeStep({
+    step: JobStepName.Transcription,
+    provider: 'pyai',
+    providerJobId: 'job-dead',
+    status: JobStepStatus.Pending,
+  });
+  let saved: StepRecord | null = null;
+  const handler = transcriptionHandler({
+    recordings: {
+      findOneBy: async () => ({ id: 10, audioStorageKey: 'recordings/10/audio.wav' }),
+    },
+    storage: { getSignedUrl: async () => 'https://example.invalid/audio.wav' },
+    speech: {
+      submitTranscription: async () => ({ providerJobId: 'job-new', status: 'queued' }),
+      getTranscriptionStatus: async () => ({
+        providerJobId: 'job-dead',
+        status: 'failed',
+        error: 'stt: HTTP 500: Internal Server Error',
+      }),
+      getTranscriptionResult: async () => ({ text: 'hi', segments: [] }),
+    },
+    jobSteps: {
+      save: async (row: StepRecord) => {
+        saved = { ...row };
+        return row;
+      },
+    },
+  } as unknown as WorkerDeps);
+
+  await assert.rejects(
+    async () => handler({ jobId: 1, recordingId: 10, step, attempt: 1 }),
+    (error: unknown) =>
+      error instanceof ProviderError &&
+      error.code === 'transcription_failed' &&
+      error.retryable === true,
+  );
+  assert.equal(step.providerJobId, null);
+  assert.equal(saved?.providerJobId ?? null, null);
 });

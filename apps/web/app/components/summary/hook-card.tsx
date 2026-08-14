@@ -1,10 +1,12 @@
 import { Download, Loader2, Share2, Trash2 } from 'lucide-react';
 import { useState, type KeyboardEvent, type MouseEvent } from 'react';
+import { CutClipConfirmDialog } from '@/components/summary/cut-clip-confirm-dialog';
 import { HookThumb } from '@/components/summary/hook-thumb';
 import { ShareClipModal } from '@/components/summary/share-clip-modal';
 import { buttonVariants } from '@/components/ui/button';
 import { ConfirmDeleteDialog } from '@/components/ui/confirm-delete-dialog';
 import { useClipDownload } from '@/hooks/use-clip-download';
+import { useClipReadyAttention } from '@/hooks/use-clip-ready-attention';
 import { useDeleteClip } from '@/hooks/use-delete-clip';
 import { useHookClipExport } from '@/hooks/use-hook-clip-export';
 import { DEMO_MEDIA } from '@/lib/demo-media';
@@ -15,6 +17,7 @@ import { useEditorStore, type EditorHook, type EditorHookStatus } from '@/stores
 
 type HookCardProps = {
   hook: EditorHook;
+  sequenceLabel: string;
   selected: boolean;
   recordingId?: number | undefined;
   onPreview: () => void;
@@ -59,25 +62,42 @@ function DeleteClipButton({
   );
 }
 
-export function HookCard({ hook, selected, recordingId, onPreview }: HookCardProps) {
+export function HookCard({ hook, sequenceLabel, selected, recordingId, onPreview }: HookCardProps) {
   const score = hook.score;
   const mediaSrc = useEditorStore((state) => state.mediaElement?.currentSrc);
   const storeSrc = useEditorStore((state) => state.video.src);
   const clearHookClip = useEditorStore((state) => state.clearHookClip);
   const videoUrl = mediaSrc || storeSrc || DEMO_MEDIA.videoUrl;
-  const { exportClip, isExporting, canExport } = useHookClipExport(recordingId, hook);
+  const setPlayerAspect = useEditorStore((state) => state.setPlayerAspect);
+  const setPlayerCaptionsOn = useEditorStore((state) => state.setPlayerCaptionsOn);
+  const {
+    exportClip,
+    isExporting,
+    canExport,
+    playerAspect,
+    playerCaptionsOn,
+    errorMessage: exportError,
+  } = useHookClipExport(recordingId, hook);
   const { isDownloading, download } = useClipDownload();
   const { deleteClip, isDeleting, errorMessage, reset } = useDeleteClip();
   const [shareOpen, setShareOpen] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [cutOpen, setCutOpen] = useState(false);
   const showDownload = hook.status === 'ready' && Boolean(hook.clipVideoUrl);
   const canDeleteClip = hook.clipId != null;
   const inFlight = hook.status === 'queued' || hook.status === 'rendering' || isExporting;
   const actionLabel = cutClipLabel(hook.status, isExporting);
+  const {
+    pulse: readyPulse,
+    highlight: readyHighlight,
+    setCardRef: setReadyCardRef,
+    dismissHighlight: dismissReadyHighlight,
+  } = useClipReadyAttention(hook.clipId ?? `hook-${hook.id}`, hook.status);
 
   function onKeyDown(event: KeyboardEvent<HTMLDivElement>) {
     if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault();
+      dismissReadyHighlight();
       onPreview();
     }
   }
@@ -88,7 +108,7 @@ export function HookCard({ hook, selected, recordingId, onPreview }: HookCardPro
     if (!canExport) {
       return;
     }
-    exportClip();
+    setCutOpen(true);
   }
 
   function onDownload(event: MouseEvent<HTMLButtonElement>) {
@@ -119,10 +139,15 @@ export function HookCard({ hook, selected, recordingId, onPreview }: HookCardPro
   return (
     <>
       <div
+        ref={setReadyCardRef}
         role="button"
         tabIndex={0}
-        aria-label={`Preview hook ${hook.title}`}
-        onClick={onPreview}
+        aria-label={`Preview hook ${sequenceLabel}: ${hook.title}`}
+        onClick={() => {
+          dismissReadyHighlight();
+          onPreview();
+        }}
+        onPointerEnter={dismissReadyHighlight}
         onKeyDown={onKeyDown}
         className={cn(
           'glass flex w-full cursor-pointer items-stretch overflow-hidden rounded-md text-left',
@@ -130,11 +155,13 @@ export function HookCard({ hook, selected, recordingId, onPreview }: HookCardPro
           selected
             ? 'border-[var(--mr-acc)] shadow-[var(--glass-shadow-elevated)] ring-2 ring-[color-mix(in_oklch,var(--mr-acc)_35%,transparent)]'
             : 'hover:border-[var(--glass-border)]',
+          readyPulse && 'clip-ready-attention',
+          readyHighlight && 'clip-ready-highlight',
         )}
       >
         <HookThumb
           start={hook.start}
-          ratio={hook.ratio}
+          chip={sequenceLabel}
           videoUrl={videoUrl}
           className="aspect-[4/3] w-[128px] self-stretch"
         />
@@ -176,7 +203,7 @@ export function HookCard({ hook, selected, recordingId, onPreview }: HookCardPro
                   onClick={onDownload}
                   className={cn(
                     buttonVariants({ variant: 'ghost', size: 'icon-xs' }),
-                    'text-foreground',
+                    'text-[var(--mr-acc)] hover:text-[var(--mr-acc)]',
                   )}
                 >
                   {isDownloading ? <Loader2 className="animate-spin" /> : <Download />}
@@ -217,6 +244,26 @@ export function HookCard({ hook, selected, recordingId, onPreview }: HookCardPro
           title={hook.title}
         />
       ) : null}
+
+      <CutClipConfirmDialog
+        open={cutOpen}
+        onOpenChange={setCutOpen}
+        title={`Cut clip — ${hook.title}`}
+        pending={isExporting}
+        errorMessage={exportError}
+        initialAspect={playerAspect}
+        initialBurnSubtitles={playerCaptionsOn}
+        confirmLabel={hook.status === 'failed' ? 'Retry' : 'Cut clip'}
+        onAspectChange={(aspect) => {
+          setPlayerAspect(aspect);
+        }}
+        onBurnSubtitlesChange={(burn) => {
+          setPlayerCaptionsOn(burn);
+        }}
+        onConfirm={({ aspectRatio, burnSubtitles }) => {
+          exportClip(aspectRatio, burnSubtitles, { onSuccess: () => setCutOpen(false) });
+        }}
+      />
 
       <ConfirmDeleteDialog
         open={confirmOpen}

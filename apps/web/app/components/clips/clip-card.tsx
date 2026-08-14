@@ -4,6 +4,7 @@ import { ShareClipModal } from '@/components/summary/share-clip-modal';
 import { buttonVariants } from '@/components/ui/button';
 import { ConfirmDeleteDialog } from '@/components/ui/confirm-delete-dialog';
 import { useClipDownload } from '@/hooks/use-clip-download';
+import { useClipReadyAttention } from '@/hooks/use-clip-ready-attention';
 import { useDeleteClip } from '@/hooks/use-delete-clip';
 import {
   formatClipDuration,
@@ -32,6 +33,12 @@ export function ClipCard({ clip }: { clip: ClipSummary }) {
   const canDownload = clip.status === 'ready' && Boolean(clip.videoUrl);
   const { isDownloading, download } = useClipDownload();
   const { deleteClip, isDeleting, errorMessage, reset } = useDeleteClip();
+  const {
+    pulse: readyPulse,
+    highlight: readyHighlight,
+    setCardRef: setReadyCardRef,
+    dismissHighlight: dismissReadyHighlight,
+  } = useClipReadyAttention(clip.id, clip.status);
   const [shareOpen, setShareOpen] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const projectLabel = formatClipProjectLabel(clip);
@@ -67,7 +74,15 @@ export function ClipCard({ clip }: { clip: ClipSummary }) {
 
   return (
     <>
-      <article className="glass flex h-full min-w-0 flex-col overflow-hidden rounded-lg">
+      <article
+        ref={setReadyCardRef}
+        onPointerEnter={dismissReadyHighlight}
+        className={cn(
+          'glass flex h-full min-w-0 flex-col overflow-hidden rounded-lg',
+          readyPulse && 'clip-ready-attention',
+          readyHighlight && 'clip-ready-highlight',
+        )}
+      >
         <div className="relative flex aspect-[4/3] w-full shrink-0 flex-col justify-between overflow-hidden bg-[repeating-linear-gradient(135deg,var(--mr-stripe3)_0_10px,var(--mr-stripe4)_10px_20px)] p-2.5">
           {thumbnailUrl ? (
             <img
@@ -144,7 +159,10 @@ export function ClipCard({ clip }: { clip: ClipSummary }) {
                   }
                   disabled={isDownloading}
                   onClick={onDownload}
-                  className={cn(buttonVariants({ variant: 'outline', size: 'xs' }), 'flex-1')}
+                  className={cn(
+                    buttonVariants({ variant: 'outline', size: 'xs' }),
+                    'flex-1 text-[var(--mr-acc)] hover:text-[var(--mr-acc)]',
+                  )}
                 >
                   {isDownloading ? <Loader2 className="animate-spin" /> : <Download />}
                   {isDownloading ? 'Downloading…' : 'Download'}

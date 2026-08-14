@@ -224,12 +224,26 @@ export type AskMomentsResponse =
   | { kind: 'moments'; moments: MomentCandidate[] }
   | { kind: 'reject'; text: string };
 
+export type ClipAspectRatio = '9:16' | '1:1' | '16:9';
+
+export type ClipFitMode = 'fit' | 'fill';
+
 export type CreateClipRequest = {
   recordingId: number;
   title: string;
   startMs: number;
   endMs: number;
   hookId?: number | null;
+  aspectRatio?: ClipAspectRatio;
+  fitMode?: ClipFitMode;
+  burnSubtitles?: boolean;
+  subtitleStyle?: string | null;
+};
+
+export type ExportHookClipRequest = {
+  aspectRatio?: ClipAspectRatio;
+  fitMode?: ClipFitMode;
+  burnSubtitles?: boolean;
   subtitleStyle?: string | null;
 };
 
@@ -265,10 +279,13 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(body),
     }),
-  exportHookClip: (recordingId: number, hookId: number) =>
+  exportHookClip: (recordingId: number, hookId: number, body?: ExportHookClipRequest) =>
     request<ClipSummary>(
       `/recordings/${encodeURIComponent(recordingId)}/hooks/${encodeURIComponent(hookId)}/export`,
-      { method: 'POST' },
+      {
+        method: 'POST',
+        body: JSON.stringify(body ?? {}),
+      },
     ),
   createClip: (body: CreateClipRequest) =>
     request<ClipSummary>('/clips', {

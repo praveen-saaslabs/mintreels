@@ -1,7 +1,8 @@
-import { Controller, Get, HttpCode, Param, ParseIntPipe, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, Param, ParseIntPipe, Post, UseGuards } from '@nestjs/common';
 import {
   ApiAcceptedResponse,
   ApiBadRequestResponse,
+  ApiBody,
   ApiConflictResponse,
   ApiCookieAuth,
   ApiNotFoundResponse,
@@ -11,11 +12,16 @@ import {
   ApiTags,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
-import { ClipStatus } from '@mintreels/schema';
+import { ClipFitMode, ClipRatio, ClipStatus } from '@mintreels/schema';
 import { AuthGuard } from '../auth/auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
 import type { RequestUser } from '../auth/auth.types';
+import {
+  exportHookClipRequestSchema,
+  type ExportHookClipRequest,
+} from '../clips/clips.dto';
 import { ClipsService } from '../clips/clips.service';
+import { ZodValidationPipe } from '../common/zod-validation.pipe';
 import { HooksService } from './hooks.service';
 
 @ApiTags('Hooks')
@@ -73,6 +79,16 @@ export class HooksController {
   @ApiOperation({ summary: 'Export a clip from a hook time range' })
   @ApiParam({ name: 'id', type: Number })
   @ApiParam({ name: 'hookId', type: Number })
+  @ApiBody({
+    required: false,
+    schema: {
+      example: {
+        aspectRatio: ClipRatio.Vertical,
+        fitMode: ClipFitMode.Fit,
+        burnSubtitles: true,
+      },
+    },
+  })
   @ApiAcceptedResponse({
     description: 'Clip row created or reused; render job enqueued when needed',
     schema: {
@@ -87,9 +103,13 @@ export class HooksController {
         startMs: 252000,
         endMs: 293000,
         status: ClipStatus.Queued,
+        aspectRatio: ClipRatio.Vertical,
+        fitMode: ClipFitMode.Fit,
+        burnSubtitles: true,
         subtitleStyle: null,
         videoUrl: null,
         thumbnailUrl: null,
+        ratio: ClipRatio.Vertical,
       },
     },
   })
@@ -102,7 +122,8 @@ export class HooksController {
     @CurrentUser() user: RequestUser,
     @Param('id', ParseIntPipe) id: number,
     @Param('hookId', ParseIntPipe) hookId: number,
+    @Body(new ZodValidationPipe(exportHookClipRequestSchema)) body: ExportHookClipRequest,
   ) {
-    return this.clipsService.exportFromHook(id, hookId, user.id);
+    return this.clipsService.exportFromHook(id, hookId, user.id, body);
   }
 }

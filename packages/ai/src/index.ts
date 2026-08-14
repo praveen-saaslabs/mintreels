@@ -34,6 +34,7 @@ export {
   PyAIClient,
   PyAILLMProvider,
   PyAISpeechProvider,
+  isRetryableTranscriptionJobError,
   mapPyAIError,
   mapJobToSubmission,
   mapResultToCanonical,

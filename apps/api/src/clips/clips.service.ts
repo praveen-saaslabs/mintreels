@@ -12,6 +12,7 @@ import type { QueueProvider } from '@mintreels/queue';
 import {
   CLIP_FILTER_LABELS,
   ClipFilterId,
+  ClipFitMode,
   ClipRatio,
   ClipStatus,
   JobStatus,
@@ -21,27 +22,16 @@ import { HttpError } from '../common/http-error';
 import { publicPlaybackUrl } from '../common/playback-url';
 import { QUEUE_PROVIDER } from '../providers/provider-tokens';
 import { clipCreateGuard } from './clip-create-guard';
-import type { CreateClipRequest } from './clips.dto';
+import type { CreateClipRequest, ExportHookClipRequest } from './clips.dto';
 
 const RENDER_QUEUE_MAX_ATTEMPTS = 3;
-
-function clipRatio(width: number | null | undefined, height: number | null | undefined): ClipRatio | undefined {
-  if (!width || !height) {
-    return undefined;
-  }
-  if (height > width) {
-    return ClipRatio.Vertical;
-  }
-  if (width === height) {
-    return ClipRatio.Square;
-  }
-  return ClipRatio.Widescreen;
-}
+const DEFAULT_ASPECT = ClipRatio.Vertical;
+const DEFAULT_FIT_MODE = ClipFitMode.Fit;
+const DEFAULT_BURN_SUBTITLES = true;
 
 export function toPublicClip(clip: Clip) {
   const recording = clip.recording;
   const project = recording?.project;
-  const ratio = clipRatio(recording?.width, recording?.height);
   return {
     id: clip.id,
     title: clip.title,
@@ -53,10 +43,14 @@ export function toPublicClip(clip: Clip) {
     startMs: clip.startMs,
     endMs: clip.endMs,
     status: clip.status,
+    aspectRatio: clip.aspectRatio,
+    fitMode: clip.fitMode,
+    burnSubtitles: clip.burnSubtitles,
     subtitleStyle: clip.subtitleStyle,
     videoUrl: publicPlaybackUrl(clip.storageKey),
     thumbnailUrl: publicPlaybackUrl(clip.thumbnailStorageKey),
-    ...(ratio ? { ratio } : {}),
+    /** Export target aspect (same as aspectRatio). */
+    ratio: clip.aspectRatio,
   };
 }
 
@@ -107,6 +101,10 @@ export class ClipsService {
       }
     }
 
+    const aspectRatio = body.aspectRatio ?? DEFAULT_ASPECT;
+    const fitMode = body.fitMode ?? DEFAULT_FIT_MODE;
+    const burnSubtitles = body.burnSubtitles ?? DEFAULT_BURN_SUBTITLES;
+
     const clip = await this.clips.save(
       this.clips.create({
         recordingId: recording.id,
@@ -114,6 +112,9 @@ export class ClipsService {
         title: body.title,
         startMs: body.startMs,
         endMs: body.endMs,
+        aspectRatio,
+        fitMode,
+        burnSubtitles,
         subtitleStyle: body.subtitleStyle ?? null,
         storageKey: null,
         thumbnailStorageKey: null,
@@ -125,7 +126,12 @@ export class ClipsService {
     return toPublicClip(clip);
   }
 
-  async exportFromHook(recordingId: number, hookId: number, userId: number) {
+  async exportFromHook(
+    recordingId: number,
+    hookId: number,
+    userId: number,
+    options: ExportHookClipRequest = {},
+  ) {
     const recording = await this.recordings.findOne({
       where: { id: recordingId, project: { userId } },
       relations: { project: true },
@@ -145,23 +151,39 @@ export class ClipsService {
       throw new HttpError(400, 'INVALID_HOOK_RANGE');
     }
 
+    const aspectRatio = options.aspectRatio ?? DEFAULT_ASPECT;
+    const fitMode = options.fitMode ?? DEFAULT_FIT_MODE;
+    const burnSubtitles = options.burnSubtitles ?? DEFAULT_BURN_SUBTITLES;
+    const subtitleStyle = options.subtitleStyle ?? null;
+
     const existing = await this.clips.findLatestByRecordingAndHookId(recordingId, hookId);
     if (existing) {
-      if (existing.status === ClipStatus.Queued || existing.status === ClipStatus.Rendering) {
+      const sameRender =
+        existing.aspectRatio === aspectRatio &&
+        existing.fitMode === fitMode &&
+        existing.burnSubtitles === burnSubtitles;
+      if (
+        sameRender &&
+        (existing.status === ClipStatus.Queued || existing.status === ClipStatus.Rendering)
+      ) {
         existing.recording = existing.recording ?? recording;
         return toPublicClip(existing);
       }
-      if (existing.status === ClipStatus.Ready) {
+      if (sameRender && existing.status === ClipStatus.Ready) {
         existing.recording = existing.recording ?? recording;
         return toPublicClip(existing);
       }
-      if (existing.status === ClipStatus.Failed) {
+      if (existing.status === ClipStatus.Failed || !sameRender) {
         existing.status = ClipStatus.Queued;
         existing.storageKey = null;
         existing.thumbnailStorageKey = null;
         existing.startMs = hook.startMs;
         existing.endMs = hook.endMs;
         existing.title = hook.title;
+        existing.aspectRatio = aspectRatio;
+        existing.fitMode = fitMode;
+        existing.burnSubtitles = burnSubtitles;
+        existing.subtitleStyle = subtitleStyle;
         const saved = await this.clips.save(existing);
         saved.recording = recording;
         await this.enqueueRender(saved);
@@ -176,7 +198,10 @@ export class ClipsService {
         title: hook.title,
         startMs: hook.startMs,
         endMs: hook.endMs,
-        subtitleStyle: null,
+        aspectRatio,
+        fitMode,
+        burnSubtitles,
+        subtitleStyle,
         storageKey: null,
         thumbnailStorageKey: null,
         status: ClipStatus.Queued,
@@ -251,7 +276,12 @@ export class ClipsService {
         currentStep: null,
         startedAt: null,
         finishedAt: null,
-        metadata: { clipId: clip.id },
+        metadata: {
+          clipId: clip.id,
+          aspectRatio: clip.aspectRatio,
+          fitMode: clip.fitMode,
+          burnSubtitles: clip.burnSubtitles,
+        },
       }),
     );
 
@@ -261,7 +291,12 @@ export class ClipsService {
         step: null,
         event: 'job_queued',
         message: 'RENDER_CLIP enqueued',
-        metadata: { clipId: clip.id },
+        metadata: {
+          clipId: clip.id,
+          aspectRatio: clip.aspectRatio,
+          fitMode: clip.fitMode,
+          burnSubtitles: clip.burnSubtitles,
+        },
       }),
     );
 
@@ -274,6 +309,9 @@ export class ClipsService {
         jobId: job.id,
         startMs: clip.startMs,
         endMs: clip.endMs,
+        aspectRatio: clip.aspectRatio,
+        fitMode: clip.fitMode,
+        burnSubtitles: clip.burnSubtitles,
       },
       maxAttempts: RENDER_QUEUE_MAX_ATTEMPTS,
     });

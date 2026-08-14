@@ -13,7 +13,7 @@ type EditorLayoutProps = {
 const PANE_RESIZE = {
   handleSize: 10,
   touchHandleSize: 20,
-  handlePlacement: 'overlay-boundary' as const,
+  handlePlacement: Space.ResizeHandlePlacement.OverlayBoundary,
 };
 
 function isSpacesResizeHandle(target: EventTarget | null): boolean {

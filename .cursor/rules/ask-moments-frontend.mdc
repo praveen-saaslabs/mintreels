@@ -71,9 +71,14 @@ type AskMomentsResponse =
   "recordingId": 10,
   "title": "The enterprise plan starts at",
   "startMs": 9000,
-  "endMs": 47000
+  "endMs": 47000,
+  "aspectRatio": "9:16",
+  "fitMode": "fit",
+  "burnSubtitles": true
 }
 ```
+
+`aspectRatio` defaults to the player chip (`9:16` / `1:1` / `16:9`); confirm dialog can override before cut. `fitMode` defaults `fit` (Keep full frame + blur); `fill` is opt-in center crop. `burnSubtitles` defaults `true`.
 
 Then poll `GET /api/clips/:id` (`api.getClip`) every **2–5s** while `status` is `queued` | `rendering`. Stop on `ready` | `failed`. Download `videoUrl` (HTTPS Filestack only). Same pattern as hook export (`useHookClipExport` / `useMomentClipExport`).
 

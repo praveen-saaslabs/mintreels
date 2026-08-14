@@ -47,6 +47,19 @@ function parseRenderClipPayload(data: unknown): RenderClipPayload {
   if (typeof rec.jobId === 'number') {
     payload.jobId = rec.jobId;
   }
+  if (
+    rec.aspectRatio === '9:16' ||
+    rec.aspectRatio === '1:1' ||
+    rec.aspectRatio === '16:9'
+  ) {
+    payload.aspectRatio = rec.aspectRatio;
+  }
+  if (rec.fitMode === 'fit' || rec.fitMode === 'fill') {
+    payload.fitMode = rec.fitMode;
+  }
+  if (typeof rec.burnSubtitles === 'boolean') {
+    payload.burnSubtitles = rec.burnSubtitles;
+  }
   return payload;
 }
 

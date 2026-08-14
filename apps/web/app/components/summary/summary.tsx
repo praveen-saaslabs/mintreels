@@ -8,6 +8,7 @@ import { AskMint } from '@/components/summary/moment-search';
 import { HookCard } from '@/components/summary/hook-card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { EditorPane } from '@/components/video/editor-layout';
+import { hookSequenceLabel, rankHooksByScore } from '@/lib/hook-rank';
 import { useRecordingId } from '@/lib/recording-id';
 import { useEditorStore, type EditorHook } from '@/stores/editor-store';
 
@@ -16,12 +17,6 @@ type SummaryProps = Readonly<{
   pendingHooks?: boolean;
   pendingSummary?: boolean;
 }>;
-
-function rankHooksByScore(hooks: EditorHook[]): EditorHook[] {
-  return [...hooks].sort(
-    (a, b) => (b.score ?? Number.NEGATIVE_INFINITY) - (a.score ?? Number.NEGATIVE_INFINITY),
-  );
-}
 
 /** Turn paragraph or newline/bullet text into display bullets. */
 function summaryToBullets(text: string): string[] {
@@ -66,10 +61,11 @@ function HooksPane({
   if (rankedHooks.length > 0) {
     return (
       <ul className="flex flex-col gap-2.5">
-        {rankedHooks.map((hook) => (
+        {rankedHooks.map((hook, index) => (
           <li key={hook.id}>
             <HookCard
               hook={hook}
+              sequenceLabel={hookSequenceLabel(index)}
               selected={hook.id === selectedHookId}
               recordingId={recordingId}
               onPreview={() => {
@@ -151,7 +147,10 @@ export function Summary({ text, pendingHooks = false, pendingSummary = false }: 
         >
           <AskMint recordingId={recordingId} />
         </TabsContent>
-        <TabsContent value="hooks" className="mt-0 flex min-h-0 flex-1 flex-col gap-3 overflow-auto outline-none">
+        <TabsContent
+          value="hooks"
+          className="mt-0 flex min-h-0 flex-1 flex-col gap-3 overflow-auto outline-none"
+        >
           <p className="text-xs text-muted-foreground">Ranked by predicted retention</p>
           <HooksPane
             rankedHooks={rankedHooks}

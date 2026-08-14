@@ -27,7 +27,13 @@ import { AuthGuard } from '../auth/auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
 import type { RequestUser } from '../auth/auth.types';
 import { ZodValidationPipe } from '../common/zod-validation.pipe';
-import { CLIP_FILTER_LABELS, ClipFilterId, ClipRatio, ClipStatus } from '@mintreels/schema';
+import {
+  CLIP_FILTER_LABELS,
+  ClipFilterId,
+  ClipFitMode,
+  ClipRatio,
+  ClipStatus,
+} from '@mintreels/schema';
 import { createClipRequestSchema, type CreateClipRequest } from './clips.dto';
 import { ClipsService } from './clips.service';
 
@@ -42,6 +48,9 @@ const clipExample = {
   startMs: 252000,
   endMs: 293000,
   status: ClipStatus.Ready,
+  aspectRatio: ClipRatio.Vertical,
+  fitMode: ClipFitMode.Fit,
+  burnSubtitles: true,
   subtitleStyle: 'bold_mint',
   videoUrl: 'https://cdn.filestackcontent.com/HANDLE',
   thumbnailUrl: 'https://cdn.filestackcontent.com/THUMB',
