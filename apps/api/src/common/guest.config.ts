@@ -6,7 +6,7 @@ export const GUEST_COOKIE_NAME = 'guest_session';
 /** Defaults — every value is overridable via env (see .env.example). */
 const DEFAULT_SESSION_TTL_SECONDS = 24 * 60 * 60; // 24h
 const DEFAULT_DATA_RETENTION_SECONDS = 72 * 60 * 60; // 72h
-const DEFAULT_MAX_PROJECTS = 1;
+const DEFAULT_MAX_PROJECTS = 2;
 const DEFAULT_MAX_RECORDINGS = 3;
 const DEFAULT_REQUESTS_PER_MINUTE = 100;
 const DEFAULT_UPLOADS_PER_HOUR = 5;
@@ -54,7 +54,10 @@ export function loadGuestConfig(): GuestConfig {
       process.env[EnvKey.GuestRequestsPerMinute],
       DEFAULT_REQUESTS_PER_MINUTE,
     ),
-    uploadsPerHour: parsePositive(process.env[EnvKey.GuestUploadsPerHour], DEFAULT_UPLOADS_PER_HOUR),
+    uploadsPerHour: parsePositive(
+      process.env[EnvKey.GuestUploadsPerHour],
+      DEFAULT_UPLOADS_PER_HOUR,
+    ),
     transcriptionsPerHour: parsePositive(
       process.env[EnvKey.GuestTranscriptionsPerHour],
       DEFAULT_TRANSCRIPTIONS_PER_HOUR,
