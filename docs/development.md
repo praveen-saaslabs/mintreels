@@ -55,6 +55,16 @@ pnpm --filter @mintreels/worker start
 
 API health: `GET http://127.0.0.1:3000/health`
 
+## Seed demo data
+
+`pnpm db:seed` loads [`fixtures/demo-seed.json`](../fixtures/demo-seed.json) into MySQL (metadata only — no embeddings). Set `SEED_DEMO_PASSWORD` in `.env` the first time so the script can create `demo@mintreels.local` (override with `SEED_DEMO_EMAIL`). The password is hashed with argon2id and never logged.
+
+```bash
+pnpm db:seed
+```
+
+If the demo recording already exists, the script attaches its project to the demo user and exits.
+
 ## Notes
 
 - IDs are auto-increment integers (not UUIDs).

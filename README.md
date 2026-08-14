@@ -45,14 +45,15 @@ Stop with `docker compose down`.
 
 ### Load the demo project
 
-Sample data ships in [`fixtures/demo-seed.json`](fixtures/demo-seed.json). After the API is up:
+Sample data ships in [`fixtures/demo-seed.json`](fixtures/demo-seed.json) (Joe Dispenza recording with transcript, hooks, and clips). After the API is up:
 
 ```bash
 pnpm install   # once, on the host
-pnpm seed
+# Set SEED_DEMO_PASSWORD in .env (local only; hashed at seed time)
+pnpm db:seed
 ```
 
-Hard-refresh the web app. In non-production the API auto-attaches the demo guest session (`GUEST_DEMO_AUTO_ATTACH`, on by default) so you land on a seeded recording with transcript, hooks, and clips — no DevTools cookie step.
+Log in as `demo@mintreels.local` (or `SEED_DEMO_EMAIL` if you set one) with that password. Re-running the seed is idempotent: it will not duplicate the recording.
 
 > **AI / storage jobs** (new uploads, re-transcribe, render) need `PYAI_*` and `FILESTACK_*` in `.env`. The stack boots without them; browse and demo seed work first.
 
