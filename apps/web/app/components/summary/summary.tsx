@@ -1,5 +1,6 @@
 import { Sparkles } from 'lucide-react';
-import { useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   HooksListEmptyState,
   SummaryTextEmptyState,
@@ -8,6 +9,7 @@ import { AskMint } from '@/components/summary/moment-search';
 import { HookCard } from '@/components/summary/hook-card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { EditorPane } from '@/components/video/editor-layout';
+import { parseEditorDeepLink } from '@/lib/editor-deep-link';
 import { hookSequenceLabel, rankHooksByScore } from '@/lib/hook-rank';
 import { useRecordingId } from '@/lib/recording-id';
 import { useEditorStore, type EditorHook } from '@/stores/editor-store';
@@ -58,11 +60,17 @@ function HooksPane({
   recordingId: number | undefined;
   onPreview: (id: string) => void;
 }>) {
+  const selectedItemRef = useRef<HTMLLIElement>(null);
+
+  useEffect(() => {
+    selectedItemRef.current?.scrollIntoView({ block: 'nearest' });
+  }, [selectedHookId]);
+
   if (rankedHooks.length > 0) {
     return (
       <ul className="flex flex-col gap-2.5">
         {rankedHooks.map((hook, index) => (
-          <li key={hook.id}>
+          <li key={hook.id} ref={hook.id === selectedHookId ? selectedItemRef : undefined}>
             <HookCard
               hook={hook}
               sequenceLabel={hookSequenceLabel(index)}
@@ -119,6 +127,8 @@ function SummaryPane({
 
 export function Summary({ text, pendingHooks = false, pendingSummary = false }: SummaryProps) {
   const recordingId = useRecordingId();
+  const [searchParams] = useSearchParams();
+  const initialTab = parseEditorDeepLink(searchParams).tab;
   const hooks = useEditorStore((state) => state.hooks);
   const selectedHookId = useEditorStore((state) => state.selectedHookId);
   const selectHookAndSeek = useEditorStore((state) => state.selectHookAndSeek);
@@ -127,7 +137,7 @@ export function Summary({ text, pendingHooks = false, pendingSummary = false }: 
   const rankedHooks = useMemo(() => rankHooksByScore(hooks), [hooks]);
 
   return (
-    <Tabs defaultValue="ask" className="flex h-full min-h-0 w-full flex-col gap-0">
+    <Tabs defaultValue={initialTab} className="flex h-full min-h-0 w-full flex-col gap-0">
       <EditorPane
         header={
           <TabsList variant="line">

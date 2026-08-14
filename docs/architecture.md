@@ -879,7 +879,7 @@ When the user selects a hook (Cut clip):
 POST /api/recordings/:id/hooks/:hookId/export
 ```
 
-The API looks up the recording video (`storageKey`) and the hook `startMs` / `endMs`, inserts a `clips` row (`queued`, `recordingId`, `hookId`, `aspectRatio` default `9:16`, `fitMode` default `fit`, `burnSubtitles` default `true`), and enqueues `render-clip` with those fields. The worker downloads the source, then FFmpeg trims + aspect framing: **Fit** (default) scales to fit and pads with a blurred copy of the same frame (layout-agnostic — preserves the full source); **Fill** center-crops then scales (opt-in). Optionally burns overlapping transcript segments as WebVTT. It uploads the MP4 to Filestack, then asks Filestack for a video thumbnail (`video_convert=preset:thumbnail`, FFmpeg frame upload as fallback). It stores `clip.storageKey` + `clip.thumbnailStorageKey` and sets `status: ready` (or `failed`). The UI polls `GET /api/clips/:id` and, when ready, downloads via public `videoUrl` and shows `thumbnailUrl` (HTTPS Filestack CDN).
+The API looks up the recording video (`storageKey`) and the hook `startMs` / `endMs`, inserts a `clips` row (`queued`, `recordingId`, `hookId`, `aspectRatio` default `9:16`, `fitMode` default `fit`, `burnSubtitles` default `true`), and enqueues `render-clip` with those fields. The worker downloads the source, then FFmpeg trims + aspect framing: **Fit** (default) scales to fit and pads with a blurred copy of the same frame (layout-agnostic — preserves the full source); **Fill** center-crops then scales (opt-in). Optionally burns overlapping transcript segments as WebVTT. It uploads the MP4 to Filestack, then asks Filestack for a video thumbnail (`video_convert=preset:thumbnail` at the clip midpoint, FFmpeg frame upload as fallback). It stores `clip.storageKey` + `clip.thumbnailStorageKey` and sets `status: ready` (or `failed`). The UI polls `GET /api/clips/:id` and, when ready, downloads via public `videoUrl` and shows `thumbnailUrl` (HTTPS Filestack CDN).
 
 ---
 
@@ -1287,7 +1287,8 @@ export interface StorageProvider {
   ): Promise<void>;
 
   createVideoThumbnail(
-    sourceKey: string
+    sourceKey: string,
+    options?: { atMs?: number }
   ): Promise<StoredObject>;
 }
 ```
@@ -1730,7 +1731,7 @@ Return { id, jobId }
 
 Client polls `GET /api/recordings/:id/processing`. Worker:
 
-Best-effort recording thumbnail (Filestack `video_convert=preset:thumbnail`, FFmpeg frame upload as fallback) runs at ingest start and again after audio extraction has a local video. Failure never fails ingest. Stored as `recordings.thumbnail_storage_key`; public `thumbnailUrl` on recording/processing/project GETs.
+Best-effort recording thumbnail (Filestack `video_convert=preset:thumbnail` at the video midpoint, FFmpeg frame upload as fallback) runs after a local video is available (or when `durationMs` is known). Ingest start skips the poster when duration is unknown so a 1s blank frame is not persisted. Failure never fails ingest. Stored as `recordings.thumbnail_storage_key`; public `thumbnailUrl` on recording/processing/project GETs.
 
 ```text
 VIDEO_INGEST (single BullMQ job, sequential job_steps)

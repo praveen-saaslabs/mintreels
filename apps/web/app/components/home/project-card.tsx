@@ -6,11 +6,7 @@ import { buttonVariants } from '@/components/ui/button';
 import { useDeleteProject } from '@/hooks/use-delete-project';
 import { isHttpsFilestackPlaybackUrl } from '@/lib/filestack-playback';
 import { cn } from '@/lib/utils';
-import {
-  formatKbLabel,
-  formatProjectJobText,
-  formatRelativeUpdatedAt,
-} from '@/lib/data/format';
+import { formatProjectJobText, formatRelativeUpdatedAt } from '@/lib/data/format';
 import type { ProjectSummary } from '@/lib/data/types';
 
 function jobTone(status: ProjectSummary['jobStatus']) {
@@ -44,9 +40,9 @@ export function ProjectCard({ project }: { project: ProjectSummary }) {
     <>
       <Link
         to={`/editor/${String(project.id)}`}
-        className="glass relative block overflow-hidden rounded-lg text-inherit transition-[border-color,box-shadow] hover:border-[var(--mr-acc)] hover:shadow-[var(--glass-shadow-elevated)]"
+        className="glass relative flex h-full min-h-[260px] flex-col overflow-hidden rounded-lg text-inherit transition-[border-color,box-shadow] hover:border-[var(--mr-acc)] hover:shadow-[var(--glass-shadow-elevated)]"
       >
-        <div className="relative flex h-[118px] items-end overflow-hidden bg-[repeating-linear-gradient(135deg,var(--mr-stripe3)_0_10px,var(--mr-stripe4)_10px_20px)] p-3">
+        <div className="relative flex h-[118px] shrink-0 items-end overflow-hidden bg-[repeating-linear-gradient(135deg,var(--mr-stripe3)_0_10px,var(--mr-stripe4)_10px_20px)] p-3">
           {thumbnailUrl ? (
             <img
               src={thumbnailUrl}
@@ -80,16 +76,16 @@ export function ProjectCard({ project }: { project: ProjectSummary }) {
             <Trash2 />
           </button>
         </div>
-        <div className="flex flex-col gap-2.5 p-3.5">
+        <div className="flex min-h-0 flex-1 flex-col gap-2.5 p-3.5">
           <div>
-            <div className="text-[15px] leading-snug font-semibold tracking-[-0.01em]">
+            <div className="line-clamp-2 text-[15px] leading-snug font-semibold tracking-[-0.01em]">
               {project.name}
             </div>
             <div className="mt-1 text-xs text-[var(--mr-mfg)]">
               {formatRelativeUpdatedAt(project.updatedAt)}
             </div>
           </div>
-          <div className="flex gap-4">
+          <div className="mt-auto flex gap-4">
             <div>
               <div className="font-mono text-[15px] font-medium">{project.recordingCount}</div>
               <div className="text-[10.5px] text-[var(--mr-mfg)]">recordings</div>
@@ -105,7 +101,6 @@ export function ProjectCard({ project }: { project: ProjectSummary }) {
               <div className="text-[10.5px] text-[var(--mr-mfg)]">open hooks</div>
             </div>
           </div>
-          <div className="text-[11px] text-[var(--mr-mfg)]">{formatKbLabel(project.kbScope)}</div>
         </div>
       </Link>
       <ConfirmDeleteDialog

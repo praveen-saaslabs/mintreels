@@ -113,8 +113,7 @@ export function VideoPlayer({ src, pending = false, poster }: Readonly<VideoPlay
   const captionsOn = useEditorStore((state) => state.playerCaptionsOn);
   const setPlayerAspect = useEditorStore((state) => state.setPlayerAspect);
   const setPlayerCaptionsOn = useEditorStore((state) => state.setPlayerCaptionsOn);
-  // Fit-only preview for now (blur pad). Fill crop is not exposed in the UI.
-  const useFitBlur = aspect !== '16:9';
+  // Fit preview (blur pad) for every aspect, including 16:9 — matches export.
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const fitBackdropRef = useRef<HTMLVideoElement>(null);
@@ -147,9 +146,6 @@ export function VideoPlayer({ src, pending = false, poster }: Readonly<VideoPlay
 
   // Keep Fit blurred backdrop roughly in sync with the main player.
   useEffect(() => {
-    if (!useFitBlur) {
-      return;
-    }
     const main = videoRef.current;
     const backdrop = fitBackdropRef.current;
     if (!main || !backdrop) {
@@ -181,17 +177,25 @@ export function VideoPlayer({ src, pending = false, poster }: Readonly<VideoPlay
       main.removeEventListener('seeked', sync);
       backdrop.pause();
     };
-  }, [useFitBlur, resolvedSrc]);
+  }, [resolvedSrc]);
 
   // Sole seek driver. Timeline overlay playhead follows this element's currentTime on rAF.
+  // Re-apply on loadedmetadata so deep-link seeks survive src attach.
   useEffect(() => {
     const video = videoRef.current;
     if (!video || seekEpoch === 0) {
       return;
     }
 
-    video.currentTime = currentTimeRef.current;
-  }, [seekEpoch]);
+    const applySeek = () => {
+      video.currentTime = currentTimeRef.current;
+    };
+    applySeek();
+    video.addEventListener('loadedmetadata', applySeek);
+    return () => {
+      video.removeEventListener('loadedmetadata', applySeek);
+    };
+  }, [seekEpoch, resolvedSrc]);
 
   async function togglePlayback() {
     const video = videoRef.current;
@@ -375,7 +379,7 @@ export function VideoPlayer({ src, pending = false, poster }: Readonly<VideoPlay
                 )}
               >
                 {/* Fit preview: blurred cover backdrop under object-contain (matches export). */}
-                {useFitBlur && resolvedSrc ? (
+                {resolvedSrc ? (
                   <video
                     ref={fitBackdropRef}
                     aria-hidden

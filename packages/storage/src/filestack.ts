@@ -1,5 +1,10 @@
 import { createHmac } from 'node:crypto';
-import type { StorageProvider, StoredObject, UploadInput } from './provider';
+import type {
+  CreateVideoThumbnailOptions,
+  StorageProvider,
+  StoredObject,
+  UploadInput,
+} from './provider';
 import { parseFilestackRef } from './filestack-url';
 
 const STORE_URL = 'https://www.filestackapi.com/api/store/s3';
@@ -120,10 +125,18 @@ export class FilestackStorageProvider implements StorageProvider {
     return response.body;
   }
 
-  async createVideoThumbnail(sourceKey: string): Promise<StoredObject> {
+  async createVideoThumbnail(
+    sourceKey: string,
+    options?: CreateVideoThumbnailOptions,
+  ): Promise<StoredObject> {
+    const atMs = options?.atMs;
+    if (atMs === undefined || !Number.isFinite(atMs) || atMs < 0) {
+      throw new Error('createVideoThumbnail requires a non-negative atMs');
+    }
     const ref = parseFilestackRef(sourceKey);
     const security = this.securityQuery(['convert', 'read']);
-    const startUrl = `${CDN_BASE}/video_convert=preset:thumbnail,thumbnail_offset:1s/${ref.handle}?key=${encodeURIComponent(this.config.apiKey)}${security}`;
+    const offset = filestackThumbnailOffset(atMs);
+    const startUrl = `${CDN_BASE}/video_convert=preset:thumbnail,thumbnail_offset:${offset}/${ref.handle}?key=${encodeURIComponent(this.config.apiKey)}${security}`;
     const started = await fetchJsonObject(startUrl);
     let status = stringField(started, 'status');
     let data = asRecord(started.data);
@@ -172,6 +185,12 @@ export class FilestackStorageProvider implements StorageProvider {
       throw new Error(`Filestack delete failed (${String(response.status)})`);
     }
   }
+}
+
+function filestackThumbnailOffset(atMs: number): string {
+  const seconds = Math.max(0, atMs / 1000);
+  const rounded = Math.round(seconds * 10) / 10;
+  return `${String(rounded)}s`;
 }
 
 function sleep(ms: number): Promise<void> {

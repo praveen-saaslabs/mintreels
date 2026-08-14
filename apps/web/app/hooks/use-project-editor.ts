@@ -8,6 +8,7 @@ import {
   type RecordingSummary,
   type TranscriptResponse,
 } from '@/lib/api';
+import { parseEditorDeepLink } from '@/lib/editor-deep-link';
 import { isHttpsFilestackPlaybackUrl } from '@/lib/filestack-playback';
 import { queryKeys } from '@/lib/query-keys';
 import {
@@ -338,12 +339,16 @@ export type EditorPanelPending = {
 export function useProjectEditor(projectId: number | undefined) {
   const location = useLocation();
   const locationState = (location.state as EditorLocationState | null) ?? null;
-  const locationRecordingId = locationState?.recordingId;
+  const deepLink = useMemo(() => parseEditorDeepLink(location.search), [location.search]);
+  const locationRecordingId = locationState?.recordingId ?? deepLink.recordingId;
   const locationMediaUrl = locationState?.mediaUrl;
   const resetEditor = useEditorStore((state) => state.resetEditor);
   const setProject = useEditorStore((state) => state.setProject);
   const setHooks = useEditorStore((state) => state.setHooks);
+  const seek = useEditorStore((state) => state.seek);
+  const selectHook = useEditorStore((state) => state.selectHook);
   const setSrc = useEditorStore((state) => state.setSrc);
+  const appliedDeepLinkRef = useRef<string | null>(null);
   const storeVideoSrc = useEditorStore((state) => state.video.src);
   const videoSrc = storeVideoSrc === SEEDED_VIDEO_SRC ? '' : storeVideoSrc;
   const storeJobId = useEditorStore((state) => state.project?.job_id);
@@ -356,7 +361,10 @@ export function useProjectEditor(projectId: number | undefined) {
   const seenProjectThumbRef = useRef(false);
 
   const recordingsQuery = useQuery({
-    queryKey: queryKeys.recordings.forProject(projectId ?? 0),
+    queryKey: [
+      ...queryKeys.recordings.forProject(projectId ?? 0),
+      locationRecordingId ?? 'latest',
+    ] as const,
     enabled: projectId !== undefined,
     queryFn: async () => {
       if (projectId === undefined) {
@@ -491,6 +499,7 @@ export function useProjectEditor(projectId: number | undefined) {
     setSrc('');
     prevStepStatusRef.current = new Map();
     hydratedRecordingRef.current = undefined;
+    appliedDeepLinkRef.current = null;
   }, [projectId, resetEditor, setSrc]);
 
   // Seed an empty project shell as soon as we know the recording so panes can render.
@@ -578,8 +587,37 @@ export function useProjectEditor(projectId: number | undefined) {
       updated_at: Date.now(),
       result: mapped,
     });
-    setHooks(mapHooksToEditor(hooks));
-  }, [phase, editorDataQuery.data, recordingId, setProject, setHooks]);
+    const editorHooks = mapHooksToEditor(hooks);
+    setHooks(editorHooks);
+
+    const deepLinkKey = `${String(recordingId)}:${String(deepLink.hookId ?? '')}:${String(deepLink.startMs ?? '')}`;
+    if (
+      appliedDeepLinkRef.current === deepLinkKey ||
+      (deepLink.startMs == null && deepLink.hookId == null)
+    ) {
+      return;
+    }
+    appliedDeepLinkRef.current = deepLinkKey;
+    if (deepLink.startMs != null) {
+      seek(deepLink.startMs / 1000);
+    }
+    if (
+      deepLink.hookId != null &&
+      editorHooks.some((hook) => hook.id === String(deepLink.hookId))
+    ) {
+      selectHook(String(deepLink.hookId));
+    }
+  }, [
+    phase,
+    editorDataQuery.data,
+    recordingId,
+    deepLink.hookId,
+    deepLink.startMs,
+    setProject,
+    setHooks,
+    seek,
+    selectHook,
+  ]);
 
   const errorMessage = useMemo(() => {
     if (recordingsQuery.error instanceof ApiError) {

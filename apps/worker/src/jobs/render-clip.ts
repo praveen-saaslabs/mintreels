@@ -128,6 +128,7 @@ export async function renderClip(payload: RenderClipPayload, deps: WorkerDeps): 
   const jobExtras = {
     ...(job ? { jobId: job.id, attempt: job.attempt } : {}),
   };
+  const clipDurationMs = Math.max(0, payload.endMs - payload.startMs);
 
   if (clip.status === ClipStatus.Ready && clip.storageKey) {
     logClip(payload.recordingId, payload.clipId, 'ready_short_circuit', 'already ready', jobExtras);
@@ -139,6 +140,7 @@ export async function renderClip(payload: RenderClipPayload, deps: WorkerDeps): 
         localVideoPath: null,
         tmpDir: null,
         uploadKey: `clip-${String(clip.id)}-thumb.jpg`,
+        durationMs: clipDurationMs,
       });
       if (thumbKey) {
         clip.thumbnailStorageKey = thumbKey;
@@ -255,6 +257,7 @@ export async function renderClip(payload: RenderClipPayload, deps: WorkerDeps): 
       localVideoPath: outputPath,
       tmpDir,
       uploadKey: `clip-${String(clip.id)}-thumb.jpg`,
+      durationMs: clipDurationMs,
     });
     logClip(payload.recordingId, payload.clipId, 'thumbnail', 'done', runExtras);
 

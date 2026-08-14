@@ -1,6 +1,7 @@
 import { ArrowLeft, Download, FileDown, Loader2, Trash2, X } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { ThemeToggle } from '@/components/shell/theme-toggle';
 import { CutClipConfirmDialog } from '@/components/summary/cut-clip-confirm-dialog';
 import { ConfirmDeleteDialog } from '@/components/ui/confirm-delete-dialog';
 import { buttonVariants } from '@/components/ui/button';
@@ -159,6 +160,7 @@ export function EditorHeader({
           />
         </>
       ) : null}
+      <ThemeToggle />
       {projectId != null ? (
         <>
           <button
