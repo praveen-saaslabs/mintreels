@@ -9,7 +9,6 @@ import { HookCard } from '@/components/summary/hook-card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { EditorPane } from '@/components/video/editor-layout';
 import { useRecordingId } from '@/lib/recording-id';
-import { formatTimestamp } from '@/lib/time';
 import { useEditorStore, type EditorHook } from '@/stores/editor-store';
 
 type SummaryProps = Readonly<{
@@ -22,6 +21,33 @@ function rankHooksByScore(hooks: EditorHook[]): EditorHook[] {
   return [...hooks].sort(
     (a, b) => (b.score ?? Number.NEGATIVE_INFINITY) - (a.score ?? Number.NEGATIVE_INFINITY),
   );
+}
+
+/** Turn paragraph or newline/bullet text into display bullets. */
+function summaryToBullets(text: string): string[] {
+  const trimmed = text.trim();
+  if (!trimmed) return [];
+
+  const lines = trimmed
+    .split(/\n+/)
+    .map((line) => line.replace(/^[-•*]\s+/, '').trim())
+    .filter((line) => line.length > 0);
+  if (lines.length > 1) return lines;
+
+  const bullets: string[] = [];
+  let start = 0;
+  for (let i = 0; i < trimmed.length; i += 1) {
+    const char = trimmed[i];
+    if (char !== '.' && char !== '!' && char !== '?') continue;
+    const next = trimmed[i + 1];
+    if (next && next !== ' ' && next !== '\n') continue;
+    const sentence = trimmed.slice(start, i + 1).trim();
+    if (sentence.length > 0) bullets.push(sentence);
+    start = i + 1;
+  }
+  const rest = trimmed.slice(start).trim();
+  if (rest.length > 0) bullets.push(rest);
+  return bullets.length > 0 ? bullets : [trimmed];
 }
 
 function HooksPane({
@@ -72,9 +98,15 @@ function SummaryPane({
   pending: boolean;
   recordingId: number | undefined;
 }>) {
-  if (summary.length > 0) {
+  const bullets = summaryToBullets(summary);
+
+  if (bullets.length > 0) {
     return (
-      <p className="text-sm leading-relaxed whitespace-pre-wrap text-foreground">{summary}</p>
+      <ul className="list-disc space-y-2.5 pl-4 text-sm leading-relaxed text-foreground">
+        {bullets.map((bullet, index) => (
+          <li key={`${String(index)}-${bullet.slice(0, 48)}`}>{bullet}</li>
+        ))}
+      </ul>
     );
   }
 
@@ -91,7 +123,6 @@ function SummaryPane({
 
 export function Summary({ text, pendingHooks = false, pendingSummary = false }: SummaryProps) {
   const recordingId = useRecordingId();
-  const currentTime = useEditorStore((state) => state.video.currentTime);
   const hooks = useEditorStore((state) => state.hooks);
   const selectedHookId = useEditorStore((state) => state.selectedHookId);
   const selectHookAndSeek = useEditorStore((state) => state.selectHookAndSeek);
@@ -131,9 +162,6 @@ export function Summary({ text, pendingHooks = false, pendingSummary = false }: 
           />
         </TabsContent>
         <TabsContent value="summary" className="mt-0 min-h-0 flex-1 overflow-auto outline-none">
-          <p className="mb-3 font-mono text-xs text-muted-foreground">
-            {formatTimestamp(currentTime)}
-          </p>
           <SummaryPane summary={summary} pending={pendingSummary} recordingId={recordingId} />
         </TabsContent>
       </EditorPane>
