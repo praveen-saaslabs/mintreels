@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Link } from 'react-router-dom';
+import { BrandLogo } from '@/components/brand/brand-logo';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 export function AuthLayout({
@@ -16,11 +16,8 @@ export function AuthLayout({
   return (
     <div className="mr-ambient flex min-h-svh items-center justify-center px-4 py-10">
       <div className="w-full max-w-md space-y-6">
-        <div className="flex items-center justify-center gap-2">
-          <div className="size-2.5 rounded bg-[var(--mr-acc)]" />
-          <Link to="/login" className="text-lg font-semibold tracking-[-0.01em]">
-            MintReels
-          </Link>
+        <div className="flex items-center justify-center">
+          <BrandLogo to="/login" markClassName="size-8" wordmarkClassName="text-lg" />
         </div>
 
         <Card elevated>

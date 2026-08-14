@@ -8,11 +8,11 @@ import {
   SidebarInset,
   SidebarProvider,
   SidebarRail,
-  SidebarSeparator,
   SidebarTrigger,
 } from '@/components/ui/sidebar';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { AppHeader } from './app-header';
+import { BrandLogo } from '@/components/brand/brand-logo';
 import { ProjectListNav } from './project-list-nav';
 import { SidebarNav } from './sidebar-nav';
 import { UserFooter } from './user-footer';
@@ -31,17 +31,17 @@ export function AppShell() {
         <Sidebar collapsible="icon" className="border-[var(--glass-border-subtle)]">
           <SidebarHeader className="h-[52px] justify-center border-b border-[var(--glass-border-subtle)] px-3">
             <div className="flex items-center gap-2 px-1">
-              <div className="size-2.5 shrink-0 rounded bg-[var(--mr-acc)]" />
-              <span className="font-semibold tracking-[-0.01em] group-data-[collapsible=icon]:hidden">
-                MintReels
-              </span>
+              <BrandLogo
+                className="min-w-0 flex-1"
+                markClassName="size-7 group-data-[collapsible=icon]:size-6"
+                wordmarkClassName="group-data-[collapsible=icon]:hidden"
+              />
               <SidebarTrigger className="ml-auto md:hidden" />
             </div>
           </SidebarHeader>
 
           <SidebarContent>
             <SidebarNav />
-            <SidebarSeparator />
             <ProjectListNav />
           </SidebarContent>
 

@@ -8,6 +8,7 @@ import {
 } from '@/components/ui/dialog';
 import { isHttpsFilestackPlaybackUrl } from '@/lib/filestack-playback';
 import { cn } from '@/lib/utils';
+import { useEditorStore } from '@/stores/editor-store';
 
 export type ClipPlayerAspect = '9:16' | '1:1' | '16:9';
 
@@ -52,6 +53,7 @@ export function ClipPlayerModal({
   poster,
 }: ClipPlayerModalProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const blurBackdrop = useEditorStore((state) => state.playerBlurBackdrop);
   const playable = isHttpsFilestackPlaybackUrl(src);
   const posterUrl =
     typeof poster === 'string' && isHttpsFilestackPlaybackUrl(poster) ? poster : undefined;
@@ -85,14 +87,14 @@ export function ClipPlayerModal({
 
         {open && playable ? (
           <div
-            className="relative mx-auto overflow-hidden rounded-lg bg-background ring-1 ring-[var(--glass-border-subtle)]"
+            className="relative mx-auto overflow-hidden rounded-md bg-background ring-1 ring-[var(--glass-border-subtle)]"
             style={{
               aspectRatio: `${String(w)} / ${String(h)}`,
               width: `min(100%, calc(min(72vh, 40rem) * ${String(w)} / ${String(h)}))`,
               maxHeight: 'min(72vh, 40rem)',
             }}
           >
-            {posterUrl ? (
+            {blurBackdrop && posterUrl ? (
               <img
                 src={posterUrl}
                 alt=""

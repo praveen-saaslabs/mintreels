@@ -1,4 +1,4 @@
-import { Captions, Pause, Play } from 'lucide-react';
+import { Aperture, Captions, Pause, Play } from 'lucide-react';
 import {
   useEffect,
   useRef,
@@ -111,8 +111,10 @@ export function VideoPlayer({ src, pending = false, poster }: Readonly<VideoPlay
   const seek = useEditorStore((state) => state.seek);
   const aspect = useEditorStore((state) => state.playerAspect);
   const captionsOn = useEditorStore((state) => state.playerCaptionsOn);
+  const blurBackdrop = useEditorStore((state) => state.playerBlurBackdrop);
   const setPlayerAspect = useEditorStore((state) => state.setPlayerAspect);
   const setPlayerCaptionsOn = useEditorStore((state) => state.setPlayerCaptionsOn);
+  const setPlayerBlurBackdrop = useEditorStore((state) => state.setPlayerBlurBackdrop);
   // Fit preview (blur pad) for every aspect, including 16:9 — matches export.
 
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -146,6 +148,9 @@ export function VideoPlayer({ src, pending = false, poster }: Readonly<VideoPlay
 
   // Keep Fit blurred backdrop roughly in sync with the main player.
   useEffect(() => {
+    if (!blurBackdrop) {
+      return;
+    }
     const main = videoRef.current;
     const backdrop = fitBackdropRef.current;
     if (!main || !backdrop) {
@@ -177,7 +182,7 @@ export function VideoPlayer({ src, pending = false, poster }: Readonly<VideoPlay
       main.removeEventListener('seeked', sync);
       backdrop.pause();
     };
-  }, [resolvedSrc]);
+  }, [resolvedSrc, blurBackdrop]);
 
   // Filestack handle changes after overdub/voiceover — force a reload so the
   // element does not keep playing the previously buffered file.
@@ -392,7 +397,7 @@ export function VideoPlayer({ src, pending = false, poster }: Readonly<VideoPlay
                 )}
               >
                 {/* Fit preview: blurred cover backdrop under object-contain (matches export). */}
-                {resolvedSrc ? (
+                {blurBackdrop && resolvedSrc ? (
                   <video
                     ref={fitBackdropRef}
                     aria-hidden
@@ -400,7 +405,7 @@ export function VideoPlayer({ src, pending = false, poster }: Readonly<VideoPlay
                     playsInline
                     tabIndex={-1}
                     draggable={false}
-                    preload="metadata"
+                    preload="none"
                     poster={resolvedPoster}
                     src={resolvedSrc}
                     className="pointer-events-none absolute inset-0 z-0 h-full w-full scale-110 object-cover opacity-80 blur-2xl"
@@ -516,10 +521,27 @@ export function VideoPlayer({ src, pending = false, poster }: Readonly<VideoPlay
               type="button"
               size="icon"
               variant="ghost"
+              aria-label={blurBackdrop ? 'Hide blur background' : 'Show blur background'}
+              aria-pressed={blurBackdrop}
+              title={blurBackdrop ? 'Hide blur background' : 'Show blur background'}
+              className={cn(
+                'size-[34px] shrink-0 rounded-md transition-transform duration-100 ease-out active:scale-[0.97]',
+                blurBackdrop ? 'text-foreground' : 'text-foreground/50',
+              )}
+              disabled={showVideoEmpty || showVideoUnavailable}
+              onClick={() => setPlayerBlurBackdrop(!blurBackdrop)}
+            >
+              <Aperture className="size-3.5" />
+            </Button>
+
+            <Button
+              type="button"
+              size="icon"
+              variant="ghost"
               aria-label={captionsOn ? 'Hide captions' : 'Show captions'}
               aria-pressed={captionsOn}
               className={cn(
-                'size-[34px] shrink-0 rounded transition-transform duration-100 ease-out active:scale-[0.97]',
+                'size-[34px] shrink-0 rounded-md transition-transform duration-100 ease-out active:scale-[0.97]',
                 captionsOn ? 'text-foreground' : 'text-foreground/50',
               )}
               disabled={showVideoEmpty || showVideoUnavailable}

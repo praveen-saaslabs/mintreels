@@ -85,6 +85,8 @@ type EditorStore = {
   playerAspect: EditorAspectRatio;
   /** Player caption overlay on/off — also defaults Cut clip burn-in. */
   playerCaptionsOn: boolean;
+  /** Fit blur pad under the player (second video). Off improves playback performance. */
+  playerBlurBackdrop: boolean;
   project: EditorProject | null;
   hooks: EditorHook[];
   selectedHookId: string | null;
@@ -95,6 +97,7 @@ type EditorStore = {
   setSrc: (src: string) => void;
   setPlayerAspect: (aspect: EditorAspectRatio) => void;
   setPlayerCaptionsOn: (on: boolean) => void;
+  setPlayerBlurBackdrop: (on: boolean) => void;
   seek: (time: number) => void;
   resetVideo: () => void;
   setProject: (project: EditorProject | null) => void;
@@ -128,6 +131,37 @@ const seededHooks = editorHooksSeed as EditorHook[];
 
 export const SEEDED_VIDEO_SRC = DEMO_MEDIA.videoUrl;
 
+const PLAYER_BLUR_BACKDROP_KEY = 'mintreels.player.blurBackdrop';
+
+function readPlayerBlurBackdrop(): boolean {
+  if (typeof window === 'undefined') {
+    return true;
+  }
+  try {
+    const raw = window.localStorage.getItem(PLAYER_BLUR_BACKDROP_KEY);
+    if (raw === '0' || raw === 'false') {
+      return false;
+    }
+    if (raw === '1' || raw === 'true') {
+      return true;
+    }
+  } catch {
+    // Private mode / blocked storage — keep default on.
+  }
+  return true;
+}
+
+function writePlayerBlurBackdrop(on: boolean): void {
+  if (typeof window === 'undefined') {
+    return;
+  }
+  try {
+    window.localStorage.setItem(PLAYER_BLUR_BACKDROP_KEY, on ? '1' : '0');
+  } catch {
+    // Ignore quota / private mode failures.
+  }
+}
+
 const emptyVideo = (duration = 0, src: string = SEEDED_VIDEO_SRC): EditorVideoState => ({
   currentTime: 0,
   duration,
@@ -141,6 +175,7 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
   mediaElement: null,
   playerAspect: DEFAULT_EDITOR_ASPECT,
   playerCaptionsOn: true,
+  playerBlurBackdrop: readPlayerBlurBackdrop(),
   project: seededProject,
   hooks: seededHooks,
   selectedHookId: null,
@@ -212,6 +247,14 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
       return;
     }
     set({ playerCaptionsOn: on });
+  },
+
+  setPlayerBlurBackdrop: (on) => {
+    if (get().playerBlurBackdrop === on) {
+      return;
+    }
+    writePlayerBlurBackdrop(on);
+    set({ playerBlurBackdrop: on });
   },
 
   seek: (time) => {

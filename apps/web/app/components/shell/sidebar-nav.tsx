@@ -51,9 +51,11 @@ export function SidebarNav() {
                 <item.icon />
                 <span>{item.label}</span>
               </SidebarMenuButton>
-              <SidebarMenuBadge className="font-mono text-[11px] text-muted-foreground">
-                {item.badge}
-              </SidebarMenuBadge>
+              {item.badge > 0 ? (
+                <SidebarMenuBadge className="font-mono text-[11px] text-muted-foreground">
+                  {item.badge}
+                </SidebarMenuBadge>
+              ) : null}
             </SidebarMenuItem>
           ))}
         </SidebarMenu>

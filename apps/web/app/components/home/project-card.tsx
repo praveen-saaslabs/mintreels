@@ -40,7 +40,7 @@ export function ProjectCard({ project }: { project: ProjectSummary }) {
     <>
       <Link
         to={`/editor/${String(project.id)}`}
-        className="glass relative flex h-full min-h-[260px] flex-col overflow-hidden rounded-lg text-inherit transition-[border-color,box-shadow] hover:border-[var(--mr-acc)] hover:shadow-[var(--glass-shadow-elevated)]"
+        className="glass relative flex h-full min-h-[260px] flex-col overflow-hidden rounded-md text-inherit transition-[border-color,box-shadow] hover:border-[var(--mr-acc)] hover:shadow-[var(--glass-shadow-elevated)]"
       >
         <div className="relative flex h-[118px] shrink-0 items-end overflow-hidden bg-[repeating-linear-gradient(135deg,var(--mr-stripe3)_0_10px,var(--mr-stripe4)_10px_20px)] p-3">
           {thumbnailUrl ? (

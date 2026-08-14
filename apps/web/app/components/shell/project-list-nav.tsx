@@ -8,6 +8,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarMenuSkeleton,
+  SidebarSeparator,
 } from '@/components/ui/sidebar';
 import { cn } from '@/lib/utils';
 import type { SidebarProject } from '@/lib/data/types';
@@ -27,39 +28,48 @@ function accentClass(accent: SidebarProject['accent']) {
 export function ProjectListNav() {
   const { data: sidebarProjects = [], isLoading } = useSidebarProjectsQuery();
 
+  if (!isLoading && sidebarProjects.length === 0) {
+    return null;
+  }
+
   return (
-    <SidebarGroup>
-      <SidebarGroupLabel>Projects</SidebarGroupLabel>
-      <SidebarGroupContent>
-        <SidebarMenu>
-          {isLoading
-            ? Array.from({ length: 4 }).map((_, index) => (
-                <SidebarMenuItem key={index}>
-                  <SidebarMenuSkeleton showIcon />
-                </SidebarMenuItem>
-              ))
-            : sidebarProjects.map((project) => (
-                <SidebarMenuItem key={project.id}>
-                  <SidebarMenuButton
-                    size="sm"
-                    tooltip={project.name}
-                    render={<Link to={`/editor/${String(project.id)}`} />}
-                  >
-                    <span
-                      className={cn(
-                        'size-1.5 shrink-0 rounded',
-                        accentClass(project.accent),
-                      )}
-                    />
-                    <span>{project.name}</span>
-                  </SidebarMenuButton>
-                  <SidebarMenuBadge className="font-mono text-[10.5px] text-muted-foreground">
-                    {project.recordingCount}
-                  </SidebarMenuBadge>
-                </SidebarMenuItem>
-              ))}
-        </SidebarMenu>
-      </SidebarGroupContent>
-    </SidebarGroup>
+    <>
+      <SidebarSeparator />
+      <SidebarGroup>
+        <SidebarGroupLabel>Projects</SidebarGroupLabel>
+        <SidebarGroupContent>
+          <SidebarMenu>
+            {isLoading
+              ? Array.from({ length: 4 }).map((_, index) => (
+                  <SidebarMenuItem key={index}>
+                    <SidebarMenuSkeleton showIcon />
+                  </SidebarMenuItem>
+                ))
+              : sidebarProjects.map((project) => (
+                  <SidebarMenuItem key={project.id}>
+                    <SidebarMenuButton
+                      size="sm"
+                      tooltip={project.name}
+                      render={<Link to={`/editor/${String(project.id)}`} />}
+                    >
+                      <span
+                        className={cn(
+                          'size-1.5 shrink-0 rounded',
+                          accentClass(project.accent),
+                        )}
+                      />
+                      <span>{project.name}</span>
+                    </SidebarMenuButton>
+                    {project.recordingCount > 0 ? (
+                      <SidebarMenuBadge className="font-mono text-[10.5px] text-muted-foreground">
+                        {project.recordingCount}
+                      </SidebarMenuBadge>
+                    ) : null}
+                  </SidebarMenuItem>
+                ))}
+          </SidebarMenu>
+        </SidebarGroupContent>
+      </SidebarGroup>
+    </>
   );
 }

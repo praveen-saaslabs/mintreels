@@ -1,6 +1,7 @@
 import { Button } from '@/components/ui/button';
 import { useWorkspaceUserQuery } from '@/hooks/use-home-queries';
 import { useAuth } from '@/providers/auth-provider';
+import { useAuthGateStore } from '@/stores/auth-gate-store';
 import { LogOut, Settings } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
@@ -16,15 +17,26 @@ export function UserFooter({
 }: Readonly<{
   showThemeToggle?: boolean;
 }>) {
+  const { user: authUser, status, logout } = useAuth();
   const { data: workspaceUser } = useWorkspaceUserQuery();
-  const { user: authUser, logout } = useAuth();
+  const requireAuth = useAuthGateStore((state) => state.requireAuth);
   const location = useLocation();
   const navigate = useNavigate();
   const [isSigningOut, setIsSigningOut] = useState(false);
   const settingsActive = location.pathname.startsWith('/settings');
 
-  const displayName = workspaceUser?.displayName ?? authUser?.email ?? 'Loading…';
-  const initials = workspaceUser?.initials ?? (authUser ? initialsFromEmail(authUser.email) : '—');
+  const isAuthenticated = status === 'authenticated' && authUser != null;
+  const isGuest = status === 'unauthenticated';
+
+  let displayName = '…';
+  let initials = '…';
+  if (isGuest) {
+    displayName = 'Guest';
+    initials = 'G';
+  } else if (isAuthenticated) {
+    displayName = workspaceUser?.displayName ?? authUser.email;
+    initials = workspaceUser?.initials ?? initialsFromEmail(authUser.email);
+  }
 
   async function handleSignOut() {
     setIsSigningOut(true);
@@ -47,31 +59,48 @@ export function UserFooter({
         </div>
       </div>
 
-      <Button
-        variant={settingsActive ? 'secondary' : 'ghost'}
-        size="icon-sm"
-        nativeButton={false}
-        render={<Link to="/settings" />}
-        aria-label="Settings"
-        title="Settings"
-        className="shrink-0"
-      >
-        <Settings />
-      </Button>
+      {isAuthenticated ? (
+        <Button
+          variant={settingsActive ? 'secondary' : 'ghost'}
+          size="icon-sm"
+          nativeButton={false}
+          render={<Link to="/settings" />}
+          aria-label="Settings"
+          title="Settings"
+          className="shrink-0"
+        >
+          <Settings />
+        </Button>
+      ) : null}
 
       {showThemeToggle ? <ThemeToggle /> : null}
 
-      <Button
-        variant="ghost"
-        size="icon-sm"
-        onClick={() => void handleSignOut()}
-        disabled={isSigningOut}
-        aria-label="Sign out"
-        title="Sign out"
-        className="shrink-0 text-muted-foreground"
-      >
-        <LogOut />
-      </Button>
+      {isGuest ? (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => {
+            requireAuth();
+          }}
+          className="shrink-0 px-2 text-xs text-muted-foreground group-data-[collapsible=icon]:px-0"
+        >
+          Sign in
+        </Button>
+      ) : null}
+
+      {isAuthenticated ? (
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          onClick={() => void handleSignOut()}
+          disabled={isSigningOut}
+          aria-label="Sign out"
+          title="Sign out"
+          className="shrink-0 text-muted-foreground"
+        >
+          <LogOut />
+        </Button>
+      ) : null}
     </div>
   );
 }

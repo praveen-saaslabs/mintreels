@@ -15,7 +15,7 @@ function Card({
       className={cn(
         // Exactly one glass tier — never stack `glass` + `glass-elevated`.
         elevated ? "glass-elevated" : "glass",
-        "group/card flex flex-col gap-(--card-spacing) overflow-hidden rounded py-(--card-spacing) text-sm text-card-foreground [--card-spacing:--spacing(4)] has-data-[slot=card-footer]:pb-0 has-[>img:first-child]:pt-0 data-[size=sm]:[--card-spacing:--spacing(3)] data-[size=sm]:has-data-[slot=card-footer]:pb-0 *:[img:first-child]:rounded-t *:[img:last-child]:rounded-b",
+        "group/card flex flex-col gap-(--card-spacing) overflow-hidden rounded-md py-(--card-spacing) text-sm text-card-foreground [--card-spacing:--spacing(4)] has-data-[slot=card-footer]:pb-0 has-[>img:first-child]:pt-0 data-[size=sm]:[--card-spacing:--spacing(3)] data-[size=sm]:has-data-[slot=card-footer]:pb-0 *:[img:first-child]:rounded-t-md *:[img:last-child]:rounded-b-md",
         className
       )}
       {...props}

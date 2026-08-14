@@ -148,7 +148,7 @@ export function ClipCard({ clip }: Readonly<{ clip: ClipSummary }>) {
         ref={setReadyCardRef}
         onPointerEnter={dismissReadyHighlight}
         className={cn(
-          'glass flex h-full min-w-0 flex-col overflow-hidden rounded-lg',
+          'glass flex h-full min-w-0 flex-col overflow-hidden rounded-md',
           readyPulse && 'clip-ready-attention',
           readyHighlight && 'clip-ready-highlight',
         )}

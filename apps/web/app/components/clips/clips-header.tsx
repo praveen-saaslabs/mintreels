@@ -37,13 +37,13 @@ export function ClipsHeader({
         <h1 className="m-0 text-2xl font-semibold tracking-[-0.02em]">All clips</h1>
         <p className="mt-1.5 mb-0 text-[13px] text-[var(--mr-mfg)]">{subtitle}</p>
       </div>
-      <label className="glass flex h-[34px] w-[300px] items-center gap-2 rounded px-2.5">
+      <label className="glass flex h-[34px] w-[300px] items-center gap-2 rounded-md px-2.5">
         <Search className="size-3.5 text-[var(--mr-mfg)]" />
         <input
           ref={searchInputRef}
           value={searchQuery}
           onChange={(event) => onSearchQueryChange(event.target.value)}
-          placeholder="Search clips, captions, transcript"
+          placeholder="Search clips"
           aria-label="Search clips"
           className="min-w-0 flex-1 bg-transparent text-[12.5px] text-[var(--mr-fg)] outline-none placeholder:text-[var(--mr-mfg)]"
         />

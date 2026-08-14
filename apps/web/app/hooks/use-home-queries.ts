@@ -1,11 +1,14 @@
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { queryKeys } from '@/lib/query-keys';
+import { useAuth } from '@/providers/auth-provider';
 
 export function useWorkspaceUserQuery() {
+  const { status } = useAuth();
   return useQuery({
     queryKey: queryKeys.workspace.user(),
     queryFn: () => api.getWorkspaceUser(),
+    enabled: status === 'authenticated',
   });
 }
 
