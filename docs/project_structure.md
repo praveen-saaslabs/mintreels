@@ -44,6 +44,7 @@ Placeholder routes:
 - `POST /api/recordings/:id/moments/ask`
 - `GET/POST /api/knowledge-bases`
 - `POST /api/clips`
+- `POST /api/clips/:id/social-copy`
 - `GET /api/clips`
 - `GET /api/clips/filters`
 - `GET /api/clips/:id`

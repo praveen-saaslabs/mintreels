@@ -242,6 +242,7 @@ export function HookCard({ hook, sequenceLabel, selected, recordingId, onPreview
           onOpenChange={setShareOpen}
           url={hook.clipVideoUrl}
           title={hook.title}
+          clipId={hook.clipId ?? null}
         />
       ) : null}
 

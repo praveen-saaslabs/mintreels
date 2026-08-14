@@ -264,6 +264,9 @@ export function ClipCard({ clip }: Readonly<{ clip: ClipSummary }>) {
           onOpenChange={setShareOpen}
           url={clip.videoUrl}
           title={clip.title}
+          clipId={clip.id}
+          socialTitle={clip.socialTitle ?? null}
+          socialDescription={clip.socialDescription ?? null}
         />
       ) : null}
 

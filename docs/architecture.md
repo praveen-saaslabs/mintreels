@@ -1110,11 +1110,14 @@ POST   /api/clips
 GET    /api/clips
 GET    /api/clips/filters
 GET    /api/clips/:id
+POST   /api/clips/:id/social-copy
 DELETE /api/clips/:id
 GET    /api/clips/:id/download
 ```
 
 Product clip create is hook export (`POST /api/recordings/:id/hooks/:hookId/export`) or prompt-range `POST /api/clips`. `GET /api/clips/:id/download` is still 501; the UI downloads `videoUrl` from `GET /api/clips/:id`.
+
+`POST /api/clips/:id/social-copy` generates a share title + description via `LLMProvider.generateSocialCopy` from the clip’s transcript excerpt (and optional hook context), persists `socialTitle` / `socialDescription` on the clip, and returns the public clip. Ready clips only; human-initiated share copy — not automated social posting.
 
 `DELETE /api/clips/:id` is tenant-scoped (**204**). Soft-deletes the clip row (`deleted_at`). Does not delete the hook. Filestack video + thumbnail stay until a later purge.
 

@@ -41,6 +41,8 @@ import { ClipsService } from './clips.service';
 const clipExample = {
   id: 1,
   title: 'The roadmap was never a plan',
+  socialTitle: 'The roadmap was never a plan',
+  socialDescription: 'A sharp take on why roadmaps fail — and what to do instead.',
   recordingId: 10,
   hookId: 4,
   projectId: 2,
@@ -120,6 +122,19 @@ export class ClipsController {
   @Get(':id')
   getById(@CurrentActor() actor: RequestActor, @Param('id', ParseIntPipe) id: number) {
     return this.clipsService.getById(id, ownership(actor));
+  }
+
+  @ApiOperation({ summary: 'Generate social title and description for a ready clip' })
+  @ApiParam({ name: 'id', type: Number })
+  @ApiOkResponse({
+    description: 'Clip with socialTitle and socialDescription persisted',
+    schema: { example: clipExample },
+  })
+  @ApiNotFoundResponse({ description: 'Clip not found' })
+  @ApiConflictResponse({ description: 'CLIP_NOT_READY or TRANSCRIPT_REQUIRED' })
+  @Post(':id/social-copy')
+  generateSocialCopy(@CurrentUser() user: RequestUser, @Param('id', ParseIntPipe) id: number) {
+    return this.clipsService.generateSocialCopy(id, user.id);
   }
 
   @ApiOperation({ summary: 'Soft-delete a clip' })

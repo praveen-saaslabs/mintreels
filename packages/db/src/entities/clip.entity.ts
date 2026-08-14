@@ -28,6 +28,12 @@ export class Clip implements ClipRow {
   @Column({ type: 'text' })
   title!: string;
 
+  @Column({ type: 'varchar', length: 120, name: 'social_title', nullable: true })
+  socialTitle!: string | null;
+
+  @Column({ type: 'text', name: 'social_description', nullable: true })
+  socialDescription!: string | null;
+
   @Column({ type: 'int', name: 'start_ms' })
   startMs!: number;
 

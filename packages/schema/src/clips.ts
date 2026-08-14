@@ -28,6 +28,8 @@ export const clipRowSchema = z
     recordingId: idSchema,
     hookId: idSchema.nullable(),
     title: z.string().min(1),
+    socialTitle: z.string().nullable(),
+    socialDescription: z.string().nullable(),
     startMs: z.number().int().nonnegative(),
     endMs: z.number().int().nonnegative(),
     aspectRatio: clipRatioSchema,
@@ -44,6 +46,8 @@ export const clipRowSchema = z
 export const clipInsertSchema = clipRowSchema.partial({
   id: true,
   hookId: true,
+  socialTitle: true,
+  socialDescription: true,
   aspectRatio: true,
   fitMode: true,
   burnSubtitles: true,

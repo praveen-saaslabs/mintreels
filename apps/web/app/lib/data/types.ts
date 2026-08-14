@@ -44,6 +44,8 @@ export type ClipFilter = {
 export type ClipSummary = {
   id: number;
   title: string;
+  socialTitle?: string | null;
+  socialDescription?: string | null;
   recordingId: number;
   hookId: number | null;
   projectId: number;

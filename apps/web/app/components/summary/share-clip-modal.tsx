@@ -5,11 +5,14 @@ import {
   Instagram,
   Link2,
   Linkedin,
+  Loader2,
   MessageCircle,
   Send,
   Share2,
+  Sparkles,
 } from 'lucide-react';
 import { useEffect, useState, type ReactNode } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -18,6 +21,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { api, ApiError } from '@/lib/api';
+import { queryKeys } from '@/lib/query-keys';
 import {
   buildClipboardShareText,
   buildShareIntentUrl,
@@ -25,6 +31,7 @@ import {
   copyTextToClipboard,
   isShareableHttpsUrl,
   openShareIntent,
+  pasteStatusMessage,
   platformRequiresPaste,
   shareNative,
   type SharePlatformId,
@@ -36,6 +43,9 @@ type ShareClipModalProps = Readonly<{
   onOpenChange: (open: boolean) => void;
   url: string;
   title: string;
+  clipId?: number | null;
+  socialTitle?: string | null;
+  socialDescription?: string | null;
 }>;
 
 type PlatformAction = {
@@ -56,13 +66,14 @@ const PLATFORM_ACTIONS: readonly PlatformAction[] = [
   {
     id: 'facebook',
     label: 'Facebook',
+    hint: 'Copies title, description & link — paste into your Facebook post',
     icon: <Facebook className="size-4" />,
     tone: 'bg-[#1877F2]/15 text-[#1877F2]',
   },
   {
     id: 'linkedin',
     label: 'LinkedIn',
-    hint: 'Copies link — paste into your LinkedIn post',
+    hint: 'Copies title, description & link — paste into your LinkedIn post',
     icon: <Linkedin className="size-4" />,
     tone: 'bg-[#0A66C2]/15 text-[#0A66C2]',
   },
@@ -81,24 +92,89 @@ const PLATFORM_ACTIONS: readonly PlatformAction[] = [
   {
     id: 'instagram',
     label: 'Instagram',
-    hint: 'Copies link to paste in the app',
+    hint: 'Copies title, description & link — paste in the app',
     icon: <Instagram className="size-4" />,
     tone: 'bg-[#E1306C]/15 text-[#E1306C]',
   },
 ];
 
-export function ShareClipModal({ open, onOpenChange, url, title }: ShareClipModalProps) {
+export function ShareClipModal({
+  open,
+  onOpenChange,
+  url,
+  title,
+  clipId = null,
+  socialTitle = null,
+  socialDescription = null,
+}: ShareClipModalProps) {
+  const queryClient = useQueryClient();
   const [copied, setCopied] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
+  const [draftTitle, setDraftTitle] = useState(socialTitle?.trim() || title);
+  const [draftDescription, setDraftDescription] = useState(socialDescription?.trim() ?? '');
+  const [generateError, setGenerateError] = useState<string | null>(null);
   const shareable = isShareableHttpsUrl(url);
   const showNative = canUseNativeShare();
+  const canGenerate = clipId != null && Number.isFinite(clipId) && clipId > 0;
+  const hasStoredSocial = Boolean(socialTitle?.trim() || draftDescription.trim());
+
+  const generateMutation = useMutation({
+    mutationFn: async () => {
+      if (clipId == null) {
+        throw new Error('Missing clip');
+      }
+      return api.generateClipSocialCopy(clipId);
+    },
+    onSuccess: (clip) => {
+      setDraftTitle(clip.socialTitle?.trim() || clip.title);
+      setDraftDescription(clip.socialDescription?.trim() ?? '');
+      setGenerateError(null);
+      setStatus('Social copy ready — edit before sharing');
+      queryClient.setQueryData(queryKeys.clips.detail(clip.id), clip);
+      void queryClient.invalidateQueries({ queryKey: queryKeys.clips.list() });
+    },
+    onError: (error: unknown) => {
+      if (error instanceof ApiError) {
+        setGenerateError(error.code || error.message);
+        return;
+      }
+      setGenerateError(error instanceof Error ? error.message : 'Generate failed');
+    },
+  });
 
   useEffect(() => {
     if (!open) {
       setCopied(false);
       setStatus(null);
+      setGenerateError(null);
+      return;
     }
-  }, [open]);
+    setDraftTitle(socialTitle?.trim() || title);
+    setDraftDescription(socialDescription?.trim() ?? '');
+    if (clipId == null) {
+      return;
+    }
+    let cancelled = false;
+    void api
+      .getClip(clipId)
+      .then((clip) => {
+        if (cancelled) {
+          return;
+        }
+        if (clip.socialTitle?.trim()) {
+          setDraftTitle(clip.socialTitle.trim());
+        }
+        if (clip.socialDescription?.trim()) {
+          setDraftDescription(clip.socialDescription.trim());
+        }
+      })
+      .catch(() => {
+        // Keep prop/title defaults when detail fetch fails.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [open, title, socialTitle, socialDescription, clipId]);
 
   useEffect(() => {
     if (!copied) {
@@ -111,7 +187,7 @@ export function ShareClipModal({ open, onOpenChange, url, title }: ShareClipModa
     return () => window.clearTimeout(timer);
   }, [copied]);
 
-  async function handleCopy(): Promise<void> {
+  async function handleCopyLink(): Promise<void> {
     if (!shareable) {
       return;
     }
@@ -122,31 +198,38 @@ export function ShareClipModal({ open, onOpenChange, url, title }: ShareClipModa
     }
   }
 
+  async function handleCopyPost(): Promise<void> {
+    if (!shareable) {
+      return;
+    }
+    const text = buildClipboardShareText(draftTitle, url, draftDescription);
+    const ok = await copyTextToClipboard(text);
+    if (ok) {
+      setCopied(true);
+      setStatus('Post text copied');
+    }
+  }
+
   async function handlePlatform(id: PlatformAction['id']): Promise<void> {
     if (!shareable) {
       return;
     }
 
     if (platformRequiresPaste(id)) {
-      const pasteText =
-        id === 'linkedin' ? buildClipboardShareText(title, url) : url;
+      const pasteText = buildClipboardShareText(draftTitle, url, draftDescription);
       const ok = await copyTextToClipboard(pasteText);
       if (ok) {
         setCopied(true);
-        setStatus(
-          id === 'linkedin'
-            ? 'Copied — paste into your LinkedIn post'
-            : 'Copied — paste in Instagram',
-        );
+        setStatus(pasteStatusMessage(id));
       }
-      const intent = buildShareIntentUrl(id, url, title);
+      const intent = buildShareIntentUrl(id, url, draftTitle, draftDescription);
       if (intent) {
         openShareIntent(intent);
       }
       return;
     }
 
-    const intent = buildShareIntentUrl(id, url, title);
+    const intent = buildShareIntentUrl(id, url, draftTitle, draftDescription);
     if (intent) {
       openShareIntent(intent);
     }
@@ -156,14 +239,14 @@ export function ShareClipModal({ open, onOpenChange, url, title }: ShareClipModa
     if (!shareable) {
       return;
     }
-    await shareNative(url, title);
+    await shareNative(url, draftTitle, draftDescription);
   }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         showCloseButton
-        className="w-[min(100%-2rem,24rem)] max-w-none overflow-hidden sm:max-w-none"
+        className="w-[min(100%-2rem,26rem)] max-w-none overflow-hidden sm:max-w-none"
       >
         <DialogHeader className="min-w-0 pr-8">
           <DialogTitle className="flex min-w-0 items-center gap-2 tracking-[-0.01em]">
@@ -174,12 +257,78 @@ export function ShareClipModal({ open, onOpenChange, url, title }: ShareClipModa
             {status
               ? status
               : shareable
-                ? 'Copy the link or open a platform to share this clip.'
+                ? 'Generate social copy, edit it, then copy or open a platform.'
                 : 'This clip does not have a shareable HTTPS link yet.'}
           </DialogDescription>
         </DialogHeader>
 
         <div className="min-w-0 space-y-3">
+          <div className="space-y-2">
+            <div className="flex items-center justify-between gap-2">
+              <label htmlFor="share-clip-title" className="text-[11px] font-medium text-muted-foreground">
+                Title
+              </label>
+              {canGenerate ? (
+                <Button
+                  type="button"
+                  size="xs"
+                  variant="outline"
+                  disabled={generateMutation.isPending}
+                  onClick={() => {
+                    void generateMutation.mutateAsync();
+                  }}
+                >
+                  {generateMutation.isPending ? (
+                    <Loader2 className="size-3.5 animate-spin" />
+                  ) : (
+                    <Sparkles className="size-3.5" />
+                  )}
+                  {generateMutation.isPending
+                    ? 'Generating…'
+                    : hasStoredSocial || draftDescription.trim()
+                      ? 'Regenerate'
+                      : 'Generate'}
+                </Button>
+              ) : null}
+            </div>
+            <Input
+              id="share-clip-title"
+              value={draftTitle}
+              maxLength={120}
+              disabled={!shareable}
+              onChange={(event) => {
+                setDraftTitle(event.target.value);
+              }}
+              placeholder="Share title"
+            />
+            <label
+              htmlFor="share-clip-description"
+              className="text-[11px] font-medium text-muted-foreground"
+            >
+              Description
+            </label>
+            <textarea
+              id="share-clip-description"
+              value={draftDescription}
+              maxLength={2200}
+              rows={4}
+              disabled={!shareable}
+              placeholder="Short post description for social"
+              onChange={(event) => {
+                setDraftDescription(event.target.value);
+              }}
+              className={cn(
+                'w-full min-w-0 resize-y rounded border border-input bg-[var(--glass-bg)] px-2.5 py-2',
+                'text-sm shadow-[var(--glass-highlight)] outline-none backdrop-blur-sm',
+                'placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50',
+                'disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50',
+              )}
+            />
+            {generateError ? (
+              <p className="text-[11px] text-[var(--mr-bad)]">{generateError}</p>
+            ) : null}
+          </div>
+
           <div className="flex min-w-0 items-center gap-2 overflow-hidden rounded-xl border border-[var(--glass-border-subtle)] bg-[var(--glass-bg-strong)] px-3 py-2">
             <Link2 className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />
             <p className="min-w-0 flex-1 truncate font-mono text-[11px] text-muted-foreground">
@@ -192,13 +341,26 @@ export function ShareClipModal({ open, onOpenChange, url, title }: ShareClipModa
               className="shrink-0"
               disabled={!shareable}
               onClick={() => {
-                void handleCopy();
+                void handleCopyLink();
               }}
             >
               {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
-              {copied ? 'Copied' : 'Copy'}
+              {copied ? 'Copied' : 'Link'}
             </Button>
           </div>
+
+          <Button
+            type="button"
+            variant="secondary"
+            className="w-full max-w-full justify-start gap-2"
+            disabled={!shareable}
+            onClick={() => {
+              void handleCopyPost();
+            }}
+          >
+            <Copy className="size-4 shrink-0" />
+            <span className="truncate">Copy title, description & link</span>
+          </Button>
 
           {showNative ? (
             <Button

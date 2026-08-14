@@ -28,8 +28,9 @@ PyAI Adapter (or Filestack / BullMQ adapter)
 - `generateHooks(transcript, options)` → `HookCandidate[]` (`options` carries `loadHookConfig()` weights + `maxCandidates`)
 - `generateActionItems(transcript)` → timestamped action items
 - `askTranscript(transcript, question)` → `{ intent, text, clipQuery }` (`question` | `clip` | `other`)
+- `generateSocialCopy(context)` → `{ title, description }` for clip share copy (`social-copy-v1` prompt; heuristic fallback)
 - Default: OpenAI-compatible (`packages/ai/src/providers/openai-compatible/llm.ts`) via `LLM_PROVIDER=openai` (or `nvidia`)
-- `summarize` / `generateActionItems` call Chat Completions with `response_format` (`json_schema` strict, fallback `json_object`)
+- `summarize` / `generateActionItems` / `generateSocialCopy` call Chat Completions with `response_format` (`json_schema` strict, fallback `json_object`)
 - `generateHooks` sends deterministic semantic windows (`packages/ai/src/semantic-windows.ts`) with the `hooks-v2` prompt, and returns segment IDs — never timestamps. `packages/ai/src/hook-candidates.ts` resolves segment IDs to milliseconds, divides the 0–10 dimension scores by 10, and applies the configured weights
 - `packages/ai/src/extractive-hooks.ts` is the fallback when the LLM call fails or yields nothing usable
 - Speech stays `AI_PROVIDER=pyai`. Do not point LLM at PyAI — `@pyai/sdk` has Recap only, no chat/summarize/action-items API

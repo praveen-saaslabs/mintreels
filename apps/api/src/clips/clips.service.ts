@@ -1,12 +1,20 @@
-import { Inject, Injectable } from '@nestjs/common';
+import type { LLMProvider } from '@mintreels/ai';
+import {
+  SOCIAL_COPY_DESCRIPTION_MAX,
+  SOCIAL_COPY_EXCERPT_MAX_CHARS,
+  SOCIAL_COPY_TITLE_MAX,
+} from '@mintreels/ai';
 import {
   ClipRepository,
   HookRepository,
   JobAuditLogRepository,
   JobRepository,
-  RecordingRepository,
   ownerWhere,
+  RecordingRepository,
+  TranscriptRepository,
+  TranscriptSegmentRepository,
   type Clip,
+  type TranscriptSegment,
 } from '@mintreels/db';
 import { DEFAULT_MAX_ATTEMPTS } from '@mintreels/domain';
 import type { QueueProvider } from '@mintreels/queue';
@@ -19,10 +27,11 @@ import {
   JobStatus,
   JobType,
 } from '@mintreels/schema';
+import { Inject, Injectable } from '@nestjs/common';
 import type { Ownership } from '../auth/auth.types';
 import { HttpError } from '../common/http-error';
 import { publicPlaybackUrl } from '../common/playback-url';
-import { QUEUE_PROVIDER } from '../providers/provider-tokens';
+import { LLM_PROVIDER, QUEUE_PROVIDER } from '../providers/provider-tokens';
 import { clipCreateGuard } from './clip-create-guard';
 import type { CreateClipRequest, ExportHookClipRequest } from './clips.dto';
 
@@ -31,12 +40,46 @@ const DEFAULT_ASPECT = ClipRatio.Vertical;
 const DEFAULT_FIT_MODE = ClipFitMode.Fit;
 const DEFAULT_BURN_SUBTITLES = true;
 
+function buildTranscriptExcerpt(
+  segments: readonly TranscriptSegment[],
+  startMs: number,
+  endMs: number,
+): string {
+  const overlapping = segments.filter(
+    (segment) => segment.endMs > startMs && segment.startMs < endMs,
+  );
+  const text = overlapping
+    .map((segment) => segment.text.trim())
+    .filter((part) => part.length > 0)
+    .join(' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return text.slice(0, SOCIAL_COPY_EXCERPT_MAX_CHARS);
+}
+
+function clampSocialFields(
+  title: string,
+  description: string,
+): {
+  socialTitle: string;
+  socialDescription: string;
+} {
+  const socialTitle = title.trim().slice(0, SOCIAL_COPY_TITLE_MAX);
+  const socialDescription = description.trim().slice(0, SOCIAL_COPY_DESCRIPTION_MAX);
+  if (!socialTitle || !socialDescription) {
+    throw new HttpError(502, 'SOCIAL_COPY_INVALID');
+  }
+  return { socialTitle, socialDescription };
+}
+
 export function toPublicClip(clip: Clip) {
   const recording = clip.recording;
   const project = recording?.project;
   return {
     id: clip.id,
     title: clip.title,
+    socialTitle: clip.socialTitle,
+    socialDescription: clip.socialDescription,
     recordingId: clip.recordingId,
     hookId: clip.hookId,
     projectId: recording?.projectId ?? project?.id ?? 0,
@@ -73,7 +116,10 @@ export class ClipsService {
     private readonly hooks: HookRepository,
     private readonly jobs: JobRepository,
     private readonly jobAuditLogs: JobAuditLogRepository,
+    private readonly transcripts: TranscriptRepository,
+    private readonly segments: TranscriptSegmentRepository,
     @Inject(QUEUE_PROVIDER) private readonly queue: QueueProvider,
+    @Inject(LLM_PROVIDER) private readonly llm: LLMProvider,
   ) {}
 
   async create(body: CreateClipRequest, owner: Ownership) {
@@ -113,6 +159,8 @@ export class ClipsService {
         recordingId: recording.id,
         hookId,
         title: body.title,
+        socialTitle: null,
+        socialDescription: null,
         startMs: body.startMs,
         endMs: body.endMs,
         aspectRatio,
@@ -200,6 +248,8 @@ export class ClipsService {
         recordingId: recording.id,
         hookId: hook.id,
         title: hook.title,
+        socialTitle: null,
+        socialDescription: null,
         startMs: hook.startMs,
         endMs: hook.endMs,
         aspectRatio,
@@ -258,8 +308,56 @@ export class ClipsService {
     return toPublicClip(clip);
   }
 
-  async remove(id: number, owner: Ownership): Promise<void> {
-    const clip = await this.clips.findByIdForOwner(id, owner);
+  async generateSocialCopy(id: number, userId: number) {
+    const clip = await this.clips.findByIdForUser(id, userId);
+    if (!clip) {
+      throw new HttpError(404, 'Not found');
+    }
+    if (clip.status !== ClipStatus.Ready || !publicPlaybackUrl(clip.storageKey)) {
+      throw new HttpError(409, 'CLIP_NOT_READY');
+    }
+
+    const transcript = await this.transcripts.findByRecordingId(clip.recordingId);
+    if (!transcript) {
+      throw new HttpError(409, 'TRANSCRIPT_REQUIRED');
+    }
+
+    const segments = await this.segments.listByRecordingId(clip.recordingId);
+    const excerpt = buildTranscriptExcerpt(segments, clip.startMs, clip.endMs);
+
+    let hookTitle: string | null = null;
+    let hookLine: string | null = null;
+    let hookReason: string | null = null;
+    if (clip.hookId != null) {
+      const hook = await this.hooks.findByIdAndRecordingId(clip.hookId, clip.recordingId);
+      if (hook) {
+        hookTitle = hook.title;
+        hookLine = hook.hook;
+        hookReason = hook.reason;
+      }
+    }
+
+    const recording = clip.recording;
+    const generated = await this.llm.generateSocialCopy({
+      clipTitle: clip.title,
+      recordingTitle: recording?.title ?? '',
+      startMs: clip.startMs,
+      endMs: clip.endMs,
+      transcriptExcerpt: excerpt,
+      hookTitle,
+      hookLine,
+      hookReason,
+    });
+
+    const fields = clampSocialFields(generated.title, generated.description);
+    clip.socialTitle = fields.socialTitle;
+    clip.socialDescription = fields.socialDescription;
+    const saved = await this.clips.save(clip);
+    return toPublicClip(saved);
+  }
+
+  async remove(id: number, userId: number): Promise<void> {
+    const clip = await this.clips.findByIdForUser(id, userId);
     if (!clip) {
       throw new HttpError(404, 'Not found');
     }

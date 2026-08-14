@@ -338,6 +338,10 @@ export const api = {
     }),
   getKnowledgeBases: () => request<unknown>('/knowledge-bases'),
   getClip: (id: number) => request<ClipSummary>(`/clips/${encodeURIComponent(id)}`),
+  generateClipSocialCopy: (id: number) =>
+    request<ClipSummary>(`/clips/${encodeURIComponent(id)}/social-copy`, {
+      method: 'POST',
+    }),
   deleteClip: (id: number) =>
     request<void>(`/clips/${encodeURIComponent(id)}`, { method: 'DELETE' }),
 

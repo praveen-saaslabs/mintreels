@@ -73,6 +73,7 @@ All paths are under `/api`. All GETs below are implemented and cookie-scoped to 
 | `createClip(body)` | POST | `/clips` |
 | `getKnowledgeBases()` | GET | `/knowledge-bases` |
 | `getClip(id)` | GET | `/clips/:id` |
+| `generateClipSocialCopy(id)` | POST | `/clips/:id/social-copy` |
 | `deleteClip(id)` | DELETE | `/clips/:id` (**204**) |
 | `getClips()` | GET | `/clips` |
 | `getClipFilters()` | GET | `/clips/filters` |
@@ -398,14 +399,18 @@ Editor header: **Export** (confirm dialog sends `force: true`) → poll → **Ca
 
 ### Clips — `GET /api/clips`, `GET /api/clips/:id`
 
-**No `storageKey`, no signed URL, no `caption`.** Playback URL is `videoUrl` (`null` until render finishes). Poster is `thumbnailUrl` (`null` until Filestack/FFmpeg thumb is stored). `hookId` is `null` when the clip was not created from a hook. `aspectRatio` / `ratio` is the **export target** (`9:16` \| `1:1` \| `16:9`). `fitMode` is `fit` (full frame + blur pad, default) or `fill` (center crop). `burnSubtitles` is whether captions were burned in. Status: `queued` \| `rendering` \| `ready` \| `failed`.
+**No `storageKey`, no signed URL, no `caption`.** Playback URL is `videoUrl` (`null` until render finishes). Poster is `thumbnailUrl` (`null` until Filestack/FFmpeg thumb is stored). `hookId` is `null` when the clip was not created from a hook. `aspectRatio` / `ratio` is the **export target** (`9:16` \| `1:1` \| `16:9`). `fitMode` is `fit` (full frame + blur pad, default) or `fill` (center crop). `burnSubtitles` is whether captions were burned in. Status: `queued` \| `rendering` \| `ready` \| `failed`. Optional `socialTitle` / `socialDescription` are AI share copy (null until generated).
 
 `POST /api/clips` creates a clip from an owned recording time range (prompt search uses padded `clipStartMs` / `clipEndMs`, `hookId` omitted). Optional `aspectRatio` (default `9:16`), `fitMode` (default `fit`), and `burnSubtitles` (default `true`). Hook export remains `POST /recordings/:id/hooks/:hookId/export`.
+
+`POST /api/clips/:id/social-copy` (ready clips only) generates and persists `socialTitle` + `socialDescription` for human-initiated sharing. **409** `CLIP_NOT_READY` or `TRANSCRIPT_REQUIRED`. Share UI edits the copy then copies title + description + HTTPS `videoUrl` (not auto-posting).
 
 ```json
 {
   "id": 1,
   "title": "The roadmap was never a plan",
+  "socialTitle": "The roadmap was never a plan",
+  "socialDescription": "A sharp take on why roadmaps fail — and what to do instead.",
   "recordingId": 10,
   "hookId": 4,
   "projectId": 2,
@@ -430,7 +435,7 @@ Map to mock `ClipSummary` in the UI: `projectLabel` ← `projectName` + `recordi
 
 - Player aspect chips (`9:16` default, `1:1`, `16:9`) frame preview: **Fit** = `object-contain` + blurred backdrop; **Fill** = `object-cover`. Default Fit for vertical/square. **Cut clip** opens a confirm with aspect chips plus **Fit (blur)** / **Fill (crop)** (“Keep full frame” vs “Zoom / crop”), then calls export/`createClip` with `aspectRatio` + `fitMode` + `burnSubtitles: true`.
 - Editor hook card: **Cut clip** until the hook has no ready `videoUrl`; poll `GET /clips/:id` while `queued` / `rendering`. When `status === ready` and `videoUrl` is set, show the **download icon** only.
-- Clips page: list/filter via `GET /clips` + `GET /clips/filters`. Cards use a **4:3** poster (`thumbnailUrl` when present); **Download** when `ready` + `videoUrl`. **Delete** (confirm dialog) calls `DELETE /clips/:id` for any status.
+- Clips page: list/filter via `GET /clips` + `GET /clips/filters`. Cards use a **4:3** poster (`thumbnailUrl` when present); **Download** when `ready` + `videoUrl`. **Share** opens the share modal (Generate/Regenerate social title + description via `POST /clips/:id/social-copy`, then copy/share). **Delete** (confirm dialog) calls `DELETE /clips/:id` for any status.
 - Download fetches `videoUrl` in the browser (HTTPS Filestack CDN only, `credentials: 'omit'`). Show a loading state while the file is saving. Signed `GET /clips/:id/download` is still unimplemented.
 
 ### Delete — `DELETE /api/projects/:id`, `/api/clips/:id`, `/api/recordings/:id`

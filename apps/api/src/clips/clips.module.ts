@@ -1,5 +1,3 @@
-import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
 import {
   Clip,
   ClipRepository,
@@ -11,13 +9,29 @@ import {
   JobRepository,
   Recording,
   RecordingRepository,
+  Transcript,
+  TranscriptRepository,
+  TranscriptSegment,
+  TranscriptSegmentRepository,
 } from '@mintreels/db';
-import { GuestModule } from '../guest/guest.module';
+import { Module } from '@nestjs/common';
+import { TypeOrmModule } from '@nestjs/typeorm';
 import { ClipsController } from './clips.controller';
 import { ClipsService } from './clips.service';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Clip, Recording, Hook, Job, JobAuditLog]), GuestModule],
+  imports: [
+    TypeOrmModule.forFeature([
+      Clip,
+      Recording,
+      Hook,
+      Job,
+      JobAuditLog,
+      Transcript,
+      TranscriptSegment,
+    ]),
+    AuthModule,
+  ],
   controllers: [ClipsController],
   providers: [
     ClipsService,
@@ -26,6 +40,8 @@ import { ClipsService } from './clips.service';
     HookRepository,
     JobRepository,
     JobAuditLogRepository,
+    TranscriptRepository,
+    TranscriptSegmentRepository,
   ],
   exports: [ClipsService, ClipRepository],
 })

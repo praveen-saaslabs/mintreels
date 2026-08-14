@@ -1,5 +1,5 @@
 export type { SpeechProvider } from './speech-provider';
-export type { ActionItem, HookGenerationOptions, LLMProvider } from './llm-provider';
+export type { ActionItem, HookGenerationOptions, LLMProvider, SocialCopyResult } from './llm-provider';
 export {
   classifyTranscriptAsk,
   extractiveAnswer,
@@ -8,6 +8,16 @@ export {
   parseTranscriptAskResponse,
 } from './transcript-ask';
 export type { TranscriptAskIntent, TranscriptAskResult } from './transcript-ask';
+export {
+  buildSocialCopyUserPrompt,
+  heuristicSocialCopy,
+  parseSocialCopyResponse,
+  SOCIAL_COPY_DESCRIPTION_MAX,
+  SOCIAL_COPY_EXCERPT_MAX_CHARS,
+  SOCIAL_COPY_PROMPT_VERSION,
+  SOCIAL_COPY_TITLE_MAX,
+} from './prompts/social-copy.prompt';
+export type { SocialCopyContext } from './prompts/social-copy.prompt';
 export type { EmbeddingProvider } from './embedding-provider';
 export type {
   HookCandidate,
