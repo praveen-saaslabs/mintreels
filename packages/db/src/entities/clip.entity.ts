@@ -7,7 +7,13 @@ import {
   ManyToOne,
   PrimaryGeneratedColumn,
 } from 'typeorm';
-import { ClipFitMode, ClipRatio, ClipStatus, type ClipRow } from '@mintreels/schema';
+import {
+  ClipFitMode,
+  ClipRatio,
+  ClipStatus,
+  type ClipRow,
+  type ClipVoiceover,
+} from '@mintreels/schema';
 import { Recording } from './recording.entity';
 
 @Entity({ name: 'clips' })
@@ -57,6 +63,9 @@ export class Clip implements ClipRow {
 
   @Column({ type: 'text', name: 'thumbnail_storage_key', nullable: true })
   thumbnailStorageKey!: string | null;
+
+  @Column({ type: 'json', name: 'voiceover', nullable: true })
+  voiceover!: ClipVoiceover | null;
 
   @Column({ type: 'text' })
   status!: ClipStatus;

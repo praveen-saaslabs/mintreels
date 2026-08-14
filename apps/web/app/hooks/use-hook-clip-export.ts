@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import { api } from '@/lib/api';
+import type { ClipVoiceover } from '@/lib/data/types';
 import { queryKeys } from '@/lib/query-keys';
 import {
   DEFAULT_EDITOR_FIT_MODE,
@@ -55,9 +56,11 @@ export function useHookClipExport(recordingId: number | undefined, hook: EditorH
     mutationFn: async ({
       aspectRatio,
       burnSubtitles,
+      voiceover,
     }: {
       aspectRatio: EditorAspectRatio;
       burnSubtitles: boolean;
+      voiceover?: ClipVoiceover | null;
     }) => {
       if (recordingId == null || !Number.isInteger(hookId) || hookId <= 0) {
         throw new Error('Invalid recording or hook');
@@ -66,6 +69,7 @@ export function useHookClipExport(recordingId: number | undefined, hook: EditorH
         aspectRatio,
         fitMode: DEFAULT_EDITOR_FIT_MODE,
         burnSubtitles,
+        ...(voiceover ? { voiceover } : {}),
       });
     },
     onSuccess: (clip) => {
@@ -92,10 +96,14 @@ export function useHookClipExport(recordingId: number | undefined, hook: EditorH
     exportClip: (
       aspectRatio: EditorAspectRatio = playerAspect,
       burnSubtitles: boolean = playerCaptionsOn,
-      options?: { onSuccess?: () => void },
+      options?: { onSuccess?: () => void; voiceover?: ClipVoiceover | null },
     ) => {
       exportMutation.mutate(
-        { aspectRatio, burnSubtitles },
+        {
+          aspectRatio,
+          burnSubtitles,
+          voiceover: options?.voiceover ?? null,
+        },
         {
           onSuccess: () => {
             options?.onSuccess?.();

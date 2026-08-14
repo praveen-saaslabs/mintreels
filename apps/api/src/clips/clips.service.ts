@@ -26,6 +26,7 @@ import {
   ClipStatus,
   JobStatus,
   JobType,
+  type ClipVoiceover,
 } from '@mintreels/schema';
 import { Inject, Injectable } from '@nestjs/common';
 import type { Ownership } from '../auth/auth.types';
@@ -72,6 +73,23 @@ function clampSocialFields(
   return { socialTitle, socialDescription };
 }
 
+function normalizeVoiceover(value: ClipVoiceover | null | undefined): ClipVoiceover | null {
+  if (!value || !value.enabled) {
+    return null;
+  }
+  // Legacy `duck` mixes are no longer supported — treat as before-video.
+  const placement =
+    (value as { placement?: string }).placement === 'post' ? 'post' : 'pre';
+  return { ...value, placement };
+}
+
+function sameVoiceover(
+  a: ClipVoiceover | null | undefined,
+  b: ClipVoiceover | null | undefined,
+): boolean {
+  return JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
+}
+
 export function toPublicClip(clip: Clip) {
   const recording = clip.recording;
   const project = recording?.project;
@@ -92,6 +110,7 @@ export function toPublicClip(clip: Clip) {
     fitMode: clip.fitMode,
     burnSubtitles: clip.burnSubtitles,
     subtitleStyle: clip.subtitleStyle,
+    voiceover: clip.voiceover ?? null,
     videoUrl: publicPlaybackUrl(clip.storageKey),
     thumbnailUrl: publicPlaybackUrl(clip.thumbnailStorageKey),
     /** Export target aspect (same as aspectRatio). */
@@ -169,6 +188,7 @@ export class ClipsService {
         subtitleStyle: body.subtitleStyle ?? null,
         storageKey: null,
         thumbnailStorageKey: null,
+        voiceover: normalizeVoiceover(body.voiceover),
         status: ClipStatus.Queued,
       }),
     );
@@ -207,13 +227,15 @@ export class ClipsService {
     const fitMode = options.fitMode ?? DEFAULT_FIT_MODE;
     const burnSubtitles = options.burnSubtitles ?? DEFAULT_BURN_SUBTITLES;
     const subtitleStyle = options.subtitleStyle ?? null;
+    const requestedVoiceover = normalizeVoiceover(options.voiceover);
 
     const existing = await this.clips.findLatestByRecordingAndHookId(recordingId, hookId);
     if (existing) {
       const sameRender =
         existing.aspectRatio === aspectRatio &&
         existing.fitMode === fitMode &&
-        existing.burnSubtitles === burnSubtitles;
+        existing.burnSubtitles === burnSubtitles &&
+        sameVoiceover(existing.voiceover, requestedVoiceover);
       if (
         sameRender &&
         (existing.status === ClipStatus.Queued || existing.status === ClipStatus.Rendering)
@@ -236,6 +258,7 @@ export class ClipsService {
         existing.fitMode = fitMode;
         existing.burnSubtitles = burnSubtitles;
         existing.subtitleStyle = subtitleStyle;
+        existing.voiceover = requestedVoiceover;
         const saved = await this.clips.save(existing);
         saved.recording = recording;
         await this.enqueueRender(saved);
@@ -258,6 +281,7 @@ export class ClipsService {
         subtitleStyle,
         storageKey: null,
         thumbnailStorageKey: null,
+        voiceover: requestedVoiceover,
         status: ClipStatus.Queued,
       }),
     );
@@ -308,8 +332,9 @@ export class ClipsService {
     return toPublicClip(clip);
   }
 
-  async generateSocialCopy(id: number, userId: number) {
-    const clip = await this.clips.findByIdForUser(id, userId);
+  async generateSocialCopy(id: number, owner: Ownership) {
+    this.requireExportAuth(owner);
+    const clip = await this.clips.findByIdForOwner(id, owner);
     if (!clip) {
       throw new HttpError(404, 'Not found');
     }
@@ -356,8 +381,8 @@ export class ClipsService {
     return toPublicClip(saved);
   }
 
-  async remove(id: number, userId: number): Promise<void> {
-    const clip = await this.clips.findByIdForUser(id, userId);
+  async remove(id: number, owner: Ownership): Promise<void> {
+    const clip = await this.clips.findByIdForOwner(id, owner);
     if (!clip) {
       throw new HttpError(404, 'Not found');
     }

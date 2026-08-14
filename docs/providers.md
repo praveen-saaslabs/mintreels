@@ -20,6 +20,17 @@ PyAI Adapter (or Filestack / BullMQ adapter)
 - Default: PyAI (`packages/ai/src/providers/pyai/speech.ts`) via `@pyai/sdk` **only inside that adapter**
 - Jobs are submitted as multipart `audio` (OpenAPI) so PyAI does not need a public `audio_url`. Status/result still use the SDK. Webhooks are not required.
 
+## VoiceProvider
+
+`packages/ai/src/voice-provider.ts`
+
+- `listVoices()` → stock voice catalog (`GET /v1/voices`)
+- `synthesize({ text, voiceId?, format? })` → audio bytes (`POST /v1/audio/speech`, model `pyai-speak`, `stream: false`)
+- Default: PyAI (`packages/ai/src/providers/pyai/voice.ts`) via HTTP fetch inside the adapter (not from apps/web)
+- API proxy: `GET /api/voices` (auth cookie). Browser never receives `PYAI_API_KEY`.
+- Used by: clip title/CTA voiceover on `render-clip`, and transcript overdub (`apply-overdub`)
+- Key scope required: `voice:synthesize`. Voice cloning (`/v1/voice/clones`) is out of MVP.
+
 ## LLMProvider
 
 `packages/ai/src/llm-provider.ts`
@@ -89,6 +100,7 @@ STORAGE_PROVIDER=filestack
 QUEUE_PROVIDER=bullmq
 EMBEDDING_PROVIDER=openai
 VECTOR_STORE_PROVIDER=qdrant
+# PYAI_API_KEY must include Hear scopes + voice:synthesize for Speak (clip VO / overdub)
 ```
 
 LLM adapter (`openai` | `nvidia`) reads:

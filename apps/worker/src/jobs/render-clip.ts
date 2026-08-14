@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { access, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { createReadStream, createWriteStream } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -10,8 +11,8 @@ import type {
   ClipFitMode,
   JobStatus as DomainJobStatus,
 } from '@mintreels/domain';
-import { renderClipVideo, segmentsToAss } from '@mintreels/media';
-import { ClipFitMode as ClipFitModeEnum, ClipRatio, ClipStatus, JobStatus, JobType } from '@mintreels/schema';
+import { mixVoiceoverOntoVideo, renderClipVideo, segmentsToAss } from '@mintreels/media';
+import { ClipFitMode as ClipFitModeEnum, ClipRatio, ClipStatus, JobStatus, JobType, type ClipVoiceover } from '@mintreels/schema';
 import type { WorkerDeps } from '../pipeline/deps';
 import { logPipeline, logPipelineError } from '../pipeline/log';
 import { storeVideoThumbnail } from '../pipeline/video-thumbnail';
@@ -103,6 +104,62 @@ function resolveFitMode(
   return ClipFitModeEnum.Fit;
 }
 
+
+function voiceoverScript(voiceover: ClipVoiceover, fallbackTitle: string): string {
+  const title = (voiceover.titleText ?? fallbackTitle).trim();
+  const cta = voiceover.ctaText?.trim() ?? '';
+  if (title !== '' && cta !== '') {
+    return `${title}. ${cta}`;
+  }
+  if (title !== '') {
+    return title;
+  }
+  return cta;
+}
+
+function resolveVoiceoverPlacement(placement: string | undefined): 'pre' | 'post' {
+  return placement === 'post' ? 'post' : 'pre';
+}
+
+function ttsCacheKey(voiceId: string, text: string): string {
+  const hash = createHash('sha256').update(`${voiceId}\n${text}`).digest('hex').slice(0, 32);
+  return `tts-cache/${hash}.mp3`;
+}
+
+async function resolveVoiceoverAudio(
+  deps: WorkerDeps,
+  voiceover: ClipVoiceover,
+  text: string,
+  outPath: string,
+): Promise<void> {
+  const cacheKey = ttsCacheKey(voiceover.voiceId, text);
+  try {
+    const cached = await deps.storage.download(cacheKey);
+    await writeStreamToFile(cached, outPath);
+    if (await fileExists(outPath)) {
+      return;
+    }
+  } catch {
+    // Cache miss — synthesize below.
+  }
+
+  const spoken = await deps.voice.synthesize({
+    text,
+    voiceId: voiceover.voiceId,
+    format: 'mp3',
+  });
+  await writeFile(outPath, spoken.audio);
+  try {
+    await deps.storage.upload({
+      key: cacheKey,
+      body: spoken.audio,
+      contentType: spoken.contentType,
+    });
+  } catch {
+    // Cache upload is best-effort.
+  }
+}
+
 export async function renderClip(payload: RenderClipPayload, deps: WorkerDeps): Promise<DomainJobStatus> {
   const clip = await deps.clips.findOneBy({ id: payload.clipId });
   if (!clip) {
@@ -178,6 +235,8 @@ export async function renderClip(payload: RenderClipPayload, deps: WorkerDeps): 
   const tmpDir = await mkdtemp(join(tmpdir(), 'mintreels-clip-'));
   const videoPath = join(tmpDir, 'source.bin');
   const outputPath = join(tmpDir, `clip-${String(clip.id)}.mp4`);
+  const voicePath = join(tmpDir, 'voiceover.mp3');
+  const mixedPath = join(tmpDir, `clip-${String(clip.id)}-vo.mp4`);
   // ASS (not SRT/VTT): explicit PlayRes avoids giant FontSize from SRT’s 384×288 default.
   const assPath = join(tmpDir, `clip-${String(clip.id)}.ass`);
 
@@ -241,11 +300,30 @@ export async function renderClip(payload: RenderClipPayload, deps: WorkerDeps): 
     });
     logClip(payload.recordingId, payload.clipId, 'ffmpeg', 'done', runExtras);
 
+    let finalPath = outputPath;
+    const voiceover = clip.voiceover;
+    if (voiceover?.enabled) {
+      const script = voiceoverScript(voiceover, clip.title);
+      if (script.trim() === '') {
+        throw new Error('Voiceover text is empty');
+      }
+      logClip(payload.recordingId, payload.clipId, 'voiceover', 'start tts', runExtras);
+      await resolveVoiceoverAudio(deps, voiceover, script, voicePath);
+      await mixVoiceoverOntoVideo({
+        videoPath: outputPath,
+        voiceoverPath: voicePath,
+        outputPath: mixedPath,
+        placement: resolveVoiceoverPlacement(voiceover.placement),
+      });
+      finalPath = mixedPath;
+      logClip(payload.recordingId, payload.clipId, 'voiceover', 'done mix', runExtras);
+    }
+
     // Filestack store still buffers the body once; stream from disk avoids a prior readFile copy.
     logClip(payload.recordingId, payload.clipId, 'upload', 'start', runExtras);
     const stored = await deps.storage.upload({
       key: `clip-${String(clip.id)}.mp4`,
-      body: Readable.toWeb(createReadStream(outputPath)) as ReadableStream,
+      body: Readable.toWeb(createReadStream(finalPath)) as ReadableStream,
       contentType: 'video/mp4',
     });
     logClip(payload.recordingId, payload.clipId, 'upload', 'done', runExtras);
@@ -254,7 +332,7 @@ export async function renderClip(payload: RenderClipPayload, deps: WorkerDeps): 
     const thumbKey = await storeVideoThumbnail({
       storage: deps.storage,
       videoStorageKey: stored.key,
-      localVideoPath: outputPath,
+      localVideoPath: finalPath,
       tmpDir,
       uploadKey: `clip-${String(clip.id)}-thumb.jpg`,
       durationMs: clipDurationMs,

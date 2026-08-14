@@ -1,6 +1,10 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import {
+  Job,
+  JobAuditLog,
+  JobAuditLogRepository,
+  JobRepository,
   Recording,
   RecordingRepository,
   Transcript,
@@ -13,13 +17,18 @@ import { TranscriptsController } from './transcripts.controller';
 import { TranscriptsService } from './transcripts.service';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Transcript, TranscriptSegment, Recording]), GuestModule],
+  imports: [
+    TypeOrmModule.forFeature([Transcript, TranscriptSegment, Recording, Job, JobAuditLog]),
+    GuestModule,
+  ],
   controllers: [TranscriptsController],
   providers: [
     TranscriptsService,
     TranscriptRepository,
     TranscriptSegmentRepository,
     RecordingRepository,
+    JobRepository,
+    JobAuditLogRepository,
   ],
   exports: [TranscriptsService],
 })

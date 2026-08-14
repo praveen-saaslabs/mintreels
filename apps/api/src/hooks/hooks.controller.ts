@@ -90,6 +90,13 @@ export class HooksController {
         aspectRatio: ClipRatio.Vertical,
         fitMode: ClipFitMode.Fit,
         burnSubtitles: true,
+        voiceover: {
+          enabled: true,
+          voiceId: 'stock_dorit_en_us',
+          titleText: 'The roadmap was never a plan',
+          ctaText: 'Follow for more product stories',
+          placement: 'pre',
+        },
       },
     },
   })
@@ -111,6 +118,7 @@ export class HooksController {
         fitMode: ClipFitMode.Fit,
         burnSubtitles: true,
         subtitleStyle: null,
+        voiceover: null,
         videoUrl: null,
         thumbnailUrl: null,
         ratio: ClipRatio.Vertical,

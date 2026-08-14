@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { api, type MomentCandidate } from '@/lib/api';
-import type { ClipSummary } from '@/lib/data/types';
+import type { ClipSummary, ClipVoiceover } from '@/lib/data/types';
 import { queryKeys } from '@/lib/query-keys';
 import {
   DEFAULT_EDITOR_FIT_MODE,
@@ -47,9 +47,11 @@ export function useMomentClipExport(recordingId: number | undefined, moment: Mom
     mutationFn: async ({
       aspectRatio,
       burnSubtitles,
+      voiceover,
     }: {
       aspectRatio: EditorAspectRatio;
       burnSubtitles: boolean;
+      voiceover?: ClipVoiceover | null;
     }) => {
       if (recordingId == null) {
         throw new Error('Invalid recording');
@@ -62,6 +64,7 @@ export function useMomentClipExport(recordingId: number | undefined, moment: Mom
         aspectRatio,
         fitMode: DEFAULT_EDITOR_FIT_MODE,
         burnSubtitles,
+        ...(voiceover ? { voiceover } : {}),
       });
     },
     onSuccess: (created) => {
@@ -79,10 +82,14 @@ export function useMomentClipExport(recordingId: number | undefined, moment: Mom
     exportClip: (
       aspectRatio: EditorAspectRatio = playerAspect,
       burnSubtitles: boolean = playerCaptionsOn,
-      options?: { onSuccess?: () => void },
+      options?: { onSuccess?: () => void; voiceover?: ClipVoiceover | null },
     ) => {
       exportMutation.mutate(
-        { aspectRatio, burnSubtitles },
+        {
+          aspectRatio,
+          burnSubtitles,
+          voiceover: options?.voiceover ?? null,
+        },
         {
           onSuccess: () => {
             options?.onSuccess?.();

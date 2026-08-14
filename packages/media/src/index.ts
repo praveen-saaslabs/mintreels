@@ -21,6 +21,19 @@ export type {
   TrimVideoInput,
 } from './video';
 export {
+  buildAtempoFilter,
+  mixVoiceoverOntoVideo,
+  probeDurationSeconds,
+  replaceAudioRange,
+} from './voiceover';
+export type {
+  MixVoiceoverOntoVideoInput,
+  MixVoiceoverOntoVideoResult,
+  ProbeDurationInput,
+  ReplaceAudioRangeInput,
+  VoiceoverPlacement,
+} from './voiceover';
+export {
   CAPTION_WORDS_PER_CUE,
   burnSubtitles,
   formatAssTimestamp,

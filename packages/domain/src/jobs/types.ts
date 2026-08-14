@@ -7,6 +7,8 @@ export const JOB_NAMES = [
   'generate-hooks',
   'sync-knowledge-base',
   'render-clip',
+  'apply-overdub',
+  'apply-recording-voiceover',
   'export-recording',
 ] as const;
 

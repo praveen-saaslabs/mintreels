@@ -25,6 +25,11 @@ export const queryKeys = {
     detail: (id: number) => [...queryKeys.clips.all(), 'detail', id] as const,
   },
 
+  voices: {
+    all: () => [...queryKeys.all, 'voices'] as const,
+    list: () => [...queryKeys.voices.all(), 'list'] as const,
+  },
+
   settings: {
     all: () => [...queryKeys.all, 'settings'] as const,
     snapshot: () => [...queryKeys.settings.all(), 'snapshot'] as const,

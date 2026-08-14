@@ -13,6 +13,7 @@ import {
 import {
   ApiAcceptedResponse,
   ApiBadRequestResponse,
+  ApiBody,
   ApiConflictResponse,
   ApiCookieAuth,
   ApiCreatedResponse,
@@ -32,8 +33,10 @@ import { CurrentActor } from '../guest/current-actor.decorator';
 import { ownership, type RequestActor } from '../auth/auth.types';
 import { ZodValidationPipe } from '../common/zod-validation.pipe';
 import {
+  applyRecordingVoiceoverRequestSchema,
   createRecordingRequestSchema,
   exportRecordingRequestSchema,
+  type ApplyRecordingVoiceoverRequest,
   type CreateRecordingRequest,
   type ExportRecordingRequest,
 } from './recordings.dto';
@@ -203,6 +206,55 @@ export class RecordingsController {
     @Param('id', ParseIntPipe) id: number,
   ) {
     return this.recordingsService.cancelExportRecording(id, ownership(actor));
+  }
+
+  @ApiOperation({ summary: 'Add AI voiceover to the source recording (Speak + FFmpeg mix)' })
+  @ApiParam({ name: 'id', type: Number })
+  @ApiBody({
+    schema: {
+      example: {
+        voiceId: 'stock_dorit_en_us',
+        titleText: 'Protecting Mental Health',
+        ctaText: 'Follow for more such videos',
+        placement: 'pre',
+      },
+    },
+  })
+  @ApiAcceptedResponse({
+    description: 'Recording voiceover job enqueued',
+    schema: {
+      example: {
+        jobId: 14,
+        status: 'queued',
+        voiceId: 'stock_dorit_en_us',
+        placement: 'pre',
+      },
+    },
+  })
+  @ApiBadRequestResponse({ description: 'EMPTY_VOICEOVER_TEXT' })
+  @ApiConflictResponse({ description: 'VIDEO_NOT_AVAILABLE | VOICEOVER_IN_PROGRESS' })
+  @ApiNotFoundResponse({ description: 'Recording not found' })
+  @HttpCode(HttpStatus.ACCEPTED)
+  @Post(':id/voiceover')
+  applyVoiceover(
+    @CurrentActor() actor: RequestActor,
+    @Param('id', ParseIntPipe) id: number,
+    @Body(new ZodValidationPipe(applyRecordingVoiceoverRequestSchema))
+    body: ApplyRecordingVoiceoverRequest,
+  ) {
+    return this.recordingsService.applyVoiceover(id, body, ownership(actor));
+  }
+
+  @ApiOperation({ summary: 'Get the latest recording voiceover job status' })
+  @ApiParam({ name: 'id', type: Number })
+  @ApiOkResponse({
+    description: 'Latest voiceover job snapshot',
+    schema: { example: { jobId: 14, status: 'running', error: null } },
+  })
+  @ApiNotFoundResponse({ description: 'Recording not found' })
+  @Get(':id/voiceover')
+  getVoiceoverJob(@CurrentActor() actor: RequestActor, @Param('id', ParseIntPipe) id: number) {
+    return this.recordingsService.getVoiceoverJob(id, ownership(actor));
   }
 
   @ApiOperation({ summary: 'Get a single recording by ID' })

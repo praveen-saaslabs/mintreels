@@ -12,6 +12,7 @@ import { HookHeadlineScores1700000000007 } from './0008-hook-headline-scores';
 import { RecordingExport1700000000009 } from './0010-recording-export';
 import { GuestSessions1700000000010 } from './0011-guest-sessions';
 import { ClipSocialCopy1700000000010 } from './0011-clip-social-copy';
+import { ClipVoiceover1700000000011 } from './0012-clip-voiceover';
 
 // Keep this list ordered. New migrations get appended here.
 export const migrations = [
@@ -29,4 +30,5 @@ export const migrations = [
   RecordingExport1700000000009,
   GuestSessions1700000000010,
   ClipSocialCopy1700000000010,
+  ClipVoiceover1700000000011,
 ];

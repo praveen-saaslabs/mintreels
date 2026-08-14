@@ -1,4 +1,5 @@
 export const SPEECH_PROVIDER = Symbol('SPEECH_PROVIDER');
+export const VOICE_PROVIDER = Symbol('VOICE_PROVIDER');
 export const LLM_PROVIDER = Symbol('LLM_PROVIDER');
 export const KB_PROVIDER = Symbol('KB_PROVIDER');
 export const STORAGE_PROVIDER = Symbol('STORAGE_PROVIDER');

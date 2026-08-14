@@ -1,5 +1,6 @@
 export {
   createSpeechProvider,
+  createVoiceProvider,
   createLLMProvider,
   createKnowledgeBaseProvider,
   createStorageProvider,
@@ -7,6 +8,7 @@ export {
 } from './factories';
 export {
   SPEECH_PROVIDER,
+  VOICE_PROVIDER,
   LLM_PROVIDER,
   KB_PROVIDER,
   STORAGE_PROVIDER,

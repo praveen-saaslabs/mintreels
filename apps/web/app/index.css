@@ -175,17 +175,18 @@
 }
 
 .dark {
-  --background: oklch(0.145 0.008 165);
+  /* Near-neutral canvas — low chroma so glass refracts cleanly (not a green wash) */
+  --background: oklch(0.145 0.002 165);
   --foreground: oklch(0.985 0 0);
-  --card: oklch(0.22 0.01 165 / 55%);
+  --card: oklch(0.22 0.003 165 / 55%);
   --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.22 0.01 165 / 72%);
+  --popover: oklch(0.22 0.003 165 / 72%);
   --popover-foreground: oklch(0.985 0 0);
   --primary: oklch(0.922 0 0);
   --primary-foreground: oklch(0.205 0 0);
   --secondary: oklch(1 0 0 / 10%);
   --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0.01 165);
+  --muted: oklch(0.269 0.003 165);
   --muted-foreground: oklch(0.708 0 0);
   --accent: oklch(1 0 0 / 10%);
   --accent-foreground: oklch(0.985 0 0);
@@ -198,7 +199,7 @@
   --chart-3: oklch(0.439 0 0);
   --chart-4: oklch(0.371 0 0);
   --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.18 0.01 165 / 62%);
+  --sidebar: oklch(0.18 0.003 165 / 62%);
   --sidebar-foreground: oklch(0.985 0 0);
   --sidebar-primary: oklch(0.78 0.14 165);
   --sidebar-primary-foreground: oklch(0.18 0.04 165);
@@ -207,16 +208,16 @@
   --sidebar-border: oklch(1 0 0 / 12%);
   --sidebar-ring: oklch(0.78 0.14 165 / 0.45);
 
-  /* Liquid glass material tokens (dark) */
-  --glass-bg: oklch(0.2 0.012 165 / 38%);
-  --glass-bg-elevated: oklch(0.24 0.014 165 / 52%);
-  --glass-bg-strong: oklch(0.28 0.014 165 / 66%);
+  /* Liquid glass material tokens (dark) — neutral frost; mint stays on accents */
+  --glass-bg: oklch(0.22 0.004 165 / 42%);
+  --glass-bg-elevated: oklch(0.26 0.004 165 / 56%);
+  --glass-bg-strong: oklch(0.3 0.004 165 / 70%);
   --glass-border: oklch(1 0 0 / 16%);
   --glass-border-subtle: oklch(1 0 0 / 10%);
   --glass-blur: 32px;
   --glass-blur-sm: 16px;
   --glass-blur-lg: 48px;
-  --glass-saturate: 1.65;
+  --glass-saturate: 1.35;
   --glass-shadow: 0 4px 28px oklch(0 0 0 / 0.38), 0 1px 2px oklch(0 0 0 / 0.2);
   --glass-shadow-elevated: 0 14px 44px oklch(0 0 0 / 0.5), 0 2px 8px oklch(0 0 0 / 0.25);
   --glass-highlight: inset 0 1px 0 oklch(1 0 0 / 0.18);
@@ -254,19 +255,19 @@
   --speaker-10-bg: oklch(0.3 0.04 275);
 
   /* MintReels Home shell tokens (dark) */
-  --mr-bg: oklch(0.145 0.008 165);
-  --mr-panel: oklch(0.22 0.01 165 / 52%);
-  --mr-card: oklch(0.22 0.01 165 / 55%);
-  --mr-muted: oklch(0.269 0.01 165);
+  --mr-bg: oklch(0.145 0.002 165);
+  --mr-panel: oklch(0.22 0.003 165 / 52%);
+  --mr-card: oklch(0.22 0.003 165 / 55%);
+  --mr-muted: oklch(0.269 0.003 165);
   --mr-fg: oklch(0.985 0 0);
   --mr-fg2: oklch(0.85 0 0);
   --mr-mfg: oklch(0.708 0 0);
   --mr-bd: oklch(1 0 0 / 12%);
   --mr-bd2: oklch(1 0 0 / 8%);
-  --mr-stripe3: oklch(0.25 0.01 165);
-  --mr-stripe4: oklch(0.225 0.01 165);
+  --mr-stripe3: oklch(0.25 0.004 165);
+  --mr-stripe4: oklch(0.225 0.003 165);
   --mr-onstripe: oklch(0.985 0 0);
-  --mr-pill: oklch(0.16 0.01 165 / 72%);
+  --mr-pill: oklch(0.16 0.003 165 / 72%);
   --mr-acc: oklch(0.78 0.14 165);
   --mr-accfg: oklch(0.18 0.04 165);
   --mr-warn: oklch(0.78 0.13 80);
@@ -303,6 +304,24 @@
       transparent 58%
     ),
     radial-gradient(ellipse 40% 30% at 70% 40%, oklch(0.97 0.015 145 / 0.2), transparent 70%);
+
+  /* Dark: quieter mint washes so frosted glass stays clear, not green-tinted */
+  &:is(.dark *),
+  .dark & {
+    background-image:
+      radial-gradient(
+        ellipse 90% 60% at 8% -12%,
+        color-mix(in oklch, var(--mr-acc) 9%, transparent),
+        transparent 62%
+      ),
+      radial-gradient(ellipse 75% 50% at 96% 4%, oklch(0.45 0.02 200 / 0.12), transparent 54%),
+      radial-gradient(
+        ellipse 60% 45% at 50% 112%,
+        color-mix(in oklch, var(--mr-acc) 5%, transparent),
+        transparent 58%
+      ),
+      radial-gradient(ellipse 40% 30% at 70% 40%, oklch(0.35 0.012 145 / 0.08), transparent 70%);
+  }
 }
 
 /* Shared liquid-glass material recipe */
@@ -519,6 +538,57 @@
 
 @utility animate-mr-pulse {
   animation: mrpulse 1.4s ease-in-out infinite;
+}
+
+@keyframes voiceover-status-shimmer {
+  0% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+@keyframes voiceover-dots {
+  0%,
+  20% {
+    opacity: 0.25;
+  }
+  40% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.25;
+  }
+}
+
+@utility voiceover-status-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background-image: linear-gradient(
+    90deg,
+    color-mix(in oklch, var(--muted-foreground) 70%, transparent) 0%,
+    var(--mr-acc) 45%,
+    color-mix(in oklch, var(--muted-foreground) 70%, transparent) 90%
+  );
+  background-size: 220% 100%;
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  animation: voiceover-status-shimmer 1.6s ease-in-out infinite;
+}
+
+@utility voiceover-status-dot {
+  animation: voiceover-dots 1.2s ease-in-out infinite;
+}
+
+@utility voiceover-status-dot-2 {
+  animation-delay: 0.2s;
+}
+
+@utility voiceover-status-dot-3 {
+  animation-delay: 0.4s;
 }
 
 /* Ask Mint — “thinking” magic */
@@ -855,6 +925,19 @@
   .mint-thinking-line,
   .mint-thinking-dot {
     animation: none;
+  }
+
+  .voiceover-status-live,
+  .voiceover-status-dot,
+  .animate-mr-pulse {
+    animation: none;
+  }
+
+  .voiceover-status-live {
+    background: none;
+    color: var(--muted-foreground);
+    -webkit-background-clip: unset;
+    background-clip: unset;
   }
 
   .mint-thinking-text {

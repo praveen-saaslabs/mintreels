@@ -62,6 +62,12 @@ All paths are under `/api`. All GETs below are implemented and cookie-scoped to 
 | `createRecording(body)` | POST | `/recordings` |
 | `retryRecording(id)` | POST | `/recordings/:id/retry` |
 | `getTranscript(id)` | GET | `/recordings/:id/transcript` |
+| `patchTranscriptSegment(id, segmentId, body)` | PATCH | `/recordings/:id/transcript/segments/:segmentId` |
+| `applyTranscriptOverdub(id, segmentId, body)` | POST | `/recordings/:id/transcript/segments/:segmentId/overdub` |
+| `getTranscriptOverdub(id)` | GET | `/recordings/:id/transcript/overdub` |
+| `applyRecordingVoiceover(id, body)` | POST | `/recordings/:id/voiceover` |
+| `getRecordingVoiceover(id)` | GET | `/recordings/:id/voiceover` |
+| `getVoices()` | GET | `/voices` |
 | — | GET | `/recordings/:id/transcript.vtt` (`text/vtt`) |
 | `getSummary(id)` | GET | `/recordings/:id/summary` |
 | `getHooks(id)` | GET | `/recordings/:id/hooks` |
@@ -308,11 +314,11 @@ Discriminated **200** responses:
 
 ### Hook export — `POST /api/recordings/:id/hooks/:hookId/export`
 
-Optional body: `{ aspectRatio?: "9:16"|"1:1"|"16:9", fitMode?: "fit"|"fill", burnSubtitles?: boolean }` (defaults `9:16` / `fit` / `true`). Creates a `clips` row (`queued`) and enqueues `render-clip`. **202** with the public clip DTO. Poll `GET /api/clips/:id` while `status` is `queued` or `rendering`.
+Optional body: `{ aspectRatio?: "9:16"|"1:1"|"16:9", fitMode?: "fit"|"fill", burnSubtitles?: boolean, voiceover?: { enabled, voiceId, titleText?, ctaText?, placement: "pre"|"post" } }` (defaults `9:16` / `fit` / `true`). Creates a `clips` row (`queued`) and enqueues `render-clip`. Optional `voiceover` mixes AI Speak audio onto the render. **202** with the public clip DTO. Poll `GET /api/clips/:id` while `status` is `queued` or `rendering`.
 
 `fitMode`: **`fit`** (default) = full frame + blurred pad; **`fill`** = center crop (opt-in). Layout-agnostic — Fit preserves the whole source regardless of hosts/grid/PiP.
 
-Idempotent when aspect + fit + burn match: in-flight (`queued`/`rendering`) or `ready` returns the existing clip; `failed` or a different aspect/fit/burn resets that row and re-enqueues.
+Idempotent when aspect + fit + burn + voiceover match: in-flight (`queued`/`rendering`) or `ready` returns the existing clip; `failed` or different options resets that row and re-enqueues.
 
 Errors: `404` recording/hook, `400 INVALID_HOOK_RANGE`, `409 VIDEO_NOT_AVAILABLE`. Never returns `storageKey`.
 
@@ -401,7 +407,7 @@ Editor header: **Export** (confirm dialog sends `force: true`) → poll → **Ca
 
 **No `storageKey`, no signed URL, no `caption`.** Playback URL is `videoUrl` (`null` until render finishes). Poster is `thumbnailUrl` (`null` until Filestack/FFmpeg thumb is stored). `hookId` is `null` when the clip was not created from a hook. `aspectRatio` / `ratio` is the **export target** (`9:16` \| `1:1` \| `16:9`). `fitMode` is `fit` (full frame + blur pad, default) or `fill` (center crop). `burnSubtitles` is whether captions were burned in. Status: `queued` \| `rendering` \| `ready` \| `failed`. Optional `socialTitle` / `socialDescription` are AI share copy (null until generated).
 
-`POST /api/clips` creates a clip from an owned recording time range (prompt search uses padded `clipStartMs` / `clipEndMs`, `hookId` omitted). Optional `aspectRatio` (default `9:16`), `fitMode` (default `fit`), and `burnSubtitles` (default `true`). Hook export remains `POST /recordings/:id/hooks/:hookId/export`.
+`POST /api/clips` creates a clip from an owned recording time range (prompt search uses padded `clipStartMs` / `clipEndMs`, `hookId` omitted). Optional `aspectRatio` (default `9:16`), `fitMode` (default `fit`), `burnSubtitles` (default `true`), and `voiceover: { enabled, voiceId, titleText?, ctaText?, placement: "pre"|"post" }`. Hook export remains `POST /recordings/:id/hooks/:hookId/export`. Stock voices: `GET /api/voices`.
 
 `POST /api/clips/:id/social-copy` (ready clips only) generates and persists `socialTitle` + `socialDescription` for human-initiated sharing. **409** `CLIP_NOT_READY` or `TRANSCRIPT_REQUIRED`. Share UI edits the copy then copies title + description + HTTPS `videoUrl` (not auto-posting).
 
@@ -432,6 +438,11 @@ Editor header: **Export** (confirm dialog sends `force: true`) → poll → **Ca
 Map to mock `ClipSummary` in the UI: `projectLabel` ← `projectName` + `recordingTitle`; `range` / `duration` ← `startMs`/`endMs`; `id` ← `String(id)` only if the router still wants strings.
 
 ### Editor + clips UI
+
+
+- Editor hook/moment **Cut clip**: confirm aspect + burn, then optional AI voiceover dialog; export with both. Poll `GET /clips/:id` while `queued` / `rendering`.
+- Transcript: **Edit** a segment → save text (`PATCH …/segments/:segmentId`) and/or **Apply voice** (`POST …/overdub` + poll `GET …/transcript/overdub`). On success, reload recording `videoUrl` (source audio was replaced).
+- Editor header: **AI voiceover** applies Speak mix to the full source recording (`POST /recordings/:id/voiceover`); **Export** remains full-recording aspect/burn export.
 
 - Player aspect chips (`9:16` default, `1:1`, `16:9`) frame preview: **Fit** = `object-contain` + blurred backdrop; **Fill** = `object-cover`. Default Fit for vertical/square. **Cut clip** opens a confirm with aspect chips plus **Fit (blur)** / **Fill (crop)** (“Keep full frame” vs “Zoom / crop”), then calls export/`createClip` with `aspectRatio` + `fitMode` + `burnSubtitles: true`.
 - Editor hook card: **Cut clip** until the hook has no ready `videoUrl`; poll `GET /clips/:id` while `queued` / `rendering`. When `status === ready` and `videoUrl` is set, show the **download icon** only.

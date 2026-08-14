@@ -121,8 +121,12 @@ export {
   clipRatioSchema,
   clipRowSchema,
   clipStatusSchema,
+  clipVoiceoverPlacementSchema,
+  clipVoiceoverSchema,
   type ClipInsert,
   type ClipRow,
+  type ClipVoiceover,
+  type ClipVoiceoverPlacement,
 } from './clips';
 export {
   askMomentsRequestSchema,

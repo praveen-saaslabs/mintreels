@@ -14,6 +14,7 @@ import type {
   LLMProvider,
   SpeechProvider,
   VectorStoreProvider,
+  VoiceProvider,
 } from '@mintreels/ai';
 import type { StorageProvider } from '@mintreels/storage';
 
@@ -28,6 +29,7 @@ export interface WorkerDeps {
   summaries: SummaryRepository;
   hooks: HookRepository;
   speech: SpeechProvider;
+  voice: VoiceProvider;
   llm: LLMProvider;
   embeddings: EmbeddingProvider;
   vectorStore: VectorStoreProvider;

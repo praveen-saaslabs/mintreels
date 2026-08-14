@@ -1,5 +1,11 @@
 import { Global, Module } from '@nestjs/common';
-import type { EmbeddingProvider, LLMProvider, SpeechProvider, VectorStoreProvider } from '@mintreels/ai';
+import type {
+  EmbeddingProvider,
+  LLMProvider,
+  SpeechProvider,
+  VectorStoreProvider,
+  VoiceProvider,
+} from '@mintreels/ai';
 import type { KnowledgeBaseProvider } from '@mintreels/knowledge';
 import type { QueueProvider } from '@mintreels/queue';
 import type { StorageProvider } from '@mintreels/storage';
@@ -12,6 +18,7 @@ import {
   createStorageProvider,
   createTranscriptVectorStoreProvider,
   createVectorStoreProvider,
+  createVoiceProvider,
 } from './factories';
 import {
   EMBEDDING_PROVIDER,
@@ -22,6 +29,7 @@ import {
   STORAGE_PROVIDER,
   TRANSCRIPT_VECTOR_STORE_PROVIDER,
   VECTOR_STORE_PROVIDER,
+  VOICE_PROVIDER,
 } from './provider-tokens';
 
 const NEST_PROBE_KEYS = new Set([
@@ -57,6 +65,10 @@ function lazy<T extends object>(factory: () => T): T {
       useFactory: (): SpeechProvider => lazy(createSpeechProvider),
     },
     {
+      provide: VOICE_PROVIDER,
+      useFactory: (): VoiceProvider => lazy(createVoiceProvider),
+    },
+    {
       provide: LLM_PROVIDER,
       useFactory: (): LLMProvider => lazy(createLLMProvider),
     },
@@ -87,6 +99,7 @@ function lazy<T extends object>(factory: () => T): T {
   ],
   exports: [
     SPEECH_PROVIDER,
+    VOICE_PROVIDER,
     LLM_PROVIDER,
     KB_PROVIDER,
     STORAGE_PROVIDER,

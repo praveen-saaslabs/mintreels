@@ -7,6 +7,7 @@ import { useTranscriptFollowScroll } from '@/components/transcript/use-transcrip
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { modKeyLabel, useHotkey } from '@/hooks/use-hotkey';
+import { useTranscriptOverdub } from '@/hooks/use-transcript-overdub';
 import { useRecordingId } from '@/lib/recording-id';
 import {
   ALL_SPEAKERS,
@@ -42,6 +43,11 @@ function TranscriptListContent({
   seek,
   activeWordRef,
   activeItemRef,
+  canOverdub,
+  overdubBusy,
+  overdubSegmentId,
+  onSaveText,
+  onApplyOverdub,
 }: Readonly<{
   pending: boolean;
   recordingId: number | undefined;
@@ -53,6 +59,11 @@ function TranscriptListContent({
   seek: (time: number) => void;
   activeWordRef: Ref<HTMLSpanElement>;
   activeItemRef: Ref<HTMLLIElement>;
+  canOverdub: boolean;
+  overdubBusy: boolean;
+  overdubSegmentId: number | null;
+  onSaveText: (segmentId: number, text: string) => Promise<void>;
+  onApplyOverdub: (segmentId: number, voiceId: string) => Promise<void>;
 }>) {
   if (segments.length === 0) {
     if (pending) {
@@ -85,6 +96,12 @@ function TranscriptListContent({
             seek={seek}
             activeWordRef={activeWordRef}
             itemRef={activeItemRef}
+            recordingId={recordingId}
+            canOverdub={canOverdub}
+            overdubBusy={overdubBusy}
+            isOverdubTarget={overdubSegmentId === segment.id}
+            onSaveText={onSaveText}
+            onApplyOverdub={onApplyOverdub}
           />
         );
       })}
@@ -103,6 +120,14 @@ export function Transcriptions({ pending = false }: Readonly<{ pending?: boolean
   const [search, setSearch] = useState('');
   const searchInputRef = useRef<HTMLInputElement>(null);
   const hasTranscript = segments.length > 0;
+  const {
+    inFlight: overdubBusy,
+    overdubSegmentId,
+    overdubStatus,
+    overdubError,
+    saveSegmentText,
+    applyOverdub,
+  } = useTranscriptOverdub(recordingId);
 
   const focusSearch = () => {
     const input = searchInputRef.current;
@@ -168,7 +193,15 @@ export function Transcriptions({ pending = false }: Readonly<{ pending?: boolean
       style={{ animationDelay: '40ms' }}
     >
       <header className="glass-pane-header shrink-0 space-y-2 select-none px-3 py-2.5">
-        <h2 className="text-sm font-medium tracking-[-0.01em] text-foreground">Transcriptions</h2>
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="text-sm font-medium tracking-[-0.01em] text-foreground">Transcriptions</h2>
+          {overdubBusy ? (
+            <span className="text-[10px] text-muted-foreground">Applying voice…</span>
+          ) : null}
+          {overdubStatus === 'failed' && overdubError ? (
+            <span className="truncate text-[10px] text-[var(--mr-bad)]">{overdubError}</span>
+          ) : null}
+        </div>
         {hasTranscript ? (
           <>
             <div className="flex flex-wrap gap-1.5" role="group" aria-label="Filter by speaker">
@@ -244,6 +277,15 @@ export function Transcriptions({ pending = false }: Readonly<{ pending?: boolean
           seek={seek}
           activeWordRef={activeWordRef}
           activeItemRef={activeItemRef}
+          canOverdub={recordingId != null && hasTranscript}
+          overdubBusy={overdubBusy}
+          overdubSegmentId={overdubSegmentId}
+          onSaveText={async (segmentId, text) => {
+            await saveSegmentText(segmentId, text);
+          }}
+          onApplyOverdub={async (segmentId, voiceId) => {
+            await applyOverdub(segmentId, voiceId);
+          }}
         />
       </div>
     </section>

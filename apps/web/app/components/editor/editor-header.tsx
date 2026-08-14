@@ -1,12 +1,15 @@
-import { ArrowLeft, Download, FileDown, Loader2, Trash2, X } from 'lucide-react';
+import { ArrowLeft, Download, FileDown, Loader2, Mic2, Sparkles, Trash2, X } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { ClipVoiceoverDialog } from '@/components/clips/clip-voiceover-dialog';
 import { ThemeToggle } from '@/components/shell/theme-toggle';
 import { CutClipConfirmDialog } from '@/components/summary/cut-clip-confirm-dialog';
 import { ConfirmDeleteDialog } from '@/components/ui/confirm-delete-dialog';
 import { buttonVariants } from '@/components/ui/button';
 import { useDeleteProject } from '@/hooks/use-delete-project';
 import { useRecordingExport } from '@/hooks/use-recording-export';
+import { useRecordingVoiceover } from '@/hooks/use-recording-voiceover';
+import type { ClipVoiceover } from '@/lib/data/types';
 import { cn } from '@/lib/utils';
 import { useEditorStore } from '@/stores/editor-store';
 
@@ -14,14 +17,17 @@ export function EditorHeader({
   title,
   projectId,
   recordingId,
+  voiceoverDefaultTitle,
 }: Readonly<{
   title: string;
   projectId?: number | undefined;
   recordingId?: number | undefined;
+  voiceoverDefaultTitle?: string | undefined;
 }>) {
   const navigate = useNavigate();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
+  const [voiceoverOpen, setVoiceoverOpen] = useState(false);
   const playerAspect = useEditorStore((state) => state.playerAspect);
   const playerCaptionsOn = useEditorStore((state) => state.playerCaptionsOn);
   const setPlayerAspect = useEditorStore((state) => state.setPlayerAspect);
@@ -45,6 +51,31 @@ export function EditorHeader({
     downloadExport,
     errorMessage: exportError,
   } = useRecordingExport(recordingId, title);
+
+  const {
+    applyVoiceover,
+    isApplying,
+    inFlight: voiceoverInFlight,
+    status: voiceoverStatus,
+    error: voiceoverError,
+    applyError,
+  } = useRecordingVoiceover(recordingId);
+
+  const voiceoverBusy = isApplying || voiceoverInFlight;
+  const canAddVoiceover = recordingId != null && !voiceoverBusy;
+
+  async function onConfirmVoiceover(voiceover: ClipVoiceover | null) {
+    if (!voiceover) {
+      setVoiceoverOpen(false);
+      return;
+    }
+    try {
+      await applyVoiceover(voiceover);
+      setVoiceoverOpen(false);
+    } catch {
+      // Error surfaced via applyError / status poll.
+    }
+  }
 
   const exportAriaLabel = isExporting
     ? 'Export in progress'
@@ -73,6 +104,58 @@ export function EditorHeader({
       </h1>
       {recordingId != null ? (
         <>
+          <div className="flex shrink-0 items-center gap-1.5">
+            {voiceoverBusy ? (
+              <span
+                className="voiceover-status-live hidden text-[10px] font-medium sm:inline-flex"
+                aria-live="polite"
+              >
+                {voiceoverStatus === 'running' || isApplying
+                  ? 'Adding Voiceover'
+                  : 'Voiceover queued'}
+                <span className="inline-flex translate-y-px gap-px text-mr-acc" aria-hidden>
+                  <span className="voiceover-status-dot">.</span>
+                  <span className="voiceover-status-dot voiceover-status-dot-2">.</span>
+                  <span className="voiceover-status-dot voiceover-status-dot-3">.</span>
+                </span>
+              </span>
+            ) : null}
+            {voiceoverStatus === 'failed' && (voiceoverError || applyError) ? (
+              <span
+                className="hidden max-w-56 truncate text-[10px] text-(--mr-bad) sm:inline"
+                title={applyError ?? voiceoverError ?? undefined}
+              >
+                {applyError ?? voiceoverError}
+              </span>
+            ) : null}
+            <button
+              type="button"
+              aria-label="Mint Voiceover"
+              disabled={!canAddVoiceover}
+              onClick={() => setVoiceoverOpen(true)}
+              className={cn(
+                buttonVariants({ variant: 'outline', size: 'sm' }),
+                'shrink-0 gap-2',
+                canAddVoiceover ? '' : 'opacity-50',
+                voiceoverBusy && 'animate-mr-pulse',
+              )}
+            >
+              <span className="relative mr-0.5 inline-flex size-3.5 shrink-0 items-center justify-center">
+                <Mic2
+                  className={cn('size-3.5 text-mr-acc', voiceoverBusy && 'animate-mr-pulse')}
+                  aria-hidden
+                />
+                <Sparkles
+                  className={cn(
+                    'absolute -top-1 -right-1.5 size-2.5 text-mr-acc',
+                    voiceoverBusy && 'mint-thinking-sparkle',
+                  )}
+                  aria-hidden
+                />
+              </span>
+              <span className="hidden sm:inline">Mint Voiceover</span>
+            </button>
+          </div>
           <button
             type="button"
             aria-label={exportAriaLabel}
@@ -172,7 +255,7 @@ export function EditorHeader({
             }}
             className={cn(
               buttonVariants({ variant: 'ghost', size: 'icon-sm' }),
-              'shrink-0 text-muted-foreground hover:text-[var(--mr-bad)]',
+              'shrink-0 text-muted-foreground hover:text-(--mr-bad)',
             )}
           >
             <Trash2 />
@@ -190,6 +273,17 @@ export function EditorHeader({
           />
         </>
       ) : null}
-    </header>
+    
+      <ClipVoiceoverDialog
+        open={voiceoverOpen}
+        onOpenChange={setVoiceoverOpen}
+        defaultTitle={voiceoverDefaultTitle?.trim() || title}
+        pending={isApplying}
+        variant="recording"
+        onConfirm={(voiceover) => {
+          void onConfirmVoiceover(voiceover);
+        }}
+      />
+</header>
   );
 }

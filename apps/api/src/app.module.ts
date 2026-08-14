@@ -17,6 +17,7 @@ import { JobsModule } from './jobs/jobs.module';
 import { ProjectsModule } from './projects/projects.module';
 import { WorkspaceModule } from './workspace/workspace.module';
 import { SettingsModule } from './settings/settings.module';
+import { VoicesModule } from './voices/voices.module';
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { SettingsModule } from './settings/settings.module';
     ProjectsModule,
     WorkspaceModule,
     SettingsModule,
+    VoicesModule,
   ],
   controllers: [HealthController],
   providers: [

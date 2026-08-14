@@ -29,6 +29,8 @@ export enum JobType {
   SyncKnowledgeBase = 'SYNC_KNOWLEDGE_BASE',
   GenerateHooks = 'GENERATE_HOOKS',
   RenderClip = 'RENDER_CLIP',
+  ApplyOverdub = 'APPLY_OVERDUB',
+  ApplyRecordingVoiceover = 'APPLY_RECORDING_VOICEOVER',
   ExportRecording = 'EXPORT_RECORDING',
 }
 

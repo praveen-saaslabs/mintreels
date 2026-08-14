@@ -1,5 +1,6 @@
 import { Download, Loader2 } from 'lucide-react';
 import { useState, type KeyboardEvent, type MouseEvent } from 'react';
+import { ClipVoiceoverDialog } from '@/components/clips/clip-voiceover-dialog';
 import { CutClipConfirmDialog } from '@/components/summary/cut-clip-confirm-dialog';
 import { HookThumb } from '@/components/summary/hook-thumb';
 import { buttonVariants } from '@/components/ui/button';
@@ -11,6 +12,7 @@ import type { MomentCandidate } from '@/lib/api';
 import { DEMO_MEDIA } from '@/lib/demo-media';
 import { clipDownloadFilename } from '@/lib/filestack-playback';
 import { formatTimestamp } from '@/lib/time';
+import type { ClipVoiceover } from '@/lib/data/types';
 import { cn } from '@/lib/utils';
 import { useEditorStore } from '@/stores/editor-store';
 
@@ -78,6 +80,11 @@ export function MomentCard({ moment, selected, recordingId, onPreview }: Readonl
   } = useMomentClipExport(recordingId, moment);
   const { isDownloading, download } = useClipDownload();
   const [cutOpen, setCutOpen] = useState(false);
+  const [voiceoverOpen, setVoiceoverOpen] = useState(false);
+  const [pendingCut, setPendingCut] = useState<{
+    aspectRatio: typeof playerAspect;
+    burnSubtitles: boolean;
+  } | null>(null);
   const showDownload = clip?.status === 'ready' && Boolean(clip.videoUrl);
   const inFlight = clip?.status === 'queued' || clip?.status === 'rendering' || isExporting;
   const actionLabel = cutLabel(clip?.status, isExporting);
@@ -232,7 +239,33 @@ export function MomentCard({ moment, selected, recordingId, onPreview }: Readonl
           setPlayerCaptionsOn(burn);
         }}
         onConfirm={({ aspectRatio, burnSubtitles }) => {
-          exportClip(aspectRatio, burnSubtitles, { onSuccess: () => setCutOpen(false) });
+          setPendingCut({ aspectRatio, burnSubtitles });
+          setCutOpen(false);
+          setVoiceoverOpen(true);
+        }}
+      />
+
+      <ClipVoiceoverDialog
+        open={voiceoverOpen}
+        onOpenChange={(open) => {
+          setVoiceoverOpen(open);
+          if (!open) {
+            setPendingCut(null);
+          }
+        }}
+        defaultTitle={moment.title}
+        pending={isExporting}
+        onConfirm={(voiceover: ClipVoiceover | null) => {
+          const cut = pendingCut;
+          setVoiceoverOpen(false);
+          setPendingCut(null);
+          if (!cut) {
+            return;
+          }
+          exportClip(cut.aspectRatio, cut.burnSubtitles, {
+            voiceover,
+            onSuccess: () => undefined,
+          });
         }}
       />
     </>

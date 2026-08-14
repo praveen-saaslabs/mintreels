@@ -524,12 +524,13 @@ export function useProjectEditor(projectId: number | undefined) {
     seenProjectThumbRef.current = false;
   }, [recordingId]);
 
-  // Inject playback URL as soon as we have it (navigate state, recording, or poll).
+  // Inject playback URL as soon as we have it (recording/poll first so post-VO
+  // storage updates win over the one-shot upload navigate state).
   useEffect(() => {
     const playbackUrl = pickPlaybackUrl(
-      locationMediaUrl,
       recordingsQuery.data?.videoUrl,
       processingQuery.data?.videoUrl,
+      locationMediaUrl,
     );
     if (!playbackUrl) {
       return;

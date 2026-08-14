@@ -41,6 +41,16 @@ export type ClipFilter = {
   count: number;
 };
 
+export type ClipVoiceoverPlacement = 'pre' | 'post';
+
+export type ClipVoiceover = {
+  enabled: boolean;
+  voiceId: string;
+  titleText?: string;
+  ctaText?: string;
+  placement: ClipVoiceoverPlacement;
+};
+
 export type ClipSummary = {
   id: number;
   title: string;
@@ -58,6 +68,7 @@ export type ClipSummary = {
   fitMode?: 'fit' | 'fill';
   burnSubtitles?: boolean;
   subtitleStyle: string | null;
+  voiceover?: ClipVoiceover | null;
   videoUrl: string | null;
   thumbnailUrl: string | null;
   /** Export target aspect (alias of aspectRatio). */

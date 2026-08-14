@@ -1,5 +1,10 @@
 import { EnvKey } from '@mintreels/schema';
 import { startWorker } from '@mintreels/queue';
+import { applyOverdub, type ApplyOverdubPayload } from '../jobs/apply-overdub';
+import {
+  applyRecordingVoiceover,
+  type ApplyRecordingVoiceoverPayload,
+} from '../jobs/apply-recording-voiceover';
 import { exportRecording, type ExportRecordingPayload } from '../jobs/export-recording';
 import { generateHooks, type GenerateHooksPayload } from '../jobs/generate-hooks';
 import { ingestVideo, type IngestVideoPayload } from '../jobs/ingest-video';
@@ -107,6 +112,69 @@ function parseExportRecordingPayload(data: unknown): ExportRecordingPayload {
   return payload;
 }
 
+function parseApplyOverdubPayload(data: unknown): ApplyOverdubPayload {
+  if (typeof data !== 'object' || data === null) {
+    throw new Error('apply-overdub payload is required');
+  }
+  const rec = data as Record<string, unknown>;
+  if (typeof rec.recordingId !== 'number') {
+    throw new Error('apply-overdub payload.recordingId is required');
+  }
+  if (typeof rec.segmentId !== 'number') {
+    throw new Error('apply-overdub payload.segmentId is required');
+  }
+  if (typeof rec.jobId !== 'number') {
+    throw new Error('apply-overdub payload.jobId is required');
+  }
+  if (typeof rec.voiceId !== 'string' || rec.voiceId.trim() === '') {
+    throw new Error('apply-overdub payload.voiceId is required');
+  }
+  if (typeof rec.text !== 'string') {
+    throw new Error('apply-overdub payload.text is required');
+  }
+  if (typeof rec.startMs !== 'number' || typeof rec.endMs !== 'number') {
+    throw new Error('apply-overdub payload.startMs and endMs are required');
+  }
+  return {
+    recordingId: rec.recordingId,
+    segmentId: rec.segmentId,
+    jobId: rec.jobId,
+    voiceId: rec.voiceId.trim(),
+    text: rec.text,
+    startMs: rec.startMs,
+    endMs: rec.endMs,
+  };
+}
+
+function parseApplyRecordingVoiceoverPayload(data: unknown): ApplyRecordingVoiceoverPayload {
+  if (typeof data !== 'object' || data === null) {
+    throw new Error('apply-recording-voiceover payload is required');
+  }
+  const rec = data as Record<string, unknown>;
+  if (typeof rec.recordingId !== 'number') {
+    throw new Error('apply-recording-voiceover payload.recordingId is required');
+  }
+  if (typeof rec.jobId !== 'number') {
+    throw new Error('apply-recording-voiceover payload.jobId is required');
+  }
+  if (typeof rec.voiceId !== 'string' || rec.voiceId.trim() === '') {
+    throw new Error('apply-recording-voiceover payload.voiceId is required');
+  }
+  if (typeof rec.text !== 'string' || rec.text.trim() === '') {
+    throw new Error('apply-recording-voiceover payload.text is required');
+  }
+  if (rec.placement !== 'pre' && rec.placement !== 'post') {
+    throw new Error('apply-recording-voiceover payload.placement must be pre or post');
+  }
+  return {
+    recordingId: rec.recordingId,
+    jobId: rec.jobId,
+    voiceId: rec.voiceId.trim(),
+    placement: rec.placement,
+    text: rec.text,
+  };
+}
+
 function failMessage(error: unknown): string {
   if (error instanceof Error && error.message.trim() !== '') {
     return error.message;
@@ -188,6 +256,28 @@ export function createProcessors(deps: WorkerDeps): { close: () => Promise<void>
           jobId: payload.jobId,
           run: async () => {
             await generateHooks(payload, deps);
+          },
+        });
+      },
+      'apply-overdub': async (data) => {
+        const payload = parseApplyOverdubPayload(data);
+        await runLoggedHandler({
+          job: 'apply-overdub',
+          recordingId: payload.recordingId,
+          jobId: payload.jobId,
+          run: async () => {
+            await applyOverdub(payload, deps);
+          },
+        });
+      },
+      'apply-recording-voiceover': async (data) => {
+        const payload = parseApplyRecordingVoiceoverPayload(data);
+        await runLoggedHandler({
+          job: 'apply-recording-voiceover',
+          recordingId: payload.recordingId,
+          jobId: payload.jobId,
+          run: async () => {
+            await applyRecordingVoiceover(payload, deps);
           },
         });
       },
