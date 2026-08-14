@@ -76,6 +76,12 @@ export class Hook implements HookRow {
   @Column({ type: 'double', name: 'novelty_score', nullable: true })
   noveltyScore!: number | null;
 
+  @Column({ type: 'double', name: 'controversy_score', nullable: true })
+  controversyScore!: number | null;
+
+  @Column({ type: 'double', name: 'headline_score', nullable: true })
+  headlineScore!: number | null;
+
   @Column({ type: 'varchar', length: 32, default: HookStatus.Candidate })
   status!: HookStatus;
 

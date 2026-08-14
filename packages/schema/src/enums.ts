@@ -188,4 +188,6 @@ export enum EnvKey {
   HookWeightSpecificity = 'HOOK_WEIGHT_SPECIFICITY',
   HookWeightShareability = 'HOOK_WEIGHT_SHAREABILITY',
   HookWeightNovelty = 'HOOK_WEIGHT_NOVELTY',
+  HookWeightControversy = 'HOOK_WEIGHT_CONTROVERSY',
+  HookWeightHeadline = 'HOOK_WEIGHT_HEADLINE',
 }

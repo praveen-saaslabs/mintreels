@@ -38,6 +38,8 @@ export function hooksHandler(deps: WorkerDeps): StepHandler {
             specificityScore: hook.dimensions?.specificity ?? null,
             shareabilityScore: hook.dimensions?.shareability ?? null,
             noveltyScore: hook.dimensions?.novelty ?? null,
+            controversyScore: hook.dimensions?.controversy ?? null,
+            headlineScore: hook.dimensions?.headline ?? null,
             status: HookStatus.Candidate,
             embeddingStatus: EmbeddingStatus.Pending,
             clipStartMs: null,

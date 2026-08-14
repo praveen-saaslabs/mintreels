@@ -10,6 +10,8 @@ export const HOOK_SCORE_DIMENSIONS = [
   'specificity',
   'shareability',
   'novelty',
+  'controversy',
+  'headline',
 ] as const;
 
 export type HookScoreDimension = (typeof HOOK_SCORE_DIMENSIONS)[number];
@@ -65,6 +67,8 @@ const hooksResponseSchema = z.object({
         specificity: llmScoreSchema,
         shareability: llmScoreSchema,
         novelty: llmScoreSchema,
+        controversy: llmScoreSchema,
+        headline: llmScoreSchema,
       }),
     }),
   ),
@@ -86,6 +90,8 @@ function normaliseScores(scores: Record<HookScoreDimension, number>): HookDimens
     specificity: clamp01(scores.specificity / LLM_SCORE_MAX),
     shareability: clamp01(scores.shareability / LLM_SCORE_MAX),
     novelty: clamp01(scores.novelty / LLM_SCORE_MAX),
+    controversy: clamp01(scores.controversy / LLM_SCORE_MAX),
+    headline: clamp01(scores.headline / LLM_SCORE_MAX),
   };
 }
 

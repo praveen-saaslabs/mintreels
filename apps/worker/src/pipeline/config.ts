@@ -54,13 +54,15 @@ export function loadHookConfig(): HookConfig {
     preRollMs: Math.trunc(parsePositive(process.env[EnvKey.ClipPrerollMs], 3000)),
     postRollMs: Math.trunc(parsePositive(process.env[EnvKey.ClipPostrollMs], 5000)),
     weights: {
-      quality: parseNonNegative(process.env[EnvKey.HookWeightQuality], 0.3),
-      standalone: parseNonNegative(process.env[EnvKey.HookWeightStandalone], 0.2),
-      curiosity: parseNonNegative(process.env[EnvKey.HookWeightCuriosity], 0.15),
-      emotional: parseNonNegative(process.env[EnvKey.HookWeightEmotional], 0.1),
-      specificity: parseNonNegative(process.env[EnvKey.HookWeightSpecificity], 0.1),
-      shareability: parseNonNegative(process.env[EnvKey.HookWeightShareability], 0.1),
-      novelty: parseNonNegative(process.env[EnvKey.HookWeightNovelty], 0.05),
+      quality: parseNonNegative(process.env[EnvKey.HookWeightQuality], 0.22),
+      standalone: parseNonNegative(process.env[EnvKey.HookWeightStandalone], 0.15),
+      curiosity: parseNonNegative(process.env[EnvKey.HookWeightCuriosity], 0.12),
+      emotional: parseNonNegative(process.env[EnvKey.HookWeightEmotional], 0.08),
+      specificity: parseNonNegative(process.env[EnvKey.HookWeightSpecificity], 0.08),
+      shareability: parseNonNegative(process.env[EnvKey.HookWeightShareability], 0.08),
+      novelty: parseNonNegative(process.env[EnvKey.HookWeightNovelty], 0.04),
+      controversy: parseNonNegative(process.env[EnvKey.HookWeightControversy], 0.12),
+      headline: parseNonNegative(process.env[EnvKey.HookWeightHeadline], 0.11),
     },
   };
 }
