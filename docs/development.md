@@ -57,13 +57,29 @@ API health: `GET http://127.0.0.1:3000/health`
 
 ## Seed demo data
 
-`pnpm db:seed` loads [`fixtures/demo-seed.json`](../fixtures/demo-seed.json) into MySQL (metadata only — no embeddings). Set `SEED_DEMO_PASSWORD` in `.env` the first time so the script can create `demo@mintreels.local` (override with `SEED_DEMO_EMAIL`). The password is hashed with argon2id and never logged.
+[`scripts/seed.ts`](../scripts/seed.ts) loads INSERTs from [`fixtures/seed.sql`](../fixtures/seed.sql) over `DATABASE_URL` (MySQL metadata only — no embeddings, no Qdrant). Schema comes from TypeORM migrations: start the API first (`GET http://127.0.0.1:3000/health`), then on the host:
 
 ```bash
 pnpm db:seed
 ```
 
-If the demo recording already exists, the script attaches its project to the demo user and exits.
+Log in as `demo@mintreels.io`. If that email already exists, the script skips. A primary-key collision with existing rows (for example user `id=2` under a different email) needs a reload:
+
+```bash
+SEED_FORCE=1 pnpm db:seed
+```
+
+`SEED_FORCE=1` truncates product tables and reloads the snapshot. It wipes local users and recordings. It never truncates `migrations`. Seeded Filestack URLs must still be public.
+
+## Reset product tables
+
+[`scripts/reset.ts`](../scripts/reset.ts) is the inverse of seed: same truncate list, no INSERT. Schema stays. It wipes **all** local users and recordings, not only demo. It does not drop MySQL and does not touch `migrations`, Filestack, Redis, or Qdrant.
+
+```bash
+pnpm db:reset
+```
+
+After reset, `pnpm db:seed` can load the demo snapshot again.
 
 ## Notes
 
