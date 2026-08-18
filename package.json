@@ -18,7 +18,9 @@
     "format": "prettier --write .",
     "setup": "tsx scripts/setup.ts",
     "db:seed": "node --import @swc-node/register/esm-register scripts/seed.ts",
-    "seed": "pnpm db:seed"
+    "seed": "pnpm db:seed",
+    "db:reset": "node --import @swc-node/register/esm-register scripts/reset.ts",
+    "reset": "pnpm db:reset"
   },
   "devDependencies": {
     "@eslint/js": "^9.17.0",
