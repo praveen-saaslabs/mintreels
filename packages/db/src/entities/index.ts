@@ -12,3 +12,4 @@ export { Clip } from './clip.entity';
 export { Job } from './job.entity';
 export { JobStep } from './job-step.entity';
 export { JobAuditLog } from './job-audit-log.entity';
+export { SystemSettings } from './system-settings.entity';

@@ -16,6 +16,7 @@ import {
   Job,
   JobStep,
   JobAuditLog,
+  SystemSettings,
 } from './entities';
 
 // A migration is registered as a class (constructor), not an instance.
@@ -36,6 +37,7 @@ export const entities = [
   Job,
   JobStep,
   JobAuditLog,
+  SystemSettings,
 ] as const;
 
 function requireDatabaseUrl(): string {

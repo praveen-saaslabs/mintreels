@@ -197,15 +197,6 @@ export enum EnvKey {
   HookFinalCount = 'HOOK_FINAL_COUNT',
   ClipPrerollMs = 'CLIP_PREROLL_MS',
   ClipPostrollMs = 'CLIP_POSTROLL_MS',
-  HookWeightQuality = 'HOOK_WEIGHT_QUALITY',
-  HookWeightStandalone = 'HOOK_WEIGHT_STANDALONE',
-  HookWeightCuriosity = 'HOOK_WEIGHT_CURIOSITY',
-  HookWeightEmotional = 'HOOK_WEIGHT_EMOTIONAL',
-  HookWeightSpecificity = 'HOOK_WEIGHT_SPECIFICITY',
-  HookWeightShareability = 'HOOK_WEIGHT_SHAREABILITY',
-  HookWeightNovelty = 'HOOK_WEIGHT_NOVELTY',
-  HookWeightControversy = 'HOOK_WEIGHT_CONTROVERSY',
-  HookWeightHeadline = 'HOOK_WEIGHT_HEADLINE',
   GuestEnabled = 'GUEST_ENABLED',
   GuestSessionTtlSeconds = 'GUEST_SESSION_TTL_SECONDS',
   GuestDataRetentionSeconds = 'GUEST_DATA_RETENTION_SECONDS',
@@ -216,4 +207,8 @@ export enum EnvKey {
   GuestTranscriptionsPerHour = 'GUEST_TRANSCRIPTIONS_PER_HOUR',
   GuestAiGenerationsPerHour = 'GUEST_AI_GENERATIONS_PER_HOUR',
   GuestSessionCreationsPerIpPerHour = 'GUEST_SESSION_CREATIONS_PER_IP_PER_HOUR',
+}
+
+export enum SettingKey {
+  HookWeights = 'hook_weights',
 }

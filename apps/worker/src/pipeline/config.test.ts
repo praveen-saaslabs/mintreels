@@ -9,15 +9,15 @@ const HOOK_ENV_KEYS = [
   EnvKey.HookFinalCount,
   EnvKey.ClipPrerollMs,
   EnvKey.ClipPostrollMs,
-  EnvKey.HookWeightQuality,
-  EnvKey.HookWeightStandalone,
-  EnvKey.HookWeightCuriosity,
-  EnvKey.HookWeightEmotional,
-  EnvKey.HookWeightSpecificity,
-  EnvKey.HookWeightShareability,
-  EnvKey.HookWeightNovelty,
-  EnvKey.HookWeightControversy,
-  EnvKey.HookWeightHeadline,
+  'HOOK_WEIGHT_QUALITY',
+  'HOOK_WEIGHT_STANDALONE',
+  'HOOK_WEIGHT_CURIOSITY',
+  'HOOK_WEIGHT_EMOTIONAL',
+  'HOOK_WEIGHT_SPECIFICITY',
+  'HOOK_WEIGHT_SHAREABILITY',
+  'HOOK_WEIGHT_NOVELTY',
+  'HOOK_WEIGHT_CONTROVERSY',
+  'HOOK_WEIGHT_HEADLINE',
 ] as const;
 
 function snapshotEnv(): Record<string, string | undefined> {
@@ -41,11 +41,11 @@ function clearHookEnv(): void {
   }
 }
 
-test('loadHookConfig uses documented defaults', () => {
+test('loadHookConfig uses documented defaults', async () => {
   const snapshot = snapshotEnv();
   clearHookEnv();
   try {
-    const config = loadHookConfig();
+    const config = await loadHookConfig();
     assert.equal(config.similarityThreshold, 0.85);
     assert.equal(config.maxCandidates, 50);
     assert.equal(config.finalCount, 10);
@@ -69,7 +69,7 @@ test('loadHookConfig uses documented defaults', () => {
   }
 });
 
-test('loadHookConfig parses overrides', () => {
+test('loadHookConfig parses overrides', async () => {
   const snapshot = snapshotEnv();
   try {
     process.env[EnvKey.HookSimilarityThreshold] = '0.9';
@@ -77,16 +77,16 @@ test('loadHookConfig parses overrides', () => {
     process.env[EnvKey.HookFinalCount] = '5';
     process.env[EnvKey.ClipPrerollMs] = '1000';
     process.env[EnvKey.ClipPostrollMs] = '2000';
-    process.env[EnvKey.HookWeightQuality] = '1';
-    process.env[EnvKey.HookWeightStandalone] = '0';
-    process.env[EnvKey.HookWeightCuriosity] = '0';
-    process.env[EnvKey.HookWeightEmotional] = '0';
-    process.env[EnvKey.HookWeightSpecificity] = '0';
-    process.env[EnvKey.HookWeightShareability] = '0';
-    process.env[EnvKey.HookWeightNovelty] = '0';
-    process.env[EnvKey.HookWeightControversy] = '0';
-    process.env[EnvKey.HookWeightHeadline] = '0';
-    const config = loadHookConfig();
+    process.env['HOOK_WEIGHT_QUALITY'] = '1';
+    process.env['HOOK_WEIGHT_STANDALONE'] = '0';
+    process.env['HOOK_WEIGHT_CURIOSITY'] = '0';
+    process.env['HOOK_WEIGHT_EMOTIONAL'] = '0';
+    process.env['HOOK_WEIGHT_SPECIFICITY'] = '0';
+    process.env['HOOK_WEIGHT_SHAREABILITY'] = '0';
+    process.env['HOOK_WEIGHT_NOVELTY'] = '0';
+    process.env['HOOK_WEIGHT_CONTROVERSY'] = '0';
+    process.env['HOOK_WEIGHT_HEADLINE'] = '0';
+    const config = await loadHookConfig();
     assert.equal(config.similarityThreshold, 0.9);
     assert.equal(config.maxCandidates, 20);
     assert.equal(config.finalCount, 5);
@@ -101,13 +101,13 @@ test('loadHookConfig parses overrides', () => {
   }
 });
 
-test('loadHookConfig ignores invalid values', () => {
+test('loadHookConfig ignores invalid values', async () => {
   const snapshot = snapshotEnv();
   try {
     process.env[EnvKey.HookSimilarityThreshold] = 'nope';
     process.env[EnvKey.HookMaxCandidates] = '-3';
-    process.env[EnvKey.HookWeightQuality] = 'abc';
-    const config = loadHookConfig();
+    process.env['HOOK_WEIGHT_QUALITY'] = 'abc';
+    const config = await loadHookConfig();
     assert.equal(config.similarityThreshold, 0.85);
     assert.equal(config.maxCandidates, 50);
     assert.equal(config.weights.quality, 0.22);

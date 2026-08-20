@@ -10,7 +10,7 @@ export function hooksHandler(deps: WorkerDeps): StepHandler {
     if (existing.length > 0) {
       return { count: existing.length, skipped: true };
     }
-    const config = loadHookConfig();
+    const config = await loadHookConfig(deps.systemSettings);
     const transcript = await loadDomainTranscript(deps, ctx.recordingId);
     const generated = await deps.llm.generateHooks(transcript, {
       weights: config.weights,

@@ -6,6 +6,7 @@ import type {
   JobStepRepository,
   RecordingRepository,
   SummaryRepository,
+  SystemSettingsRepository,
   TranscriptRepository,
   TranscriptSegmentRepository,
 } from '@mintreels/db';
@@ -28,6 +29,7 @@ export interface WorkerDeps {
   segments: TranscriptSegmentRepository;
   summaries: SummaryRepository;
   hooks: HookRepository;
+  systemSettings: SystemSettingsRepository;
   speech: SpeechProvider;
   voice: VoiceProvider;
   llm: LLMProvider;
