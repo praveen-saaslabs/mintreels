@@ -1,12 +1,6 @@
 import type { HookScoreWeights } from '@mintreels/ai';
 import type { SystemSettingsRepository } from '@mintreels/db';
-import {
-  EnvKey,
-  SettingKey,
-  DEFAULT_HOOK_WEIGHTS,
-  hookWeightsSchema,
-  type HookWeightsSettings,
-} from '@mintreels/schema';
+import { EnvKey, SettingKey, DEFAULT_HOOK_WEIGHTS, hookWeightsSchema } from '@mintreels/schema';
 
 function parsePositive(value: string | undefined, fallback: number): number {
   if (!value || value.trim() === '') {
@@ -77,36 +71,33 @@ async function loadHookWeights(
 
   // Fallback to environment variables with defaults
   const envWeights = {
-    quality: parseNonNegative(process.env[EnvKey.HookWeightQuality], DEFAULT_HOOK_WEIGHTS.quality),
+    quality: parseNonNegative(process.env['HOOK_WEIGHT_QUALITY'], DEFAULT_HOOK_WEIGHTS.quality),
     standalone: parseNonNegative(
-      process.env[EnvKey.HookWeightStandalone],
+      process.env['HOOK_WEIGHT_STANDALONE'],
       DEFAULT_HOOK_WEIGHTS.standalone,
     ),
     curiosity: parseNonNegative(
-      process.env[EnvKey.HookWeightCuriosity],
+      process.env['HOOK_WEIGHT_CURIOSITY'],
       DEFAULT_HOOK_WEIGHTS.curiosity,
     ),
     emotional: parseNonNegative(
-      process.env[EnvKey.HookWeightEmotional],
+      process.env['HOOK_WEIGHT_EMOTIONAL'],
       DEFAULT_HOOK_WEIGHTS.emotional,
     ),
     specificity: parseNonNegative(
-      process.env[EnvKey.HookWeightSpecificity],
+      process.env['HOOK_WEIGHT_SPECIFICITY'],
       DEFAULT_HOOK_WEIGHTS.specificity,
     ),
     shareability: parseNonNegative(
-      process.env[EnvKey.HookWeightShareability],
+      process.env['HOOK_WEIGHT_SHAREABILITY'],
       DEFAULT_HOOK_WEIGHTS.shareability,
     ),
-    novelty: parseNonNegative(process.env[EnvKey.HookWeightNovelty], DEFAULT_HOOK_WEIGHTS.novelty),
+    novelty: parseNonNegative(process.env['HOOK_WEIGHT_NOVELTY'], DEFAULT_HOOK_WEIGHTS.novelty),
     controversy: parseNonNegative(
-      process.env[EnvKey.HookWeightControversy],
+      process.env['HOOK_WEIGHT_CONTROVERSY'],
       DEFAULT_HOOK_WEIGHTS.controversy,
     ),
-    headline: parseNonNegative(
-      process.env[EnvKey.HookWeightHeadline],
-      DEFAULT_HOOK_WEIGHTS.headline,
-    ),
+    headline: parseNonNegative(process.env['HOOK_WEIGHT_HEADLINE'], DEFAULT_HOOK_WEIGHTS.headline),
   };
 
   // Validate the environment-based weights

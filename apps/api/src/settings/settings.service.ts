@@ -162,12 +162,9 @@ export class SettingsService {
         if (result.success) {
           return result.data;
         } else {
-          this.logger.warn(
-            'Invalid hook weights in database, falling back to environment defaults',
-            {
-              errors: result.error.errors,
-            },
-          );
+          this.logger.warn('Invalid hook weights in database, falling back to defaults', {
+            errors: result.error.issues,
+          });
         }
       }
     } catch (error) {
@@ -179,8 +176,8 @@ export class SettingsService {
       );
     }
 
-    // Fallback to environment variables or defaults
-    return this.getHookWeightsFromEnv();
+    // Fallback to hardcoded defaults (environment variables handled by worker config)
+    return DEFAULT_HOOK_WEIGHTS;
   }
 
   /**
@@ -204,37 +201,5 @@ export class SettingsService {
    */
   async resetHookWeights(): Promise<HookWeightsSettings> {
     return this.updateHookWeights(DEFAULT_HOOK_WEIGHTS);
-  }
-
-  /**
-   * Get hook weights from environment variables with defaults.
-   */
-  private getHookWeightsFromEnv(): HookWeightsSettings {
-    const envWeights = {
-      quality: Number(envValue(EnvKey.HookWeightQuality)) || DEFAULT_HOOK_WEIGHTS.quality,
-      standalone: Number(envValue(EnvKey.HookWeightStandalone)) || DEFAULT_HOOK_WEIGHTS.standalone,
-      curiosity: Number(envValue(EnvKey.HookWeightCuriosity)) || DEFAULT_HOOK_WEIGHTS.curiosity,
-      emotional: Number(envValue(EnvKey.HookWeightEmotional)) || DEFAULT_HOOK_WEIGHTS.emotional,
-      specificity:
-        Number(envValue(EnvKey.HookWeightSpecificity)) || DEFAULT_HOOK_WEIGHTS.specificity,
-      shareability:
-        Number(envValue(EnvKey.HookWeightShareability)) || DEFAULT_HOOK_WEIGHTS.shareability,
-      novelty: Number(envValue(EnvKey.HookWeightNovelty)) || DEFAULT_HOOK_WEIGHTS.novelty,
-      controversy:
-        Number(envValue(EnvKey.HookWeightControversy)) || DEFAULT_HOOK_WEIGHTS.controversy,
-      headline: Number(envValue(EnvKey.HookWeightHeadline)) || DEFAULT_HOOK_WEIGHTS.headline,
-    };
-
-    // Validate the environment-based weights
-    const result = hookWeightsSchema.safeParse(envWeights);
-    if (result.success) {
-      return result.data;
-    }
-
-    // If environment weights are invalid, return hardcoded defaults
-    this.logger.warn('Invalid hook weights from environment, using hardcoded defaults', {
-      errors: result.error.errors,
-    });
-    return DEFAULT_HOOK_WEIGHTS;
   }
 }

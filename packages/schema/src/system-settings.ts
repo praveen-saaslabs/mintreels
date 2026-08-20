@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { deletedAtSchema, idSchema } from './common';
+import { idSchema } from './common';
 import { SettingKey } from './enums';
 
 export const settingKeySchema = z.enum([SettingKey.HookWeights]);
@@ -34,7 +34,7 @@ export const hookWeightsSchema = z
 export const systemSettingsRowSchema = z.object({
   id: idSchema,
   settingKey: settingKeySchema,
-  settingValue: z.record(z.any()), // JSON column - validated by specific schemas
+  settingValue: z.record(z.string(), z.any()), // JSON column - validated by specific schemas
   description: z.string().nullable(),
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date(),

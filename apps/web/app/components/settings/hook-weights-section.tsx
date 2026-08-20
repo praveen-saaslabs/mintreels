@@ -12,11 +12,27 @@ const HOOK_DIMENSIONS = [
   { key: 'standalone', label: 'Standalone', description: 'How well content works independently' },
   { key: 'curiosity', label: 'Curiosity', description: 'Ability to spark viewer interest' },
   { key: 'emotional', label: 'Emotional', description: 'Emotional impact and resonance' },
-  { key: 'specificity', label: 'Specificity', description: 'Concrete, specific details vs. generic content' },
-  { key: 'shareability', label: 'Shareability', description: 'Likelihood of being shared on social media' },
+  {
+    key: 'specificity',
+    label: 'Specificity',
+    description: 'Concrete, specific details vs. generic content',
+  },
+  {
+    key: 'shareability',
+    label: 'Shareability',
+    description: 'Likelihood of being shared on social media',
+  },
   { key: 'novelty', label: 'Novelty', description: 'Uniqueness and freshness of content' },
-  { key: 'controversy', label: 'Controversy', description: 'Ability to generate discussion/debate' },
-  { key: 'headline', label: 'Headline', description: 'Headline-worthy or attention-grabbing nature' },
+  {
+    key: 'controversy',
+    label: 'Controversy',
+    description: 'Ability to generate discussion/debate',
+  },
+  {
+    key: 'headline',
+    label: 'Headline',
+    description: 'Headline-worthy or attention-grabbing nature',
+  },
 ] as const;
 
 export function HookWeightsSection() {
@@ -48,10 +64,13 @@ export function HookWeightsSection() {
     const sum = Object.values(localWeights).reduce((acc, val) => acc + val, 0);
     if (sum === 0) return;
 
-    const normalized = Object.keys(localWeights).reduce((acc, key) => ({
-      ...acc,
-      [key]: localWeights[key as keyof HookWeightsSettings] / sum,
-    }), {} as HookWeightsSettings);
+    const normalized = Object.keys(localWeights).reduce(
+      (acc, key) => ({
+        ...acc,
+        [key]: localWeights[key as keyof HookWeightsSettings] / sum,
+      }),
+      {} as HookWeightsSettings,
+    );
 
     setLocalWeights(normalized);
     setHasChanges(true);
@@ -78,7 +97,9 @@ export function HookWeightsSection() {
     }
   };
 
-  const currentSum = localWeights ? Object.values(localWeights).reduce((acc, val) => acc + val, 0) : 0;
+  const currentSum = localWeights
+    ? Object.values(localWeights).reduce((acc, val) => acc + val, 0)
+    : 0;
   const sumValid = Math.abs(currentSum - 1.0) <= 0.01;
 
   if (error) {
@@ -95,20 +116,30 @@ export function HookWeightsSection() {
   }
 
   return (
-    <section className="flex flex-col gap-3">
+    <section className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
-        <div className="text-[11px] font-semibold tracking-[0.06em] text-[var(--mr-mfg)] uppercase">
-          Hook Scoring Weights
+        <div>
+          <div className="text-[11px] font-semibold tracking-[0.06em] text-[var(--mr-mfg)] uppercase">
+            Hook Scoring Weights
+          </div>
+          <div className="mt-1 text-xs text-[var(--mr-mfg)]">
+            Adjust how AI scores content hooks across 9 dimensions
+          </div>
         </div>
-        <div className="flex items-center gap-2 text-xs">
-          <span className={cn('font-medium', sumValid ? 'text-[var(--mr-fg2)]' : 'text-[var(--mr-bad)]')}>
-            Sum: {currentSum.toFixed(3)}
+        <div className="flex items-center gap-3 text-xs">
+          <span
+            className={cn(
+              'font-mono font-medium',
+              sumValid ? 'text-[var(--mr-fg2)]' : 'text-[var(--mr-bad)]',
+            )}
+          >
+            {currentSum.toFixed(3)}
           </span>
           {!sumValid && (
             <button
               type="button"
               onClick={normalizeWeights}
-              className="text-[var(--mr-acc)] hover:underline"
+              className="rounded bg-[var(--mr-acc)]/10 px-2 py-1 text-[var(--mr-acc)] hover:bg-[var(--mr-acc)]/20"
             >
               Normalize
             </button>
@@ -116,76 +147,80 @@ export function HookWeightsSection() {
         </div>
       </div>
 
-      <div className="glass overflow-hidden rounded">
-        {isLoading || !localWeights
-          ? Array.from({ length: 9 }).map((_, index) => (
-              <div
-                key={index}
-                className="h-16 animate-pulse border-t border-[var(--mr-bd2)] bg-[var(--mr-muted)]/40 first:border-t-0"
-              />
-            ))
-          : HOOK_DIMENSIONS.map((dimension) => (
+      <div className="glass rounded-lg p-4">
+        {isLoading || !localWeights ? (
+          <div className="grid grid-cols-3 gap-3">
+            {Array.from({ length: 9 }).map((_, index) => (
+              <div key={index} className="h-20 animate-pulse rounded bg-[var(--mr-muted)]/30" />
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-3 gap-3">
+            {HOOK_DIMENSIONS.map((dimension) => (
               <div
                 key={dimension.key}
-                className="grid grid-cols-[160px_1fr_100px] items-center gap-4 border-t border-[var(--mr-bd2)] px-3.5 py-3 first:border-t-0"
+                className="group relative overflow-hidden rounded border border-[var(--mr-bd2)] bg-[var(--mr-bg)] p-3 transition-colors hover:border-[var(--mr-acc)]/30"
               >
-                <div>
-                  <div className="text-[13px] font-medium">{dimension.label}</div>
-                  <div className="mt-0.5 text-[11.5px] text-pretty text-[var(--mr-mfg)]">
-                    {dimension.description}
+                <div className="mb-2 flex items-center justify-between">
+                  <div className="text-xs font-medium">{dimension.label}</div>
+                  <div className="rounded bg-[var(--mr-muted)] px-1.5 py-0.5 font-mono text-xs text-[var(--mr-fg2)]">
+                    {(localWeights[dimension.key] * 100).toFixed(0)}%
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2">
-                  <input
-                    type="range"
-                    min="0"
-                    max="1"
-                    step="0.01"
-                    value={localWeights[dimension.key]}
-                    onChange={(e) => updateWeight(dimension.key, Number(e.target.value))}
-                    className="flex-1"
-                  />
+                <input
+                  type="range"
+                  min="0"
+                  max="1"
+                  step="0.01"
+                  value={localWeights[dimension.key]}
+                  onChange={(e) => updateWeight(dimension.key, Number(e.target.value))}
+                  className="mb-2 w-full accent-[var(--mr-acc)]"
+                />
+
+                <div className="text-[10px] leading-tight text-[var(--mr-mfg)]">
+                  {dimension.description}
                 </div>
 
-                <div className="text-right">
-                  <input
-                    type="number"
-                    min="0"
-                    max="1"
-                    step="0.01"
-                    value={localWeights[dimension.key].toFixed(2)}
-                    onChange={(e) => updateWeight(dimension.key, Number(e.target.value))}
-                    className="w-16 rounded border border-[var(--mr-bd2)] bg-[var(--mr-bg)] px-2 py-1 text-xs text-right"
+                {/* Visual weight indicator */}
+                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[var(--mr-muted)]">
+                  <div
+                    className="h-full bg-gradient-to-r from-[var(--mr-acc)]/50 to-[var(--mr-acc)] transition-all"
+                    style={{ width: `${localWeights[dimension.key] * 100}%` }}
                   />
                 </div>
               </div>
             ))}
+          </div>
+        )}
       </div>
 
       {hasChanges && (
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={saveWeights}
-            disabled={!sumValid || updateMutation.isPending}
-            className={cn(
-              'rounded px-3 py-1.5 text-xs font-medium',
-              sumValid
-                ? 'bg-[var(--mr-acc)] text-[var(--mr-accfg)] hover:bg-[var(--mr-acc)]/90'
-                : 'bg-[var(--mr-muted)] text-[var(--mr-mfg)] cursor-not-allowed'
-            )}
-          >
-            {updateMutation.isPending ? 'Saving...' : 'Save Changes'}
-          </button>
-          <button
-            type="button"
-            onClick={resetToDefaults}
-            disabled={resetMutation.isPending}
-            className="rounded px-3 py-1.5 text-xs font-medium text-[var(--mr-mfg)] hover:text-[var(--mr-fg)] hover:bg-[var(--mr-muted)]"
-          >
-            {resetMutation.isPending ? 'Resetting...' : 'Reset to Defaults'}
-          </button>
+        <div className="flex items-center justify-between rounded-lg border border-[var(--mr-acc)]/30 bg-[var(--mr-acc)]/5 p-3">
+          <div className="text-xs text-[var(--mr-acc)]">You have unsaved changes</div>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={resetToDefaults}
+              disabled={resetMutation.isPending}
+              className="rounded px-3 py-1.5 text-xs text-[var(--mr-mfg)] hover:text-[var(--mr-fg)] hover:bg-[var(--mr-muted)]"
+            >
+              {resetMutation.isPending ? 'Resetting...' : 'Reset'}
+            </button>
+            <button
+              type="button"
+              onClick={saveWeights}
+              disabled={!sumValid || updateMutation.isPending}
+              className={cn(
+                'rounded px-4 py-1.5 text-xs font-medium transition-colors',
+                sumValid
+                  ? 'bg-[var(--mr-acc)] text-[var(--mr-accfg)] hover:bg-[var(--mr-acc)]/90'
+                  : 'bg-[var(--mr-muted)] text-[var(--mr-mfg)] cursor-not-allowed',
+              )}
+            >
+              {updateMutation.isPending ? 'Saving...' : 'Save Changes'}
+            </button>
+          </div>
         </div>
       )}
     </section>

@@ -8,19 +8,19 @@ services:
       MYSQL_PASSWORD: ${MYSQL_PASSWORD:-mintreels}
       MYSQL_DATABASE: ${MYSQL_DATABASE:-mintreels}
     ports:
-      - '127.0.0.1:3306:3306'
+      - "127.0.0.1:3306:3306"
     volumes:
       - mysql_data:/var/lib/mysql
     healthcheck:
       test:
         [
-          'CMD',
-          'mysqladmin',
-          'ping',
-          '-h',
-          '127.0.0.1',
-          '-uroot',
-          '-p${MYSQL_ROOT_PASSWORD:-mintreels}',
+          "CMD",
+          "mysqladmin",
+          "ping",
+          "-h",
+          "127.0.0.1",
+          "-uroot",
+          "-p${MYSQL_ROOT_PASSWORD:-mintreels}",
         ]
       interval: 5s
       timeout: 5s
@@ -35,7 +35,7 @@ services:
       PMA_USER: ${MYSQL_USER:-mintreels}
       PMA_PASSWORD: ${MYSQL_PASSWORD:-mintreels}
     ports:
-      - '127.0.0.1:8080:80'
+      - "127.0.0.1:8080:80"
     depends_on:
       mysql:
         condition: service_healthy
@@ -44,11 +44,11 @@ services:
     image: redis:7-alpine
     restart: unless-stopped
     ports:
-      - '127.0.0.1:6379:6379'
+      - "127.0.0.1:6379:6379"
     volumes:
       - redis_data:/data
     healthcheck:
-      test: ['CMD', 'redis-cli', 'ping']
+      test: ["CMD", "redis-cli", "ping"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -57,7 +57,7 @@ services:
     image: qdrant/qdrant:latest
     restart: unless-stopped
     ports:
-      - '127.0.0.1:6333:6333'
+      - "127.0.0.1:6333:6333"
     volumes:
       - qdrant_data:/qdrant/storage
     # No healthcheck: the image is distroless (no shell/curl). The worker connects
@@ -75,13 +75,13 @@ services:
       - api_app_node_modules:/app/apps/api/node_modules
       - pnpm_store:/pnpm/store
     environment:
-      CI: 'true'
+      CI: "true"
       # Persist pnpm's content store on a shared volume so `pnpm install` reuses
       # already-fetched packages across restarts instead of re-downloading them.
       npm_config_store_dir: /pnpm/store
       DATABASE_URL: mysql://${MYSQL_USER:-mintreels}:${MYSQL_PASSWORD:-mintreels}@mysql:3306/${MYSQL_DATABASE:-mintreels}
       REDIS_URL: redis://redis:6379
-      PORT: '3000'
+      PORT: "3000"
       AI_PROVIDER: ${AI_PROVIDER:-pyai}
       LLM_PROVIDER: ${LLM_PROVIDER:-openai}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
@@ -131,7 +131,7 @@ services:
       CLIP_PREROLL_MS: ${CLIP_PREROLL_MS:-3000}
       CLIP_POSTROLL_MS: ${CLIP_POSTROLL_MS:-5000}
     ports:
-      - '3000:3000'
+      - "3000:3000"
     depends_on:
       mysql:
         condition: service_healthy
@@ -151,7 +151,7 @@ services:
       - worker_node_modules:/app/node_modules
       - pnpm_store:/pnpm/store
     environment:
-      CI: 'true'
+      CI: "true"
       npm_config_store_dir: /pnpm/store
       DATABASE_URL: mysql://${MYSQL_USER:-mintreels}:${MYSQL_PASSWORD:-mintreels}@mysql:3306/${MYSQL_DATABASE:-mintreels}
       REDIS_URL: redis://redis:6379
@@ -184,13 +184,6 @@ services:
       HOOK_FINAL_COUNT: ${HOOK_FINAL_COUNT:-10}
       CLIP_PREROLL_MS: ${CLIP_PREROLL_MS:-3000}
       CLIP_POSTROLL_MS: ${CLIP_POSTROLL_MS:-5000}
-      HOOK_WEIGHT_QUALITY: ${HOOK_WEIGHT_QUALITY:-0.30}
-      HOOK_WEIGHT_STANDALONE: ${HOOK_WEIGHT_STANDALONE:-0.20}
-      HOOK_WEIGHT_CURIOSITY: ${HOOK_WEIGHT_CURIOSITY:-0.15}
-      HOOK_WEIGHT_EMOTIONAL: ${HOOK_WEIGHT_EMOTIONAL:-0.10}
-      HOOK_WEIGHT_SPECIFICITY: ${HOOK_WEIGHT_SPECIFICITY:-0.10}
-      HOOK_WEIGHT_SHAREABILITY: ${HOOK_WEIGHT_SHAREABILITY:-0.10}
-      HOOK_WEIGHT_NOVELTY: ${HOOK_WEIGHT_NOVELTY:-0.05}
     depends_on:
       mysql:
         condition: service_healthy
@@ -210,13 +203,13 @@ services:
       - web_node_modules:/app/node_modules
       - pnpm_store:/pnpm/store
     environment:
-      CI: 'true'
+      CI: "true"
       npm_config_store_dir: /pnpm/store
       VITE_API_TARGET: http://api:3000
       # Browser Filestack key (falls back to worker/API key if unset)
       VITE_FILESTACK_API_KEY: ${VITE_FILESTACK_API_KEY:-${FILESTACK_API_KEY:-}}
     ports:
-      - '5173:5173'
+      - "5173:5173"
     depends_on:
       - api
 

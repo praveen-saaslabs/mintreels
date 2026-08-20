@@ -57,7 +57,7 @@ export class SystemSettingsRepository extends Repository<SystemSettings> {
 
   async deleteSetting(key: SettingKey): Promise<boolean> {
     const result = await this.delete({ settingKey: key });
-    return result.affected > 0;
+    return (result.affected ?? 0) > 0;
   }
 
   async listAll(): Promise<SystemSettings[]> {

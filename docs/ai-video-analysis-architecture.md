@@ -37,11 +37,11 @@ TRAILING (sequential, soft-fail → Partial)
 
 ### Persistence today
 
-| Table | Role |
-| --- | --- |
-| `hooks` | AI clip-window suggestions: `title`, `hook`, `reason`, `start_ms`, `end_ms`, `score` (0..1) |
-| `summaries` | text + `action_items` JSON + `key_points` JSON |
-| `clips` | rendered exports (optional `hook_id`) |
+| Table       | Role                                                                                        |
+| ----------- | ------------------------------------------------------------------------------------------- |
+| `hooks`     | AI clip-window suggestions: `title`, `hook`, `reason`, `start_ms`, `end_ms`, `score` (0..1) |
+| `summaries` | text + `action_items` JSON + `key_points` JSON                                              |
+| `clips`     | rendered exports (optional `hook_id`)                                                       |
 
 API: `GET /api/recordings/:id/hooks` returns the current shape (id, recordingId, title, hook, reason, startMs, endMs, score, createdAt). Web UI formats `score.toFixed(2)` assuming 0..1.
 
@@ -49,15 +49,15 @@ No `hook_candidates`, `clip_suggestions`, or `recording_ai_analysis` tables.
 
 ### Providers today
 
-| Interface | Production impl | Notes |
-| --- | --- | --- |
-| `SpeechProvider` | `PyAISpeechProvider` | Confirmed |
-| `LLMProvider` | `OpenAICompatibleLLMProvider` | Chat Completions + `response_format` |
-| `EmbeddingProvider` | interface only | `PyAILLMProvider.embed` throws |
-| `KnowledgeBaseProvider` | `PyAIKnowledgeBaseProvider` | stub — every method throws |
-| `StorageProvider` | Filestack | |
-| `QueueProvider` | BullMQ | |
-| Vector store | **does not exist** | |
+| Interface               | Production impl               | Notes                                |
+| ----------------------- | ----------------------------- | ------------------------------------ |
+| `SpeechProvider`        | `PyAISpeechProvider`          | Confirmed                            |
+| `LLMProvider`           | `OpenAICompatibleLLMProvider` | Chat Completions + `response_format` |
+| `EmbeddingProvider`     | interface only                | `PyAILLMProvider.embed` throws       |
+| `KnowledgeBaseProvider` | `PyAIKnowledgeBaseProvider`   | stub — every method throws           |
+| `StorageProvider`       | Filestack                     |                                      |
+| `QueueProvider`         | BullMQ                        |                                      |
+| Vector store            | **does not exist**            |                                      |
 
 Composition roots: `apps/worker/src/providers.ts`, `apps/api/src/providers/factories.ts`.
 
@@ -190,7 +190,7 @@ finalScore =
   0.11 * headline
 ```
 
-All dimensions stored 0..1. Configurable via `HOOK_WEIGHT_*`.
+All dimensions stored 0..1. Configurable via the Settings UI (database-first) with environment variable fallbacks.
 
 ### Dedup (Part 4)
 
@@ -209,16 +209,16 @@ Do not cross into an unrelated neighboring segment; preserve integer ms.
 
 ## 3. Confirmed vs unconfirmed PyAI capabilities
 
-| Capability | Status | Evidence |
-| --- | --- | --- |
-| Transcription submit (multipart audio) | **Confirmed** | `POST /v1/transcription/jobs`, model `pyai-hear` |
-| Transcription poll / result | **Confirmed** | SDK `transcriptionJobs.get` + optional `result_url` |
-| Diarization | **Confirmed** | `diarize: true` on submit |
-| VTT/SRT output formats | **Confirmed** | `output_formats` on submit; URLs in result (ephemeral) |
-| Chat / summarize / hooks LLM | **Not confirmed** | `@pyai/sdk` Recap only; no chat endpoint used |
-| Embeddings | **Not confirmed** | No endpoint; `PyAILLMProvider.embed` throws |
-| Knowledge Base CRUD + search | **Not confirmed** | Adapter fully stubbed |
-| Vector similarity / metadata filter | **Not confirmed** | Do not treat PyAI KB as the hook vector store |
+| Capability                             | Status            | Evidence                                               |
+| -------------------------------------- | ----------------- | ------------------------------------------------------ |
+| Transcription submit (multipart audio) | **Confirmed**     | `POST /v1/transcription/jobs`, model `pyai-hear`       |
+| Transcription poll / result            | **Confirmed**     | SDK `transcriptionJobs.get` + optional `result_url`    |
+| Diarization                            | **Confirmed**     | `diarize: true` on submit                              |
+| VTT/SRT output formats                 | **Confirmed**     | `output_formats` on submit; URLs in result (ephemeral) |
+| Chat / summarize / hooks LLM           | **Not confirmed** | `@pyai/sdk` Recap only; no chat endpoint used          |
+| Embeddings                             | **Not confirmed** | No endpoint; `PyAILLMProvider.embed` throws            |
+| Knowledge Base CRUD + search           | **Not confirmed** | Adapter fully stubbed                                  |
+| Vector similarity / metadata filter    | **Not confirmed** | Do not treat PyAI KB as the hook vector store          |
 
 Until embeddings/chat are in the PyAI OpenAPI contract: use OpenAI-compatible LLM + embedding adapters. Keep KB separate from hook clustering.
 
@@ -283,17 +283,17 @@ Not done (deliberately out of scope for this pass): no `RebuildRecordingEmbeddin
 
 ## 5. Risks and assumptions
 
-| Item | Assumption / risk |
-| --- | --- |
-| Score scale | UI and DB stay 0..1. Changing to 0–10 would break `toFixed(2)` display. |
-| One `hooks` table | API/UI keep working; `status` distinguishes candidate/selected/rejected. |
-| Qdrant collection width | Pinned to the first upsert's embedding width. Changing `EMBEDDING_MODEL` needs a collection rebuild (drop + regenerate), not a migration. |
-| Dedup transitivity | Greedy representative comparison is approximate (documented ceiling). Upgrade path: real clustering. |
-| Dedup vs embeddings | Dedup reuses stored vectors via `fetch`; hooks whose embedding failed skip grouping and rank by score only. |
-| PyAI embeddings later | Swap `EMBEDDING_PROVIDER`; no business-logic change. |
-| Weaviate/pgvector later | New `VectorStoreProvider` adapter only. |
-| Action items / summary | Unchanged; stay parallel with HOOKS. |
-| No new standalone job yet | Full ingest still one BullMQ `ingest-video`. Resume is per `job_steps` row. |
+| Item                      | Assumption / risk                                                                                                                         |
+| ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| Score scale               | UI and DB stay 0..1. Changing to 0–10 would break `toFixed(2)` display.                                                                   |
+| One `hooks` table         | API/UI keep working; `status` distinguishes candidate/selected/rejected.                                                                  |
+| Qdrant collection width   | Pinned to the first upsert's embedding width. Changing `EMBEDDING_MODEL` needs a collection rebuild (drop + regenerate), not a migration. |
+| Dedup transitivity        | Greedy representative comparison is approximate (documented ceiling). Upgrade path: real clustering.                                      |
+| Dedup vs embeddings       | Dedup reuses stored vectors via `fetch`; hooks whose embedding failed skip grouping and rank by score only.                               |
+| PyAI embeddings later     | Swap `EMBEDDING_PROVIDER`; no business-logic change.                                                                                      |
+| Weaviate/pgvector later   | New `VectorStoreProvider` adapter only.                                                                                                   |
+| Action items / summary    | Unchanged; stay parallel with HOOKS.                                                                                                      |
+| No new standalone job yet | Full ingest still one BullMQ `ingest-video`. Resume is per `job_steps` row.                                                               |
 
 ---
 
@@ -312,6 +312,8 @@ HOOK_MAX_CANDIDATES=50
 HOOK_FINAL_COUNT=10
 CLIP_PREROLL_MS=3000
 CLIP_POSTROLL_MS=5000
+# Hook weights are now managed via database (Settings UI)
+# Environment variables serve only as fallback defaults
 HOOK_WEIGHT_QUALITY=0.22
 HOOK_WEIGHT_STANDALONE=0.15
 HOOK_WEIGHT_CURIOSITY=0.12
@@ -323,7 +325,12 @@ HOOK_WEIGHT_CONTROVERSY=0.12
 HOOK_WEIGHT_HEADLINE=0.11
 ```
 
-Read only through `EnvKey` + `loadHookConfig()` / provider factories. Do not scatter `process.env`.
+**Hook Weight Configuration:**
+
+- **Primary**: Database storage via Settings UI (`/settings` page)
+- **Fallback**: Environment variables (for deployment continuity)
+- **Loading**: `loadHookConfig()` tries database first, falls back to env vars
+- **Access**: Read only through `EnvKey` + `loadHookConfig()` / provider factories. Do not scatter `process.env`.
 
 ---
 
