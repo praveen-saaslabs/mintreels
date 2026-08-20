@@ -18,11 +18,14 @@ export function clipRecommendationsHandler(deps: WorkerDeps): StepHandler {
       return { selected: 0, rejected: 0, skipped: true };
     }
 
-    const config = loadHookConfig();
+    const config = await loadHookConfig(deps.systemSettings);
 
     // Reuse embeddings already in the vector store; missing vectors just can't be deduped.
     const embedded = hooks.filter((hook) => hook.embeddingStatus === EmbeddingStatus.Completed);
-    const stored = embedded.length > 0 ? await deps.vectorStore.fetch(embedded.map((hook) => String(hook.id))) : [];
+    const stored =
+      embedded.length > 0
+        ? await deps.vectorStore.fetch(embedded.map((hook) => String(hook.id)))
+        : [];
     const vectorsById = new Map(stored.map((item) => [item.id, item.vector]));
 
     const candidates: SelectionCandidate[] = hooks.map((hook) => {

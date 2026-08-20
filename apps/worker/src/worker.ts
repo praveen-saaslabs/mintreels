@@ -12,6 +12,7 @@ import {
   ProjectRepository,
   RecordingRepository,
   SummaryRepository,
+  SystemSettingsRepository,
   TranscriptRepository,
   TranscriptSegmentRepository,
 } from '@mintreels/db';
@@ -41,6 +42,7 @@ async function main(): Promise<void> {
     segments: new TranscriptSegmentRepository(dataSource),
     summaries: new SummaryRepository(dataSource),
     hooks: new HookRepository(dataSource),
+    systemSettings: new SystemSettingsRepository(dataSource),
     speech: createSpeechProvider(),
     voice: createVoiceProvider(),
     llm: createLLMProvider(),

@@ -1,5 +1,6 @@
 import type {
   AuthUserResponse,
+  HookWeightsSettings,
   LoginRequest,
   SignupRequest,
 } from '@mintreels/schema';
@@ -425,6 +426,19 @@ export const api = {
   getClipFilters: () => request<ClipFilter[]>('/clips/filters'),
   getClips: () => request<ClipSummary[]>('/clips'),
   getSettings: () => request<SettingsSnapshot>('/settings'),
+
+  // Hook weights management
+  getHookWeights: () => request<HookWeightsSettings>('/settings/hook-weights'),
+  updateHookWeights: (weights: HookWeightsSettings) =>
+    request<HookWeightsSettings>('/settings/hook-weights', {
+      method: 'PUT',
+      body: JSON.stringify(weights),
+      headers: { 'Content-Type': 'application/json' },
+    }),
+  resetHookWeights: () =>
+    request<HookWeightsSettings>('/settings/hook-weights', {
+      method: 'DELETE',
+    }),
 
   signup: (body: SignupRequest) =>
     request<AuthUserResponse>('/auth/signup', {

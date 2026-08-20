@@ -217,3 +217,7 @@ export enum EnvKey {
   GuestAiGenerationsPerHour = 'GUEST_AI_GENERATIONS_PER_HOUR',
   GuestSessionCreationsPerIpPerHour = 'GUEST_SESSION_CREATIONS_PER_IP_PER_HOUR',
 }
+
+export enum SettingKey {
+  HookWeights = 'hook_weights',
+}

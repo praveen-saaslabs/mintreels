@@ -18,6 +18,7 @@ import {
   JobRepository,
   JobStepRepository,
   JobAuditLogRepository,
+  SystemSettingsRepository,
 } from './repositories';
 
 const repositories = [
@@ -35,6 +36,7 @@ const repositories = [
   JobRepository,
   JobStepRepository,
   JobAuditLogRepository,
+  SystemSettingsRepository,
 ];
 
 export interface DbModuleOptions {

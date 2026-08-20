@@ -1,5 +1,12 @@
 import type { HookScoreWeights } from '@mintreels/ai';
-import { EnvKey } from '@mintreels/schema';
+import type { SystemSettingsRepository } from '@mintreels/db';
+import {
+  EnvKey,
+  SettingKey,
+  DEFAULT_HOOK_WEIGHTS,
+  hookWeightsSchema,
+  type HookWeightsSettings,
+} from '@mintreels/schema';
 
 function parsePositive(value: string | undefined, fallback: number): number {
   if (!value || value.trim() === '') {
@@ -46,24 +53,84 @@ export type HookConfig = {
   weights: HookScoreWeights;
 };
 
-export function loadHookConfig(): HookConfig {
+/**
+ * Load hook weights from database with environment variable fallback.
+ */
+async function loadHookWeights(
+  systemSettings?: SystemSettingsRepository,
+): Promise<HookScoreWeights> {
+  // Try database first if systemSettings repository is provided
+  if (systemSettings) {
+    try {
+      const setting = await systemSettings.findByKey(SettingKey.HookWeights);
+      if (setting?.settingValue) {
+        // Validate the stored weights
+        const result = hookWeightsSchema.safeParse(setting.settingValue);
+        if (result.success) {
+          return result.data;
+        }
+      }
+    } catch (error) {
+      // Fall through to environment/defaults on database error
+    }
+  }
+
+  // Fallback to environment variables with defaults
+  const envWeights = {
+    quality: parseNonNegative(process.env[EnvKey.HookWeightQuality], DEFAULT_HOOK_WEIGHTS.quality),
+    standalone: parseNonNegative(
+      process.env[EnvKey.HookWeightStandalone],
+      DEFAULT_HOOK_WEIGHTS.standalone,
+    ),
+    curiosity: parseNonNegative(
+      process.env[EnvKey.HookWeightCuriosity],
+      DEFAULT_HOOK_WEIGHTS.curiosity,
+    ),
+    emotional: parseNonNegative(
+      process.env[EnvKey.HookWeightEmotional],
+      DEFAULT_HOOK_WEIGHTS.emotional,
+    ),
+    specificity: parseNonNegative(
+      process.env[EnvKey.HookWeightSpecificity],
+      DEFAULT_HOOK_WEIGHTS.specificity,
+    ),
+    shareability: parseNonNegative(
+      process.env[EnvKey.HookWeightShareability],
+      DEFAULT_HOOK_WEIGHTS.shareability,
+    ),
+    novelty: parseNonNegative(process.env[EnvKey.HookWeightNovelty], DEFAULT_HOOK_WEIGHTS.novelty),
+    controversy: parseNonNegative(
+      process.env[EnvKey.HookWeightControversy],
+      DEFAULT_HOOK_WEIGHTS.controversy,
+    ),
+    headline: parseNonNegative(
+      process.env[EnvKey.HookWeightHeadline],
+      DEFAULT_HOOK_WEIGHTS.headline,
+    ),
+  };
+
+  // Validate the environment-based weights
+  const result = hookWeightsSchema.safeParse(envWeights);
+  if (result.success) {
+    return result.data;
+  }
+
+  // If environment weights are invalid, return hardcoded defaults
+  return DEFAULT_HOOK_WEIGHTS;
+}
+
+export async function loadHookConfig(
+  systemSettings?: SystemSettingsRepository,
+): Promise<HookConfig> {
+  const weights = await loadHookWeights(systemSettings);
+
   return {
     similarityThreshold: parsePositive(process.env[EnvKey.HookSimilarityThreshold], 0.85),
     maxCandidates: Math.trunc(parsePositive(process.env[EnvKey.HookMaxCandidates], 50)),
     finalCount: Math.trunc(parsePositive(process.env[EnvKey.HookFinalCount], 10)),
     preRollMs: Math.trunc(parsePositive(process.env[EnvKey.ClipPrerollMs], 3000)),
     postRollMs: Math.trunc(parsePositive(process.env[EnvKey.ClipPostrollMs], 5000)),
-    weights: {
-      quality: parseNonNegative(process.env[EnvKey.HookWeightQuality], 0.22),
-      standalone: parseNonNegative(process.env[EnvKey.HookWeightStandalone], 0.15),
-      curiosity: parseNonNegative(process.env[EnvKey.HookWeightCuriosity], 0.12),
-      emotional: parseNonNegative(process.env[EnvKey.HookWeightEmotional], 0.08),
-      specificity: parseNonNegative(process.env[EnvKey.HookWeightSpecificity], 0.08),
-      shareability: parseNonNegative(process.env[EnvKey.HookWeightShareability], 0.08),
-      novelty: parseNonNegative(process.env[EnvKey.HookWeightNovelty], 0.04),
-      controversy: parseNonNegative(process.env[EnvKey.HookWeightControversy], 0.12),
-      headline: parseNonNegative(process.env[EnvKey.HookWeightHeadline], 0.11),
-    },
+    weights,
   };
 }
 

@@ -41,11 +41,11 @@ function clearHookEnv(): void {
   }
 }
 
-test('loadHookConfig uses documented defaults', () => {
+test('loadHookConfig uses documented defaults', async () => {
   const snapshot = snapshotEnv();
   clearHookEnv();
   try {
-    const config = loadHookConfig();
+    const config = await loadHookConfig();
     assert.equal(config.similarityThreshold, 0.85);
     assert.equal(config.maxCandidates, 50);
     assert.equal(config.finalCount, 10);
@@ -69,7 +69,7 @@ test('loadHookConfig uses documented defaults', () => {
   }
 });
 
-test('loadHookConfig parses overrides', () => {
+test('loadHookConfig parses overrides', async () => {
   const snapshot = snapshotEnv();
   try {
     process.env[EnvKey.HookSimilarityThreshold] = '0.9';
@@ -86,7 +86,7 @@ test('loadHookConfig parses overrides', () => {
     process.env[EnvKey.HookWeightNovelty] = '0';
     process.env[EnvKey.HookWeightControversy] = '0';
     process.env[EnvKey.HookWeightHeadline] = '0';
-    const config = loadHookConfig();
+    const config = await loadHookConfig();
     assert.equal(config.similarityThreshold, 0.9);
     assert.equal(config.maxCandidates, 20);
     assert.equal(config.finalCount, 5);
@@ -101,13 +101,13 @@ test('loadHookConfig parses overrides', () => {
   }
 });
 
-test('loadHookConfig ignores invalid values', () => {
+test('loadHookConfig ignores invalid values', async () => {
   const snapshot = snapshotEnv();
   try {
     process.env[EnvKey.HookSimilarityThreshold] = 'nope';
     process.env[EnvKey.HookMaxCandidates] = '-3';
     process.env[EnvKey.HookWeightQuality] = 'abc';
-    const config = loadHookConfig();
+    const config = await loadHookConfig();
     assert.equal(config.similarityThreshold, 0.85);
     assert.equal(config.maxCandidates, 50);
     assert.equal(config.weights.quality, 0.22);

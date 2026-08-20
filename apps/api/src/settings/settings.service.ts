@@ -1,5 +1,5 @@
-import { Injectable } from '@nestjs/common';
-import { JobRepository } from '@mintreels/db';
+import { Injectable, Logger } from '@nestjs/common';
+import { JobRepository, SystemSettingsRepository } from '@mintreels/db';
 import {
   ClipRatio,
   EnvKey,
@@ -7,6 +7,10 @@ import {
   ProviderConnectionStatus,
   SecretPresence,
   SettingsProviderId,
+  SettingKey,
+  DEFAULT_HOOK_WEIGHTS,
+  hookWeightsSchema,
+  type HookWeightsSettings,
 } from '@mintreels/schema';
 
 function envValue(key: EnvKey): string {
@@ -75,7 +79,12 @@ const RENDER_DEFAULTS = [
 
 @Injectable()
 export class SettingsService {
-  constructor(private readonly jobs: JobRepository) {}
+  private readonly logger = new Logger(SettingsService.name);
+
+  constructor(
+    private readonly jobs: JobRepository,
+    private readonly systemSettings: SystemSettingsRepository,
+  ) {}
 
   async getSnapshot(userId: number) {
     const pyaiKey = envSet(EnvKey.PyaiApiKey);
@@ -139,5 +148,93 @@ export class SettingsService {
         failedJobsRetryable: failedJobs.filter((job) => job.attempt < job.maxAttempts).length,
       },
     };
+  }
+
+  /**
+   * Get hook scoring weights from database with environment variable fallback.
+   */
+  async getHookWeights(): Promise<HookWeightsSettings> {
+    try {
+      const setting = await this.systemSettings.findByKey(SettingKey.HookWeights);
+      if (setting?.settingValue) {
+        // Validate the stored weights
+        const result = hookWeightsSchema.safeParse(setting.settingValue);
+        if (result.success) {
+          return result.data;
+        } else {
+          this.logger.warn(
+            'Invalid hook weights in database, falling back to environment defaults',
+            {
+              errors: result.error.errors,
+            },
+          );
+        }
+      }
+    } catch (error) {
+      this.logger.warn(
+        'Failed to load hook weights from database, falling back to environment defaults',
+        {
+          error: error instanceof Error ? error.message : error,
+        },
+      );
+    }
+
+    // Fallback to environment variables or defaults
+    return this.getHookWeightsFromEnv();
+  }
+
+  /**
+   * Update hook scoring weights in database.
+   */
+  async updateHookWeights(weights: HookWeightsSettings): Promise<HookWeightsSettings> {
+    // Validate weights before saving
+    const validatedWeights = hookWeightsSchema.parse(weights);
+
+    await this.systemSettings.upsertSetting(
+      SettingKey.HookWeights,
+      validatedWeights,
+      'Hook scoring dimension weights for content analysis',
+    );
+
+    return validatedWeights;
+  }
+
+  /**
+   * Reset hook weights to default values.
+   */
+  async resetHookWeights(): Promise<HookWeightsSettings> {
+    return this.updateHookWeights(DEFAULT_HOOK_WEIGHTS);
+  }
+
+  /**
+   * Get hook weights from environment variables with defaults.
+   */
+  private getHookWeightsFromEnv(): HookWeightsSettings {
+    const envWeights = {
+      quality: Number(envValue(EnvKey.HookWeightQuality)) || DEFAULT_HOOK_WEIGHTS.quality,
+      standalone: Number(envValue(EnvKey.HookWeightStandalone)) || DEFAULT_HOOK_WEIGHTS.standalone,
+      curiosity: Number(envValue(EnvKey.HookWeightCuriosity)) || DEFAULT_HOOK_WEIGHTS.curiosity,
+      emotional: Number(envValue(EnvKey.HookWeightEmotional)) || DEFAULT_HOOK_WEIGHTS.emotional,
+      specificity:
+        Number(envValue(EnvKey.HookWeightSpecificity)) || DEFAULT_HOOK_WEIGHTS.specificity,
+      shareability:
+        Number(envValue(EnvKey.HookWeightShareability)) || DEFAULT_HOOK_WEIGHTS.shareability,
+      novelty: Number(envValue(EnvKey.HookWeightNovelty)) || DEFAULT_HOOK_WEIGHTS.novelty,
+      controversy:
+        Number(envValue(EnvKey.HookWeightControversy)) || DEFAULT_HOOK_WEIGHTS.controversy,
+      headline: Number(envValue(EnvKey.HookWeightHeadline)) || DEFAULT_HOOK_WEIGHTS.headline,
+    };
+
+    // Validate the environment-based weights
+    const result = hookWeightsSchema.safeParse(envWeights);
+    if (result.success) {
+      return result.data;
+    }
+
+    // If environment weights are invalid, return hardcoded defaults
+    this.logger.warn('Invalid hook weights from environment, using hardcoded defaults', {
+      errors: result.error.errors,
+    });
+    return DEFAULT_HOOK_WEIGHTS;
   }
 }

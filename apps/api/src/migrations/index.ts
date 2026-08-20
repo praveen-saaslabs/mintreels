@@ -14,6 +14,7 @@ import { GuestSessions1700000000010 } from './0011-guest-sessions';
 import { ClipSocialCopy1700000000010 } from './0011-clip-social-copy';
 import { ClipVoiceover1700000000011 } from './0012-clip-voiceover';
 import { RemoveEmailVerification1700000000013 } from './0013-remove-email-verification';
+import { SystemSettings1700000000014 } from './0014-system-settings';
 
 // Keep this list ordered. New migrations get appended here.
 export const migrations = [
@@ -33,4 +34,5 @@ export const migrations = [
   ClipSocialCopy1700000000010,
   ClipVoiceover1700000000011,
   RemoveEmailVerification1700000000013,
+  SystemSettings1700000000014,
 ];

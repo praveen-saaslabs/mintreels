@@ -33,6 +33,7 @@ export const queryKeys = {
   settings: {
     all: () => [...queryKeys.all, 'settings'] as const,
     snapshot: () => [...queryKeys.settings.all(), 'snapshot'] as const,
+    hookWeights: () => [...queryKeys.settings.all(), 'hookWeights'] as const,
   },
 
   recordings: {

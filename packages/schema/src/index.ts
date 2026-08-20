@@ -20,6 +20,7 @@ export {
   ProviderConnectionStatus,
   RecordingStatus,
   SecretPresence,
+  SettingKey,
   SettingsProviderId,
   SidebarAccent,
 } from './enums';
@@ -142,3 +143,15 @@ export {
   type JobInsert,
   type JobRow,
 } from './jobs';
+export {
+  DEFAULT_HOOK_WEIGHTS,
+  hookWeightsSchema,
+  settingKeySchema,
+  systemSettingsInsertSchema,
+  systemSettingsRowSchema,
+  systemSettingsUpdateSchema,
+  type HookWeightsSettings,
+  type SystemSettingsInsert,
+  type SystemSettingsRow,
+  type SystemSettingsUpdate,
+} from './system-settings';
