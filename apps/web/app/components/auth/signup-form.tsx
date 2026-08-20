@@ -10,15 +10,12 @@ import { AuthLayout } from './auth-layout';
 
 export function SignupForm({
   embedded = false,
-  onNeedsVerification,
+  onSuccess,
 }: {
   /** Render only the form (no page layout) for use inside a dialog. */
   embedded?: boolean;
-  /**
-   * Called (instead of navigating to /verify-email) once signup succeeds and a
-   * verification code has been sent — lets an embedded host switch to a verify step.
-   */
-  onNeedsVerification?: (email: string) => void;
+  /** Called when signup succeeds — lets an embedded host handle the success. */
+  onSuccess?: () => void;
 } = {}) {
   const { signup } = useAuth();
   const navigate = useNavigate();
@@ -46,12 +43,10 @@ export function SignupForm({
     setIsSubmitting(true);
     try {
       await signup(parsed.data);
-      if (onNeedsVerification) {
-        onNeedsVerification(parsed.data.email);
+      if (onSuccess) {
+        onSuccess();
       } else {
-        navigate(`/verify-email?email=${encodeURIComponent(parsed.data.email)}`, {
-          replace: true,
-        });
+        navigate('/', { replace: true });
       }
     } catch (err) {
       setError(authErrorMessage(err));
@@ -118,7 +113,7 @@ export function SignupForm({
   return (
     <AuthLayout
       title="Create account"
-      description="Sign up with email and password. We’ll send a verification code."
+      description="Sign up with email and password to get started."
       footer={
         <>
           Already have an account?{' '}

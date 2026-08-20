@@ -8,13 +8,6 @@ export interface JwtConfig {
   expiresIn: string;
 }
 
-export interface SmtpConfig {
-  host: string;
-  port: number;
-  user: string;
-  password: string;
-  fromEmail: string;
-}
 
 function requireEnv(name: string): string {
   const value = process.env[name];
@@ -28,14 +21,6 @@ export function isProduction(): boolean {
   return process.env.NODE_ENV === 'production';
 }
 
-/**
- * When true, login skips the email-verified check (local/dev convenience).
- * Default off — never enable in production.
- */
-export function shouldSkipEmailVerify(): boolean {
-  const raw = process.env.AUTH_SKIP_EMAIL_VERIFY?.trim().toLowerCase();
-  return raw === 'true' || raw === '1';
-}
 
 export function loadWebOrigin(): string {
   const value = process.env.WEB_ORIGIN;
@@ -52,20 +37,6 @@ export function loadJwtConfig(): JwtConfig {
   };
 }
 
-export function loadSmtpConfig(): SmtpConfig {
-  const portRaw = process.env.SMTP_PORT?.trim() || '2525';
-  const port = Number.parseInt(portRaw, 10);
-  if (!Number.isInteger(port) || port < 1 || port > 65535) {
-    throw new Error('SMTP_PORT must be an integer between 1 and 65535');
-  }
-  return {
-    host: requireEnv('SMTP_HOST'),
-    port,
-    user: requireEnv('SMTP_USER'),
-    password: requireEnv('SMTP_PASSWORD'),
-    fromEmail: requireEnv('SMTP_FROM_EMAIL'),
-  };
-}
 
 export function authCookieOptions(): {
   httpOnly: true;
