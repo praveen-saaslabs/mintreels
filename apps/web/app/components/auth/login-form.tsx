@@ -4,7 +4,6 @@ import { loginRequestSchema } from '@mintreels/schema';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ApiError } from '@/lib/api';
 import { authErrorMessage } from '@/lib/auth-errors';
 import { useAuth } from '@/providers/auth-provider';
 import { AuthLayout } from './auth-layout';
@@ -12,17 +11,11 @@ import { AuthLayout } from './auth-layout';
 export function LoginForm({
   embedded = false,
   onSuccess,
-  onNeedsVerification,
 }: {
   /** Render only the form (no page layout) for use inside a dialog. */
   embedded?: boolean;
   /** Called after a successful login instead of navigating home. */
   onSuccess?: () => void;
-  /**
-   * Called (instead of navigating to /verify-email) when the account exists but
-   * its email is unverified — lets an embedded host switch to a verify step.
-   */
-  onNeedsVerification?: (email: string) => void;
 } = {}) {
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -50,16 +43,6 @@ export function LoginForm({
         navigate('/', { replace: true });
       }
     } catch (err) {
-      if (err instanceof ApiError && err.code === 'EMAIL_NOT_VERIFIED') {
-        if (onNeedsVerification) {
-          onNeedsVerification(parsed.data.email);
-        } else {
-          navigate(`/verify-email?email=${encodeURIComponent(parsed.data.email)}`, {
-            replace: true,
-          });
-        }
-        return;
-      }
       setError(authErrorMessage(err));
     } finally {
       setIsSubmitting(false);

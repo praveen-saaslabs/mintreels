@@ -9,7 +9,6 @@ import { KnowledgePage } from './routes/knowledge';
 import { LoginPage } from './routes/login';
 import { SettingsPage } from './routes/settings';
 import { SignupPage } from './routes/signup';
-import { VerifyEmailPage } from './routes/verify-email';
 import { IndexPage } from './routes/_index';
 
 function RootLayout() {
@@ -30,7 +29,6 @@ const router = createBrowserRouter([
         children: [
           { path: '/login', element: <LoginPage /> },
           { path: '/signup', element: <SignupPage /> },
-          { path: '/verify-email', element: <VerifyEmailPage /> },
         ],
       },
       {

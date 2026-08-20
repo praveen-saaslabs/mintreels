@@ -1,10 +1,7 @@
 import type {
   AuthUserResponse,
   LoginRequest,
-  ResendVerificationRequest,
   SignupRequest,
-  SignupResponse,
-  VerifyEmailRequest,
 } from '@mintreels/schema';
 import type {
   ClipFilter,
@@ -430,22 +427,12 @@ export const api = {
   getSettings: () => request<SettingsSnapshot>('/settings'),
 
   signup: (body: SignupRequest) =>
-    request<SignupResponse>('/auth/signup', {
+    request<AuthUserResponse>('/auth/signup', {
       method: 'POST',
       body: JSON.stringify(body),
     }),
   login: (body: LoginRequest) =>
     request<AuthUserResponse>('/auth/login', {
-      method: 'POST',
-      body: JSON.stringify(body),
-    }),
-  verifyEmail: (body: VerifyEmailRequest) =>
-    request<AuthUserResponse>('/auth/verify-email', {
-      method: 'POST',
-      body: JSON.stringify(body),
-    }),
-  resendVerification: (body: ResendVerificationRequest) =>
-    request<SignupResponse>('/auth/resend-verification', {
       method: 'POST',
       body: JSON.stringify(body),
     }),

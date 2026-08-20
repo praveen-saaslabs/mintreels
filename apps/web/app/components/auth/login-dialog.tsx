@@ -11,9 +11,8 @@ import { queryKeys } from '@/lib/query-keys';
 import { useAuthGateStore } from '@/stores/auth-gate-store';
 import { LoginForm } from './login-form';
 import { SignupForm } from './signup-form';
-import { VerifyEmailForm } from './verify-email-form';
 
-type Mode = 'login' | 'signup' | 'verify';
+type Mode = 'login' | 'signup';
 
 const COPY: Record<Mode, { title: string; description: string }> = {
   login: {
@@ -24,19 +23,15 @@ const COPY: Record<Mode, { title: string; description: string }> = {
   signup: {
     title: 'Create your account',
     description:
-      'Sign up to export your clip. The work you’ve done so far will be locked to your new account.',
-  },
-  verify: {
-    title: 'Verify your email',
-    description: 'Enter the code we emailed you to finish and save your work.',
+      'Sign up to export your clip. The work you\'ve done so far will be locked to your new account.',
   },
 };
 
 /**
  * Global auth dialog raised when an action returns AUTH_REQUIRED. Lets a guest
- * sign in OR sign up (with email verification) without leaving the page, so the
- * gated action can be replayed afterwards. On success it refetches now-claimed
- * data and resumes the pending action.
+ * sign in OR sign up without leaving the page, so the gated action can be
+ * replayed afterwards. On success it refetches now-claimed data and resumes
+ * the pending action.
  */
 export function LoginDialog() {
   const queryClient = useQueryClient();
@@ -45,13 +40,11 @@ export function LoginDialog() {
   const resume = useAuthGateStore((state) => state.resume);
 
   const [mode, setMode] = useState<Mode>('login');
-  const [pendingEmail, setPendingEmail] = useState('');
 
   // Always reopen on the sign-in step; drop any half-finished signup state.
   useEffect(() => {
     if (isOpen) {
       setMode('login');
-      setPendingEmail('');
     }
   }, [isOpen]);
 
@@ -59,11 +52,6 @@ export function LoginDialog() {
     // Guest work is claimed under the (new or existing) user server-side; refetch it.
     void queryClient.invalidateQueries({ queryKey: queryKeys.all });
     resume();
-  }
-
-  function goToVerify(email: string) {
-    setPendingEmail(email);
-    setMode('verify');
   }
 
   const copy = COPY[mode];
@@ -78,9 +66,9 @@ export function LoginDialog() {
 
         {mode === 'login' ? (
           <>
-            <LoginForm embedded onSuccess={handleSuccess} onNeedsVerification={goToVerify} />
+            <LoginForm embedded onSuccess={handleSuccess} />
             <p className="text-center text-sm text-muted-foreground">
-              Don’t have an account?{' '}
+              Don't have an account?{' '}
               <button
                 type="button"
                 onClick={() => setMode('signup')}
@@ -94,7 +82,7 @@ export function LoginDialog() {
 
         {mode === 'signup' ? (
           <>
-            <SignupForm embedded onNeedsVerification={goToVerify} />
+            <SignupForm embedded onSuccess={handleSuccess} />
             <p className="text-center text-sm text-muted-foreground">
               Already have an account?{' '}
               <button
@@ -106,10 +94,6 @@ export function LoginDialog() {
               </button>
             </p>
           </>
-        ) : null}
-
-        {mode === 'verify' ? (
-          <VerifyEmailForm embedded email={pendingEmail} onSuccess={handleSuccess} />
         ) : null}
       </DialogContent>
     </Dialog>

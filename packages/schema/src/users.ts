@@ -11,9 +11,6 @@ export const userRowSchema = z
     email: z.string().email(),
     name: z.string().nullable(),
     passwordHash: z.string().min(1),
-    emailVerified: z.boolean(),
-    emailVerificationCodeHash: z.string().nullable(),
-    emailVerificationExpiresAt: z.coerce.date().nullable(),
   })
   .merge(timestampsSchema)
   .merge(deletedAtSchema);
@@ -21,9 +18,6 @@ export const userRowSchema = z
 export const userInsertSchema = userRowSchema.partial({
   id: true,
   name: true,
-  emailVerified: true,
-  emailVerificationCodeHash: true,
-  emailVerificationExpiresAt: true,
   createdAt: true,
   updatedAt: true,
   deletedAt: true,
@@ -32,7 +26,6 @@ export const userInsertSchema = userRowSchema.partial({
 export const userPublicSchema = userRowSchema.pick({
   id: true,
   email: true,
-  emailVerified: true,
 });
 
 export type UserRow = z.infer<typeof userRowSchema>;

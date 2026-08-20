@@ -11,7 +11,6 @@ import type {
   AuthUserResponse,
   LoginRequest,
   SignupRequest,
-  VerifyEmailRequest,
 } from '@mintreels/schema';
 import { ApiError, api } from '@/lib/api';
 import { queryClient } from '@/lib/query-client';
@@ -24,9 +23,7 @@ type AuthContextValue = {
   status: AuthStatus;
   refresh: () => Promise<void>;
   login: (body: LoginRequest) => Promise<AuthUserResponse>;
-  signup: (body: SignupRequest) => Promise<void>;
-  verifyEmail: (body: VerifyEmailRequest) => Promise<AuthUserResponse>;
-  resendVerification: (email: string) => Promise<void>;
+  signup: (body: SignupRequest) => Promise<AuthUserResponse>;
   logout: () => Promise<void>;
 };
 
@@ -62,18 +59,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signup = useCallback(async (body: SignupRequest) => {
-    await api.signup(body);
-  }, []);
-
-  const verifyEmail = useCallback(async (body: VerifyEmailRequest) => {
-    const next = await api.verifyEmail(body);
+    const next = await api.signup(body);
     setUser(next);
     setStatus('authenticated');
     return next;
-  }, []);
-
-  const resendVerification = useCallback(async (email: string) => {
-    await api.resendVerification({ email });
   }, []);
 
   const logout = useCallback(async () => {
@@ -93,11 +82,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       refresh,
       login,
       signup,
-      verifyEmail,
-      resendVerification,
       logout,
     }),
-    [user, status, refresh, login, signup, verifyEmail, resendVerification, logout],
+    [user, status, refresh, login, signup, logout],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
